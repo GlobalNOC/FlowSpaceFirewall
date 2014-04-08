@@ -1,0 +1,342 @@
+/*
+ Copyright 2013 Trustees of Indiana University
+
+   Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+*/
+package edu.iu.grnoc.flowspace_firewall;
+
+import static org.easymock.EasyMock.createMock;
+import static org.easymock.EasyMock.expect;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+
+import org.easymock.*;
+
+import static org.junit.Assert.*;
+
+import net.floodlightcontroller.core.IOFSwitch;
+import net.floodlightcontroller.core.ImmutablePort;
+import org.junit.Test;
+import org.junit.Before;
+import org.openflow.protocol.OFMatch;
+import org.openflow.protocol.action.OFAction;
+import org.openflow.protocol.action.OFActionOutput;
+import org.openflow.protocol.action.OFActionVirtualLanIdentifier;
+import org.openflow.protocol.statistics.OFFlowStatisticsReply;
+import org.openflow.protocol.statistics.OFStatistics;
+
+import org.junit.Rule;
+import org.junit.rules.ExpectedException;
+
+public class FlowStatSlicerTest {
+
+	List <OFStatistics> allowedStats;
+	List <OFStatistics> noAllowedStats;
+	List <OFStatistics> mixedStats;
+	IOFSwitch sw;
+	VLANSlicer slicer;
+	PortConfig pConfig;
+	PortConfig pConfig2;
+	PortConfig pConfig3;
+	PortConfig pConfig5;
+	
+	@Rule
+	public ExpectedException thrown = ExpectedException.none();
+
+	public void buildAllowedStats(){
+		List<OFAction> actions = new ArrayList<OFAction>();
+		OFActionOutput output = new OFActionOutput();
+		output.setPort((short)1);
+		actions.add(output);
+		
+		OFMatch match = new OFMatch();
+		match.setInputPort((short)1);
+		match.setDataLayerVirtualLan((short)100);
+		
+		//all allowed stats
+		allowedStats = new ArrayList<OFStatistics>();
+		OFFlowStatisticsReply stat = new OFFlowStatisticsReply();
+		stat.setActions(actions);
+		stat.setMatch(match);
+		stat.setByteCount(123126L);
+		allowedStats.add(stat);
+		
+		actions = new ArrayList<OFAction>();
+		output = new OFActionOutput();
+		output.setPort((short)2);
+		actions.add(output);
+		match = new OFMatch();
+		match.setInputPort((short)2);
+		match.setDataLayerVirtualLan((short)102);
+		stat = new OFFlowStatisticsReply();
+		stat.setActions(actions);
+		stat.setMatch(match);
+		stat.setByteCount(123125L);
+		allowedStats.add(stat);
+		
+		actions = new ArrayList<OFAction>();
+		output = new OFActionOutput();
+		output.setPort((short)3);
+		actions.add(output);
+		match = new OFMatch();
+		match.setInputPort((short)3);
+		match.setDataLayerVirtualLan((short)103);
+		stat = new OFFlowStatisticsReply();
+		stat.setActions(actions);
+		stat.setMatch(match);
+		stat.setByteCount(123124L);
+		allowedStats.add(stat);
+		
+		actions = new ArrayList<OFAction>();
+		output = new OFActionOutput();
+		output.setPort((short)5);
+		actions.add(output);
+		match = new OFMatch();
+		match.setInputPort((short)5);
+		match.setDataLayerVirtualLan((short)105);
+		stat = new OFFlowStatisticsReply();
+		stat.setActions(actions);
+		stat.setMatch(match);
+		stat.setByteCount(123123L);
+		allowedStats.add(stat);
+	}
+
+	public void buildNoAllowedStats(){
+		//no allowed stats
+		noAllowedStats = new ArrayList<OFStatistics>();
+
+		List<OFAction> actions = new ArrayList<OFAction>();
+		OFActionOutput output = new OFActionOutput();
+		output.setPort((short)1);
+		actions.add(output);
+		
+		OFMatch match = new OFMatch();
+		match.setInputPort((short)1);
+		match.setDataLayerVirtualLan((short)300);
+		
+		OFFlowStatisticsReply stat = new OFFlowStatisticsReply();
+		stat.setActions(actions);
+		stat.setMatch(match);
+		stat.setByteCount(123126L);
+		noAllowedStats.add(stat);
+		
+		actions = new ArrayList<OFAction>();
+		output = new OFActionOutput();
+		output.setPort((short)2);
+		actions.add(output);
+		match = new OFMatch();
+		match.setInputPort((short)2);
+		match.setDataLayerVirtualLan((short)202);
+		stat = new OFFlowStatisticsReply();
+		stat.setActions(actions);
+		stat.setMatch(match);
+		stat.setByteCount(123125L);
+		noAllowedStats.add(stat);
+		
+		actions = new ArrayList<OFAction>();
+		output = new OFActionOutput();
+		output.setPort((short)3);
+		OFActionVirtualLanIdentifier setVid = new OFActionVirtualLanIdentifier();
+		setVid.setVirtualLanIdentifier((short)300);
+		actions.add(setVid);
+		actions.add(output);
+		match = new OFMatch();
+		match.setInputPort((short)3);
+		match.setDataLayerVirtualLan((short)103);
+		stat = new OFFlowStatisticsReply();
+		stat.setActions(actions);
+		stat.setMatch(match);
+		stat.setByteCount(123124L);
+		noAllowedStats.add(stat);
+		
+		actions = new ArrayList<OFAction>();
+		output = new OFActionOutput();
+		output.setPort((short)4);
+		actions.add(output);
+		match = new OFMatch();
+		match.setInputPort((short)5);
+		match.setDataLayerVirtualLan((short)105);
+		stat = new OFFlowStatisticsReply();
+		stat.setActions(actions);
+		stat.setMatch(match);
+		stat.setByteCount(123123L);
+		noAllowedStats.add(stat);
+		
+		actions = new ArrayList<OFAction>();
+		output = new OFActionOutput();
+		output.setPort((short)4);
+		actions.add(output);
+		match = new OFMatch();
+		match.setInputPort((short)5);
+		match.setDataLayerVirtualLan((short)105);
+		stat = new OFFlowStatisticsReply();
+		stat.setActions(actions);
+		stat.setMatch(match);
+		stat.setByteCount(123123L);
+		noAllowedStats.add(stat);
+		
+		actions = new ArrayList<OFAction>();
+		output = new OFActionOutput();
+		output.setPort((short)5);
+		actions.add(output);
+		match = new OFMatch();
+		match.setInputPort((short)4);
+		match.setDataLayerVirtualLan((short)105);
+		stat = new OFFlowStatisticsReply();
+		stat.setActions(actions);
+		stat.setMatch(match);
+		stat.setByteCount(123123L);
+		noAllowedStats.add(stat);
+	}
+	
+	public void buildMixedStats(){
+		//a mixed set of stats some allowed some not allowed
+		mixedStats = new ArrayList<OFStatistics>();
+	}
+	
+	
+	@Before
+	public void buildStats(){
+		
+		buildAllowedStats();
+		buildNoAllowedStats();
+		buildMixedStats();
+
+		
+	}
+	
+	@Before
+	public void buildSlicer(){
+		ArrayList <ImmutablePort> ports = new ArrayList <ImmutablePort>();
+		
+		ImmutablePort p = createMock(ImmutablePort.class);
+		expect(p.getName()).andReturn("foo").anyTimes();
+		expect(p.getPortNumber()).andReturn((short)1).anyTimes();
+		EasyMock.replay(p);
+		ports.add(p);
+		
+		ImmutablePort p2 = createMock(ImmutablePort.class);
+		expect(p2.getName()).andReturn("foo2").anyTimes();
+		expect(p2.getPortNumber()).andReturn((short)2).anyTimes();
+		EasyMock.replay(p2);
+		ports.add(p2);
+		
+		ImmutablePort p3 = createMock(ImmutablePort.class);
+		expect(p3.getName()).andReturn("foo3").anyTimes();
+		expect(p3.getPortNumber()).andReturn((short)3).anyTimes();
+		EasyMock.replay(p3);
+		ports.add(p3);
+		
+		ImmutablePort p4 = createMock(ImmutablePort.class);
+		expect(p4.getName()).andReturn("foo4").anyTimes();
+		expect(p4.getPortNumber()).andReturn((short)4).anyTimes();
+		EasyMock.replay(p4);
+		ports.add(p4);
+		
+		ImmutablePort p5 = createMock(ImmutablePort.class);
+		expect(p5.getName()).andReturn("foo5").anyTimes();
+		expect(p5.getPortNumber()).andReturn((short)5).anyTimes();
+		EasyMock.replay(p5);
+		ports.add(p5);
+		
+		sw = createMock(IOFSwitch.class);
+		expect(sw.getId()).andReturn(0L).anyTimes();
+		expect(sw.getPort((short)1)).andReturn(p).anyTimes();
+		expect(sw.getPort((short)2)).andReturn(p2).anyTimes();
+		expect(sw.getPort((short)3)).andReturn(p3).anyTimes();
+		expect(sw.getPort((short)4)).andReturn(p4).anyTimes();
+		expect(sw.getPort((short)5)).andReturn(p5).anyTimes();
+		expect(sw.getPort((short)100)).andReturn(null).anyTimes();
+		expect(sw.getPort((short)-1)).andReturn(null).anyTimes();
+        expect(sw.getPorts()).andReturn((Collection <ImmutablePort>) ports).anyTimes();
+        EasyMock.replay(sw);
+        
+        assertNotNull("switch id is not null", sw.getId());
+        assertNotNull("switch port is not null", sw.getPort((short)1));
+        assertEquals("ports == sw.getPorts()", ports, sw.getPorts());
+        
+        slicer = new VLANSlicer();
+		
+		pConfig = new PortConfig();
+		pConfig.setPortName("foo");
+		VLANRange range = new VLANRange();
+		range.setVlanAvail((short)100,true);
+		range.setVlanAvail((short)1000,true);
+		pConfig.setVLANRange(range);
+		slicer.setPortConfig("foo", pConfig);
+		
+		pConfig2 = new PortConfig();
+		pConfig.setPortName("foo2");
+		range = new VLANRange();
+		range.setVlanAvail((short)102,true);
+		range.setVlanAvail((short)1000,true);
+		pConfig2.setVLANRange(range);
+		slicer.setPortConfig("foo2", pConfig2);
+
+		pConfig3 = new PortConfig();
+		pConfig.setPortName("foo3");
+		range = new VLANRange();
+		range.setVlanAvail((short)103,true);
+		range.setVlanAvail((short)1000,true);
+		pConfig3.setVLANRange(range);
+		slicer.setPortConfig("foo3", pConfig3);
+		
+		pConfig5 = new PortConfig();
+		pConfig.setPortName("foo5");
+		range = new VLANRange();
+		range.setVlanAvail((short)105,true);
+		range.setVlanAvail((short)1000,true);
+		pConfig5.setVLANRange(range);
+		slicer.setPortConfig("foo5", pConfig5);
+		
+		slicer.setSwitch(sw);
+	}
+	
+	@Test
+	public void testSliceStatsAllAllowed() {
+		List <OFStatistics> slicedStats = FlowStatSlicer.SliceStats(slicer, allowedStats);
+		assertEquals("Number of sliced stat is same as number of total stats", slicedStats.size(), allowedStats.size());
+	}
+	
+	@Test
+	public void testSliceStatsMixed(){
+		List <OFStatistics> slicedStats = FlowStatSlicer.SliceStats(slicer, mixedStats);
+		
+	}
+	
+	@Test
+	public void testSliceStatsNull(){
+		thrown.expect(IllegalArgumentException.class);
+		thrown.expectMessage("FlowStat slicer got null stats!!");
+		List <OFStatistics> slicedStats = FlowStatSlicer.SliceStats(slicer, null);
+
+	}
+	
+	@Test
+	public void testSliceStatsNonAllowed(){
+		List <OFStatistics> slicedStats = FlowStatSlicer.SliceStats(slicer, noAllowedStats);
+		assertNotNull("Sliced Stats with no allowed stats returned ok",slicedStats);
+		assertEquals("Sliced stats", slicedStats.size(),0);
+	}
+	
+	@Test
+	public void testSliceStatsNoStats(){
+		List <OFStatistics> slicedStats = FlowStatSlicer.SliceStats(slicer, new ArrayList<OFStatistics>());
+		assertNotNull("Sliced Stats with no allowed stats returned ok",slicedStats);
+		assertEquals("Sliced stats", 0, slicedStats.size());
+	}
+	
+
+}

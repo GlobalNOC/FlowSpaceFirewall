@@ -1,0 +1,27 @@
+<configuration scan="true">
+
+  <appender name="file" class="ch.qos.logback.core.FileAppender">
+    <file>/tmp/fsf.log</file>
+    <append>true</append>
+    <encoder>
+      <pattern>%date{yyyy-MM-dd HH:mm:ss.S} %-5level [%logger{15}] %msg%n</pattern>
+    </encoder>
+  </appender>
+
+  <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+    <encoder>
+      <pattern>%date{yyyy-MM-dd HH:mm:ss.S} %-5level [%logger{15}] %msg%n</pattern>
+    </encoder>
+  </appender>
+
+  <root level="WARN">
+    <appender-ref ref="STDOUT" />
+    <appender-ref ref="file" />
+  </root>
+  <logger name="edu" level="WARN"/>
+  <logger name="org" level="WARN"/>
+  <logger name="LogService" level="WARN"/> <!-- Restlet access logging -->
+  <logger name="net.floodlightcontroller" level="WARN"/>
+  <logger name="net.floodlightcontroller.logging" level="WARN"/>
+  <logger name="org.sdnplatform" level="WARN"/>
+</configuration>

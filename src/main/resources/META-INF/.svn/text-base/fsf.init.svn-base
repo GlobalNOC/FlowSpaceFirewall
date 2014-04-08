@@ -1,0 +1,139 @@
+#!/bin/sh
+
+
+. /etc/rc.d/init.d/functions
+
+PIDFILE=/var/run/fsf.pid
+LOCK_FILE=/var/lock/fsf
+STOP_TIMEOUT=20
+RESTART_DELAY=10
+USER=_oess
+# Set paths
+FL_HOME="/usr/share/fsf"
+FL_LOGBACK="/etc/fsf/logback.xml"
+
+# Set JVM options
+JVM_OPTS=""
+JVM_OPTS="$JVM_OPTS -server -d64"
+JVM_OPTS="$JVM_OPTS -Xmx2g -Xms2g -Xmn800m"
+JVM_OPTS="$JVM_OPTS -XX:+UseParallelGC -XX:+AggressiveOpts -XX:+UseFastAccessorMethods"
+JVM_OPTS="$JVM_OPTS -XX:MaxInlineSize=8192 -XX:FreqInlineSize=8192"
+JVM_OPTS="$JVM_OPTS -XX:CompileThreshold=1500 -XX:PreBlockSpin=8"
+JVM_OPTS="$JVM_OPTS -Dpython.security.respectJavaAccessibility=false"
+
+echo
+CMD="java ${JVM_OPTS} -Dlogback.configurationFile=${FL_LOGBACK} -cp ${FL_HOME}/floodlight.jar:${FL_HOME}/flowspace_firewall.jar net.floodlightcontroller.core.Main"
+
+pid_status() {
+    pid=
+    if [ -f "${PIDFILE}" ] ; then
+        local line p
+	
+        [ ! -r "${PIDFILE}" ] && return 4 # "user had insufficient privilege"
+        while : ; do
+            read line
+            [ -z "$line" ] && break
+            for p in $line ; do
+                [ -z "${p//[0-9]/}" -a -d "/proc/$p" ] && pid="$pid $p"
+            done
+        done < "${PIDFILE}"
+
+        if [ -n "$pid" ]; then
+
+            return 0
+        fi
+
+        return 1 # "Program is dead and /var/run pid file exists"
+    fi
+
+    return 3 # "Program is not running"
+}
+
+#functions
+start(){
+    pid_status
+    status=$?
+    echo -n $"Starting FSF: "
+    if [ "$status" -gt "0" ];
+    then
+	sudo -u fsf $CMD 2>&1 &
+	PID=$!
+	RETVAL=$?
+	[ $RETVAL = 0 ] && touch ${LOCK_FILE}
+	[ "$?" -eq 0 ] && success $"java startup" || failure $"java startup"
+	echo
+	echo ${PID} > ${PIDFILE}
+	return $RETVAL
+    else
+	echo "Unable to start because FSF is already running"
+	failure $"FSF startup"
+	echo
+	return 0
+    fi
+}
+
+stop(){
+    echo -n $"Stopping FSF: "
+    killproc -p ${PIDFILE} -d ${STOP_TIMEOUT} java
+    RETVAL=$?
+    echo
+    [ $RETVAL = 0 ] && rm -f ${LOCK_FILE} ${PIDFILE}
+}
+
+reload(){
+    echo -n $"Reloading FSF: "
+    curl -S http://localhost:8080/fsf/admin/json
+    RETVLAN=$?
+    echo
+}
+#handle arguments
+ERROR=0
+ARGV="$@"
+if [ -z "$ARGV" ] ; then
+    ARGS="help"
+fi
+
+for ARG in $@ $ARGS
+do
+    case $ARG in
+    start)
+        start
+        ;;
+    stop)
+        stop
+        ;;
+    restart)
+        stop
+        sleep $RESTART_DELAY
+        start
+        ;;
+        status)
+            status -p ${PIDFILE} FSF
+        ;;
+    reload)
+	reload
+        ;;
+    *)
+        echo "usage: $0 (start|stop|restart|help)"
+        cat <<EOF
+EOF
+
+start      - start FlowSpace Firewall
+stop       - stop FlowSpace Firewall
+restart    - restart FlowSpace Firewall if running
+reload     - reload FSFs config
+status     - status of FlowSpace Firewall
+help       - this screen
+
+EOF
+        ERROR=2
+    ;;
+
+    esac
+
+done
+
+exit $ERROR
+EOF
+
+daemon $CMD

@@ -1,0 +1,247 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- WARNING: Eclipse auto-generated file.
+              Any modifications will be overwritten.
+              To include a user specific buildfile here, simply create one in the same
+              directory with the processing instruction <?eclipse.ant.import?>
+              as the first entry and export the buildfile again. -->
+<project basedir="." default="build" name="flowspace_firewall">
+    <property environment="env"/>
+    <property name="floodlight.location" value="../floodlight"/>
+    <property name="ECLIPSE_HOME" value="../../../Applications/eclipse"/>
+    <property name="debuglevel" value="source,lines,vars"/>
+    <property name="target" value="1.6"/>
+    <property name="source" value="1.6"/>
+    <path id="floodlight.classpath">
+        <pathelement location="lib/commons-collections4-4.0.jar" />
+        <pathelement location="${floodlight.location}/target/bin" />
+        <pathelement location="${floodlight.location}/target/bin-test" />
+        <pathelement location="${floodlight.location}/lib/args4j-2.0.16.jar"/>
+        <pathelement location="${floodlight.location}/lib/cglib-nodep-2.2.2.jar"/>
+        <pathelement location="${floodlight.location}/lib/concurrentlinkedhashmap-lru-1.2.jar"/>
+        <pathelement location="${floodlight.location}/lib/derby-10.9.1.0.jar"/>
+    	<pathelement location="${floodlight.location}/lib/commons-collections4-4.0.jar"/>
+        <pathelement location="${floodlight.location}/lib/findbugs-annotations-2.0.1.jar"/>
+        <pathelement location="${floodlight.location}/lib/findbugs-jsr305-2.0.1.jar"/>
+        <pathelement location="${floodlight.location}/lib/guava-13.0.1.jar"/>
+        <pathelement location="${floodlight.location}/lib/jackson-annotations-2.1.4.jar"/>
+        <pathelement location="${floodlight.location}/lib/jackson-core-2.1.4.jar"/>
+        <pathelement location="${floodlight.location}/lib/jackson-databind-2.1.4.jar"/>
+        <pathelement location="${floodlight.location}/lib/jackson-dataformat-csv-2.1.4.jar"/>
+        <pathelement location="${floodlight.location}/lib/jackson-dataformat-smile-2.1.4.jar"/>
+        <pathelement location="${floodlight.location}/lib/jackson-dataformat-xml-2.1.4.jar"/>
+        <pathelement location="${floodlight.location}/lib/jackson-dataformat-yaml-2.1.4.jar"/>
+        <pathelement location="${floodlight.location}/lib/junit-4.8.2.jar"/>
+        <pathelement location="${floodlight.location}/lib/jython-2.5.2.jar"/>
+        <pathelement location="${floodlight.location}/lib/libthrift-0.9.0.jar"/>
+        <pathelement location="${floodlight.location}/lib/logback-classic-1.0.0.jar"/>
+        <pathelement location="${floodlight.location}/lib/logback-core-1.0.0.jar"/>
+        <pathelement location="${floodlight.location}/lib/netty-3.2.6.Final.jar"/>
+        <pathelement location="${floodlight.location}/lib/objenesis-1.2.jar"/>
+        <pathelement location="${floodlight.location}/lib/org.easymock-3.1.jar"/>
+        <pathelement location="${floodlight.location}/lib/org.restlet-2.2M3.jar"/>
+        <pathelement location="${floodlight.location}/lib/org.restlet.ext.jackson-2.2M3.jar"/>
+        <pathelement location="${floodlight.location}/lib/org.restlet.ext.simple-2.2M3.jar"/>
+        <pathelement location="${floodlight.location}/lib/org.restlet.ext.slf4j-2.2M3.jar"/>
+        <pathelement location="${floodlight.location}/lib/simple-5.1.1.jar"/>
+        <pathelement location="${floodlight.location}/lib/slf4j-api-1.6.4.jar"/>
+    </path>
+    <path id="flowspace_firewall.classpath">
+        <pathelement location="bin"/>
+        <pathelement location="${floodlight.location}/lib"/>
+        <path refid="floodlight.classpath"/>
+    </path>
+    <path id="run.FloodlightLaunch.bootclasspath">
+        <fileset dir="${java.home}/lib" includes="*.jar"/>
+        <fileset dir="${java.home}/lib/ext" includes="*.jar"/>
+    </path>
+    <path id="classpath-test">
+    	<pathelement location="${floodlight.location}/lib"/>
+    	<path refid="floodlight.classpath"/>
+    	<pathelement location="bin"/>
+    </path>
+	<patternset id="lib">
+		<include name="commons-collections4-4.0.jar"/>
+	</patternset>
+    <patternset id="lib-test">
+        <include name="junit-4.8.2.jar"/>
+        <include name="org.easymock-3.1.jar"/>
+        <include name="objenesis-1.2.jar"/>  <!-- required by easymock to mock classes -->
+        <include name="cglib-nodep-2.2.2.jar"/>    <!-- required by easymock to mock classes -->
+    </patternset>
+	
+    <patternset id="lib-cobertura">
+        <include name="cobertura-1.9.4.1.jar"/>
+        <include name="asm-3.0.jar"/>
+        <include name="asm-tree-3.0.jar"/>
+        <include name="oro/jakarta-oro-2.0.8.jar"/>
+        <include name="log4j-1.2.9.jar"/>
+    </patternset>
+	
+    <path id="classpath-cobertura">
+        <fileset dir="${floodlight.location}/lib/">
+            <patternset refid="lib-cobertura"/>
+    	</fileset>
+    </path>
+	
+	<taskdef classpathref="classpath-cobertura" resource="tasks.properties"/>
+	
+	
+    <target name="init">
+        <mkdir dir="bin"/>
+        <copy includeemptydirs="false" todir="bin">
+            <fileset dir="src/main/java">
+                <exclude name="**/*.java"/>
+            </fileset>
+        </copy>
+    	<mkdir dir="bin-test"/>    
+	    	<copy includeemptydirs="false" todir="bin">
+    	    <fileset dir="src/test/java">
+        	    <exclude name="**/*.java"/>
+        	</fileset>
+	    </copy>
+    	<mkdir dir="test"/>
+    	<mkdir dir="reports/"/>
+    </target>
+	
+    <target name="clean" depends="clean-instrument,clean-test">
+        <delete dir="bin"/>
+    </target>
+	
+    <target depends="clean" name="cleanall">
+        <ant antfile="build.xml" dir="${floodlight.location}" inheritAll="false" target="clean"/>
+    </target>
+	
+    <target depends="build-subprojects,build-project" name="build"/>
+    <target name="build-subprojects">
+        <ant antfile="build.xml" dir="${floodlight.location}" inheritAll="false" target="dist">
+            <propertyset>
+                <propertyref name="build.compiler"/>
+            </propertyset>
+        </ant>
+    </target>
+	
+    <target depends="init" name="build-project">
+        <echo message="${ant.project.name}: ${ant.file}"/>
+        <javac debug="true" debuglevel="${debuglevel}" destdir="bin" includeantruntime="false" source="${source}" target="${target}">
+            <src path="src/main/java"/>
+            <classpath refid="flowspace_firewall.classpath"/>
+        </javac>
+    </target>
+	
+    <target description="Build all projects which reference this project. Useful to propagate changes." name="build-refprojects"/>
+    <target description="copy Eclipse compiler jars to ant lib directory" name="init-eclipse-compiler">
+        <copy todir="${ant.library.dir}">
+            <fileset dir="${ECLIPSE_HOME}/plugins" includes="org.eclipse.jdt.core_*.jar"/>
+        </copy>
+        <unzip dest="${ant.library.dir}">
+            <patternset includes="jdtCompilerAdapter.jar"/>
+            <fileset dir="${ECLIPSE_HOME}/plugins" includes="org.eclipse.jdt.core_*.jar"/>
+        </unzip>
+    </target>
+    <target description="compile project with Eclipse compiler" name="build-eclipse-compiler">
+        <property name="build.compiler" value="org.eclipse.jdt.core.JDTCompilerAdapter"/>
+        <antcall target="build"/>
+    </target>
+    <target name="FloodlightLaunch">
+        <java classname="net.floodlightcontroller.core.Main" failonerror="true" fork="yes">
+            <classpath refid="flowspace_firewall.classpath"/>
+            <bootclasspath>
+                <path refid="run.FloodlightLaunch.bootclasspath"/>
+            </bootclasspath>
+        </java>
+    </target>
+	
+
+	
+	<target name="compile-tests" depends="compile-test"/>
+	<target name="compile-test" depends="build-project">
+	    <javac includeAntRuntime="false" debug="true" 
+	       srcdir="src/test/java"
+	       classpath="bin/"
+	       classpathref="flowspace_firewall.classpath"
+	       destdir="bin-test/"/>
+	</target>
+	
+	<target name="test" depends="compile-test">
+		<junit fork="true" forkmode="once"
+	    	failureproperty="junit.failure"
+	        printsummary="on">
+       
+			<sysproperty key="net.sourceforge.cobertura.datafile"
+	        		file="${target}/cobertura.ser" /> 
+			
+	        <classpath>
+	        	<pathelement location="reports/coverage"/>
+	        	<pathelement location="bin-coverage/" />
+	            <pathelement location="bin/"/>
+	            <pathelement location="bin-test/"/>
+	            <path refid="classpath-test"/>
+	        	<path refid="classpath-cobertura"/>
+	        </classpath>
+	        <formatter type="xml" usefile="true" />
+	       	<batchtest todir="test/">
+	        	<fileset dir="src/test/java/">
+	            	<include name="**/*.java"/>
+	            </fileset>
+	        </batchtest>
+	    </junit>
+		<mkdir dir="reports/" />
+		<junitreport todir="reports/">
+		  <fileset dir="test/">
+		    <include name="TEST-*.xml"/>
+		  </fileset>
+		  <report format="frames" todir="reports/html"/>
+		</junitreport>
+		<fail if="junit.failure" message="Unit test(s) failed.  See reports!"/>
+	</target>
+	
+    <target name="dist" depends="build-project,compile-test">
+        <jar destfile="bin/flowspace_firewall.jar" filesetmanifest="mergewithoutmain">
+            <fileset dir="bin/"/>
+        	<zipgroupfileset dir="lib/">
+        		<patternset refid="lib"/>
+        	</zipgroupfileset>
+        </jar>
+    </target>
+	
+	<target name="clean-test">
+		<delete dir="test/" />
+		<delete dir="bin-test/" />
+	</target>
+	
+	<target name="clean-instrument">
+	    <delete file="${target}/cobertura.ser"/>
+		<delete dir="bin-coverage/" />
+	    <delete dir="reports/"/>
+		<delete dir="coverage/"/>
+	</target>
+	
+	
+    <target name="instrument" depends="build-project,compile-test,clean-instrument">
+    	<mkdir dir="bin-coverage"/>
+    	<mkdir dir="${target}"/>
+
+    	<cobertura-instrument datafile="${target}/cobertura.ser"
+                todir="bin-coverage/"
+                classpathref="classpath-cobertura">
+      	<fileset dir="bin/">
+        	<include name="**/*.class"/>
+    	</fileset>
+      </cobertura-instrument>
+    </target>
+	
+	<target name="coverage-report">
+    	<mkdir dir="coverage/" />
+		<cobertura-report format="html"
+	    	datafile="${target}/cobertura.ser"
+	        destdir="coverage/"
+	        srcdir="src/main/java"/>
+	    <cobertura-report format="xml"
+	        datafile="${target}/cobertura.ser"
+	        destdir="coverage/"
+	        srcdir="src/main/java"/>
+    </target>
+	
+	<target name="coverage" depends="instrument,test,coverage-report"/>
+	
+</project>
