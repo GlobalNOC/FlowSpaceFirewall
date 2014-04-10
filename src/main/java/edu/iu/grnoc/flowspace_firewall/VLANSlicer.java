@@ -106,6 +106,18 @@ public class VLANSlicer implements Slicer{
 	
 	public void setPortConfig(String portName, PortConfig portConfig){
 		portList.put(portName, portConfig);
+		if(this.sw != null){
+			Iterator <ImmutablePort> portIterator = sw.getPorts().iterator();
+			while(portIterator.hasNext()){
+				ImmutablePort port = portIterator.next();
+				log.debug("port: " + port.getName() + ":" + port.getPortNumber());
+				if(port.getName().equals(portName)){
+					PortConfig ptCfg = this.getPortConfig(port.getName());
+					ptCfg.setPortId(port.getPortNumber());
+					log.debug("Set port " + portConfig.getPortName() + " to port id " + port.getPortNumber());
+				}
+			}
+		}
 	}
 	
 	/**
@@ -184,54 +196,65 @@ public class VLANSlicer implements Slicer{
 		return portList.get(portName);
 	}
 	
-	private List<OFFlowMod> expandActions(OFFlowMod flowMod){
+	private OFFlowMod expandActions(OFFlowMod flowMod){
+		
 		List<OFAction> actions = flowMod.getActions();
-		List<OFFlowMod> flowMods = new ArrayList<OFFlowMod>();
-		flowMods.add(flowMod);
+		
+		if(actions == null || actions.isEmpty()){
+			return null;
+		}
+		
+		List<OFAction> newActions = new ArrayList<OFAction>();
 		
 		for(OFAction action : actions){
-		
-			for(OFFlowMod currFlowMod : flowMods){
-				if(action.getType() == OFActionType.OUTPUT){
-					OFActionOutput output = (OFActionOutput) action;
-					if(output.getPort() == OFPort.OFPP_ALL.getValue()){
-						flowMods.remove(currFlowMod);
-						//first remove the current flow from the flowMods list
-						//loop through all interfaces we have access to 
-						//and add them to the list
-						for(Map.Entry<String, PortConfig> port : this.portList.entrySet()){
-							//need to remove the existing and add this in the same place
-							Integer index = actions.indexOf(action);
-						
-							OFActionOutput newAct;
-							OFFlowMod newFlow;
-							try {
-								newAct = (OFActionOutput) action.clone();
-								newFlow = currFlowMod.clone();
-							} catch (CloneNotSupportedException e) {
-								// TODO Auto-generated catch block
-								//log.error(e.printStackTrace());
-								log.error("Unable to clone the output action or flow");
-								log.error(e.getMessage());
-								flowMods.clear();
-								return flowMods;
-							}
+			log.debug("Checking Action Type: " + action.getType().name());
+			
+			if(action.getType() == OFActionType.OUTPUT){
+				OFActionOutput output = (OFActionOutput) action;
+				if(output.getPort() == OFPort.OFPP_ALL.getValue()){
+					log.debug("Expanding Action OUTPUT: ALL");
+					//first remove the current flow from the flowMods list
+					//loop through all interfaces we have access to 
+					//and add them to the list
+					
+					for(Map.Entry<String, PortConfig> port : this.portList.entrySet()){
 							
-							//replace the existing action
-							List<OFAction> newActions = newFlow.getActions();
-							newAct.setPort(port.getValue().getPortId());
-							newActions.add(index, newAct);
-							newFlow.setActions(newActions);
-							flowMods.add(newFlow);
+						OFActionOutput newAct;
+						try {
+							newAct = (OFActionOutput) action.clone();
+						} catch (CloneNotSupportedException e) {
+							// TODO Auto-generated catch block
+							//log.error(e.printStackTrace());
+							log.error("Unable to clone the output action");
+							log.error(e.getMessage());
+							return null;
 						}
-					}else if(output.getPort() == OFPort.OFPP_FLOOD.getValue()){
-						flowMods.clear();
-						return flowMods;
+						
+						newAct.setPort(port.getValue().getPortId());
+						newActions.add(newAct);
 					}
+					
+				}else if(output.getPort() == OFPort.OFPP_FLOOD.getValue()){
+					return null;
+				}else{
+					//nothing to do here
+					log.debug("Not an output of type all or flood");
+					newActions.add(action);
 				}
 			}
-		}	
-		return flowMods;
+		}
+		
+		OFFlowMod newFlow;
+		try {
+			newFlow = flowMod.clone();
+		} catch (CloneNotSupportedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			return null;
+		}
+		newFlow.setActions(newActions);
+		return newFlow;
+		
 	}
 	
 	/**
@@ -316,6 +339,10 @@ public class VLANSlicer implements Slicer{
 		List <OFFlowMod> flowMods = new ArrayList<OFFlowMod>();
 		OFMatch match = flowMod.getMatch();
 		
+		if(match == null){
+			return flowMods;
+		}
+		
 		//if you wildcarded the vlan then tough we are blowing up now
 		//we require an input vlan
 		if(match.getDataLayerVirtualLan() == 0){
@@ -344,18 +371,17 @@ public class VLANSlicer implements Slicer{
 						//allowed or not?
 						log.debug("Attempting to verify expansion is allowed for port: " + newFlow.getMatch().getInputPort());
 						//now to check and see if we need to expand because of output actions!
+						log.debug("Attempting to expand actions");
 						//expand actions
-						List<OFFlowMod> expanded_actions = this.expandActions(newFlow);
+						OFFlowMod expandedFlow = this.expandActions(newFlow);
 						
-						for(OFFlowMod expanded_flow : expanded_actions){
 						
-							if(this.isFlowAllowed(expanded_flow)){
-								flowMods.add(expanded_flow);
-							}else{
-								log.debug("Got back a null so its not allowed :(");
-								flowMods.clear();
-								return flowMods;
-							}
+						if(this.isFlowAllowed(expandedFlow)){
+							flowMods.add(expandedFlow);
+						}else{
+							log.debug("denied Flow " + expandedFlow.toString());
+							flowMods.clear();
+							return flowMods;
 						}
 					}catch (CloneNotSupportedException e){
 						log.error("This can't happen in the real world");
@@ -368,6 +394,7 @@ public class VLANSlicer implements Slicer{
 			//a quick optimization
 			//if the number of flowMods = the number of ports on the switch
 			//original flow mod is good
+			log.debug("comparing number of flowMods to number of interfaces " + flowMods.size() + ":" + sw.getPorts().size());
 			if(flowMods.size() == sw.getPorts().size()){
 				log.debug("Number of flow rules matches the number if interfaces... original flow is good!");
 				flowMods.clear();
@@ -375,14 +402,21 @@ public class VLANSlicer implements Slicer{
 			}
 		}else{
 			//no expansion necessary
-			log.debug("No Expansion");
-			if(this.isFlowAllowed(flowMod)){
-				flowMods.add(flowMod);
+			log.debug("No Match Expansion");
+			
+			log.debug("Attempting to expand actions");
+			//expand actions
+			OFFlowMod expandedFlow = this.expandActions(flowMod);
+			
+			if(this.isFlowAllowed(expandedFlow)){
+				flowMods.add(expandedFlow);
 			}else{
+				log.debug("Denied flow " + expandedFlow.toString());
+				flowMods.clear();
 				return flowMods;
 			}
 		}
-		
+		log.debug("FLows: " + flowMods.toString());
 		return flowMods;
 	}
 	

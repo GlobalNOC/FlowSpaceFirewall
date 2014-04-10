@@ -32,6 +32,7 @@ import org.junit.Before;
 import org.openflow.protocol.OFFlowMod;
 import org.openflow.protocol.OFMatch;
 import org.openflow.protocol.OFPacketOut;
+import org.openflow.protocol.OFPort;
 import org.openflow.protocol.action.OFAction;
 import org.openflow.protocol.action.OFActionOutput;
 import org.openflow.protocol.action.OFActionVirtualLanIdentifier;
@@ -246,7 +247,7 @@ public class VLANSlicerTest {
 
 		
 		List <OFFlowMod> flows = slicer.allowedFlows(flow);
-		assertTrue("flows is the right size", flows.size() == 1);
+		assertTrue("flows is the right size " + flows.size(), flows.size() == 1);
 		assertEquals("flow was allowed and matches", flow, flows.get(0));
 		
 		
@@ -305,7 +306,7 @@ public class VLANSlicerTest {
 		OFFlowMod flow = new OFFlowMod();
 		OFMatch match = new OFMatch();
 		match.setInputPort((short)1);
-		match.setDataLayerVirtualLan((short)100);
+		match.setDataLayerVirtualLan((short)1000);
 		flow.setMatch(match);
 		List<OFAction> actions = new ArrayList<OFAction>();
 		OFActionVirtualLanIdentifier setVid = new OFActionVirtualLanIdentifier();
@@ -342,31 +343,60 @@ public class VLANSlicerTest {
 		flow.setMatch(match);
 		flow.setActions(actions);
 		List<OFFlowMod>flows = slicer.allowedFlows(flow);
-		assertNotNull("flow was denied",flows);
+		assertTrue("flow was denied",flows.size() != 0);
 		assertTrue("Flow Expansion worked", flows.size() == 5);
 
-		PortConfig tmpPConfig = slicer.getPortConfig("foo");
+		PortConfig tmpPConfig = new PortConfig();
+		tmpPConfig.setPortName("foo4");
 		VLANRange range = new VLANRange();
 		range.setVlanAvail((short)100, true);
-		range.setVlanAvail((short)1000, false);
+		range.setVlanAvail((short)1000, true);
 		tmpPConfig.setVLANRange(range);
-		flows = slicer.allowedFlows(flow);
-		assertEquals("flow was denied", flows.size(),0);
-	
-		range.setVlanAvail((short)1000, true);
-		PortConfig pConfig4 = new PortConfig();
-		pConfig4.setPortName("foo4");
-		range = new VLANRange();
-		range.setVlanAvail((short)104, true);
-		range.setVlanAvail((short)1000, true);
-		pConfig4.setVLANRange(range);
-		pConfig4.setPortId((short)4);
-		slicer.setPortConfig("foo4", pConfig4);
+		slicer.setPortConfig("foo4", tmpPConfig);
 		
+
 		flows = slicer.allowedFlows(flow);
-		assertNotNull("flow was denied",flows);
-		assertTrue("Flow Expansion worked, and then we detected it was total number of ports so changed to just 1", flows.size() == 1);
+		assertTrue("flow was denied",flows.size() != 0);
+		assertTrue("Flow Expansion worked, and then we detected it was total number of ports so changed to just 1, got " + flows.size(), flows.size() == 1);
 		
 	}
 
+	/**
+	 * tests isFlowModAllowed for expansions
+	 */
+	@Test 
+	public void testIsFlowModALLAllowedExpansions(){
+		List<OFAction> actions = new ArrayList<OFAction>();
+		OFActionOutput output = new OFActionOutput();
+		OFActionVirtualLanIdentifier setVid = new OFActionVirtualLanIdentifier();
+		setVid.setVirtualLanIdentifier((short)1000);
+		actions.add(setVid);
+		output.setPort(OFPort.OFPP_ALL.getValue());
+		actions.add(output);
+		
+		PortConfig pConfig5 = new PortConfig();
+		pConfig5.setPortName("foo5");
+		VLANRange range = new VLANRange();
+		range.setVlanAvail((short)104, true);
+		range.setVlanAvail((short)1000, true);
+		pConfig5.setVLANRange(range);
+		slicer.setPortConfig("foo5", pConfig5);
+		
+		OFFlowMod flow = new OFFlowMod();
+		OFMatch match = new OFMatch();
+		match.setInputPort((short)1);
+		match.setDataLayerVirtualLan((short)1000);
+		flow.setMatch(match);
+		flow.setActions(actions);
+		
+		List<OFFlowMod>flows = slicer.allowedFlows(flow);
+		
+		assertTrue("flow was denied",flows.size() != 0);
+		assertTrue("Flow Expansion worked had a size of " + flows.size(), flows.size() == 1);
+		
+		OFFlowMod expanded = flows.get(0);
+		assertTrue("Correct number of actions", expanded.getActions().size() == 5);
+		
+	}
+	
 }
