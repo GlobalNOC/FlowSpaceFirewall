@@ -26,13 +26,13 @@ import org.openflow.protocol.OFPacketOut;
 public interface Slicer {
 
 	List <OFFlowMod> allowedFlows(OFFlowMod flow);
+	List<OFPacketOut> allowedPacketOut(OFPacketOut output);
 	void setController(InetSocketAddress addr);
 	InetSocketAddress getControllerAddress();
 	void setSwitch(IOFSwitch mySwitch);
 	void setMaxFlows(int numberOfFlows);
 	void setFlowRate(int flowRate);
 	boolean isGreaterThanMaxFlows(int numberOfFlows);
-	boolean isPacketOutAllowed(OFPacketOut output);
 	boolean isPortPartOfSlice(String portName);
 	boolean isPortPartOfSlice(short portId);
 	void setPortConfig(String portName, PortConfig pConfig);
