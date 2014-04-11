@@ -37,7 +37,7 @@ public class FlowSpaceFirewallWebRoutable implements RestletRoutable {
 
 	@Override
 	public String basePath() {
-		return "/fsf";
+		return "/fsfw";
 	}
 
 }
