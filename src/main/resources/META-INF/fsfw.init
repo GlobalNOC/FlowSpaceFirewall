@@ -4,13 +4,13 @@
 . /etc/rc.d/init.d/functions
 
 PIDFILE=/var/run/fsf.pid
-LOCK_FILE=/var/lock/fsf
+LOCK_FILE=/var/lock/fsfw
 STOP_TIMEOUT=20
 RESTART_DELAY=10
 USER=_oess
 # Set paths
-FL_HOME="/usr/share/fsf"
-FL_LOGBACK="/etc/fsf/logback.xml"
+FL_HOME="/usr/share/fsfw"
+FL_LOGBACK="/etc/fsfw/logback.xml"
 
 # Set JVM options
 JVM_OPTS=""
@@ -56,7 +56,7 @@ start(){
     echo -n $"Starting FSF: "
     if [ "$status" -gt "0" ];
     then
-	sudo -u fsf $CMD 2>&1 &
+	sudo -u fsfw $CMD 2>&1 &
 	PID=$!
 	RETVAL=$?
 	[ $RETVAL = 0 ] && touch ${LOCK_FILE}
@@ -65,15 +65,15 @@ start(){
 	echo ${PID} > ${PIDFILE}
 	return $RETVAL
     else
-	echo "Unable to start because FSF is already running"
-	failure $"FSF startup"
+	echo "Unable to start because FSFw is already running"
+	failure $"FSFw startup"
 	echo
 	return 0
     fi
 }
 
 stop(){
-    echo -n $"Stopping FSF: "
+    echo -n $"Stopping FSFw: "
     killproc -p ${PIDFILE} -d ${STOP_TIMEOUT} java
     RETVAL=$?
     echo
@@ -81,8 +81,8 @@ stop(){
 }
 
 reload(){
-    echo -n $"Reloading FSF: "
-    curl -S http://localhost:8080/fsf/admin/json
+    echo -n $"Reloading FSFW: "
+    curl -S http://localhost:8080/fsfw/admin/json
     RETVLAN=$?
     echo
 }

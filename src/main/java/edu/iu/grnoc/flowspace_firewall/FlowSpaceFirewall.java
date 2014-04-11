@@ -185,7 +185,7 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 		//need to put it in place
 
 		try {
-			this.slices = ConfigParser.parseConfig("/etc/fsf/fsf.xml");
+			this.slices = ConfigParser.parseConfig("/etc/fsfw/fsfw.xml");
 			//newSlices is a clone so we can modify it without modifying slices
 			//we will use this to figure out which ones we have updated and which
 			//slices need to be created and connected to a currently active switch
