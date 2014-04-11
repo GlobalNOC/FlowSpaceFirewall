@@ -35,6 +35,7 @@ import org.openflow.protocol.OFPacketOut;
 import org.openflow.protocol.OFPort;
 import org.openflow.protocol.action.OFAction;
 import org.openflow.protocol.action.OFActionOutput;
+import org.openflow.protocol.action.OFActionType;
 import org.openflow.protocol.action.OFActionVirtualLanIdentifier;
 
 public class VLANSlicerTest {
@@ -214,9 +215,17 @@ public class VLANSlicerTest {
 	 * tests packetOut event slicing
 	 */
 	@Test
-	public void testIsPacketOutAllowed(){
+	public void testAllowedPacketOut(){
 		
 		OFPacketOut out = new OFPacketOut();
+		List<OFAction> actions = new ArrayList<OFAction>();
+		OFAction act = new OFAction();
+		act.setType(OFActionType.OUTPUT);
+		OFActionOutput output = (OFActionOutput) act;
+		output.setPort((short)1);
+		actions.add(act);
+		out.setActions(actions);
+		
 		
 		
 		
