@@ -36,7 +36,7 @@ rm -rf $RPM_BUILD_ROOT
 
 %{__install} jars/*.jar %{buildroot}//usr/share/fsfw/
 %{__install} conf/*.xml %{buildroot}/etc/fsfw/
-%{__install} conf/fsf.init %{buildroot}/etc/init.d/fsfw
+%{__install} conf/fsfw.init %{buildroot}/etc/init.d/fsfw
 
 # clean up buildroot                                                                                                                                                                                                   
 find %{buildroot} -name .packlist -exec %{__rm} {} \;

@@ -3,7 +3,7 @@
 
 . /etc/rc.d/init.d/functions
 
-PIDFILE=/var/run/fsf.pid
+PIDFILE=/var/run/fsfw.pid
 LOCK_FILE=/var/lock/fsfw
 STOP_TIMEOUT=20
 RESTART_DELAY=10
