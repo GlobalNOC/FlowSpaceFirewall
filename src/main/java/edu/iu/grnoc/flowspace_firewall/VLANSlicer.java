@@ -274,17 +274,29 @@ public class VLANSlicer implements Slicer{
 		
 	}
 	
+	private OFPacketOut clonePacketOut(OFPacketOut packet){
+		OFPacketOut newOut = new OFPacketOut();
+		newOut.setActions(packet.getActions());
+		newOut.setPacketData(packet.getPacketData().clone());
+		newOut.setBufferId(packet.getBufferId());
+		newOut.setInPort(packet.getInPort());
+		newOut.setLength(packet.getLength());
+		newOut.setType(packet.getType());
+		newOut.setXid(packet.getXid());
+		return newOut;
+	}
+	
 	/**
 	 * process an OFPacketOut message to verify that it fits
 	 * in this slice properly.  We don't want one slice to
 	 * be able to inject traffic into another slice erroneously
-	 * @param output the OFPacketOUt message to be properly sliced
+	 * @param output the OFPacketOut message to be properly sliced
 	 */
 	
 	public List<OFPacketOut> allowedPacketOut(OFPacketOut outPacket){
+		List <OFAction> newActions = new ArrayList<OFAction>();
 		List <OFAction> actions = outPacket.getActions();
 		List <OFPacketOut> packets = new ArrayList<OFPacketOut>();
-		packets.add(outPacket);
 		Iterator <OFAction> it = actions.iterator();
 		OFMatch match = new OFMatch();
 		try{
@@ -305,42 +317,81 @@ public class VLANSlicer implements Slicer{
 					//if its a set vlan then change our current vlan
 					OFActionVirtualLanIdentifier setvid = (OFActionVirtualLanIdentifier)action;
 					curVlan = setvid.getVirtualLanIdentifier();
+					newActions.add(action);
 					break;
 				case OUTPUT:
 					//if its an output, verify that the 
 					OFActionOutput output = (OFActionOutput)action;
 					if(output.getPort() == OFPort.OFPP_ALL.getValue()){
 						log.info("output to ALL expanding");
-					}
-					
-					if(output.getPort() == OFPort.OFPP_FLOOD.getValue()){
+
+						
+						for(Map.Entry<String, PortConfig> port : this.portList.entrySet()){
+							PortConfig myPortCfg = this.getPortConfig(port.getValue().getPortId());
+							if(myPortCfg == null){
+								log.info("output packet disallowed to port:" + port.getValue().getPortId());
+								packets.clear();
+								return packets;
+							}
+							if(!myPortCfg.vlanAllowed(curVlan)){
+								log.info("Output packet disallowed for port:" + port.getValue().getPortId() + " and vlan: " + curVlan);
+								packets.clear();
+								return packets;
+							}
+							log.debug("Complicated case of OUTPUT ALL adding for port " + port.getValue().getPortId());
+							List<OFAction> actualActions = new ArrayList<OFAction>();
+							actualActions.addAll(newActions);
+							OFPacketOut newOut = this.clonePacketOut(outPacket);
+							OFActionOutput newOutput = new OFActionOutput();
+							newOutput.setType(OFActionType.OUTPUT);
+							newOutput.setPort(port.getValue().getPortId());
+							actualActions.add(newOutput);
+							newOut.setActions(actualActions);
+							packets.add(newOut);
+						}
+						
+					}else if(output.getPort() == OFPort.OFPP_FLOOD.getValue()){
 						log.info("output to flood not supported");
 						packets.clear();
 						return packets;
-					}
-					PortConfig myPortCfg = this.getPortConfig(output.getPort());
-					if(myPortCfg == null){
-						log.info("output packet disallowed to port:" + output.getPort());
-						packets.clear();
-						return packets;
-					}
-			
-					//only return false if we fail
-					//need to continue looping through on true case
-					if(!myPortCfg.vlanAllowed(curVlan)){
-						log.info("Output packet disallowed for port:" + output.getPort() + " and vlan: " + curVlan);
-						packets.clear();
-						return packets;
+					}else{
+						PortConfig myPortCfg = this.getPortConfig(output.getPort());
+						if(myPortCfg == null){
+							log.info("output packet disallowed to port:" + output.getPort());
+							packets.clear();
+							return packets;
+						}
+				
+						//only return false if we fail
+						//need to continue looping through on true case
+						if(!myPortCfg.vlanAllowed(curVlan)){
+							log.info("Output packet disallowed for port:" + output.getPort() + " and vlan: " + curVlan);
+							packets.clear();
+							return packets;
+						}
+						
+						log.debug("Simple case, single output and it was allowed");
+						List<OFAction> actualActions = new ArrayList<OFAction>();
+						actualActions.addAll(newActions);
+						OFPacketOut newOut = this.clonePacketOut(outPacket);
+						OFActionOutput newOutput = new OFActionOutput();
+						newOutput.setType(OFActionType.OUTPUT);
+						newOutput.setPort(output.getPort());
+						actualActions.add(newOutput);
+						newOut.setActions(actualActions);
+						packets.add(newOut);
 					}
 					break;
 				case STRIP_VLAN:
 					curVlan = 0;
+					newActions.add(action);
 					break;
 				default:
+					newActions.add(action);
 					break;
 			}
 		}
-		
+		log.debug("OutPackets: " + packets.toString());
 		return packets;
 	}
 	

@@ -27,6 +27,8 @@ import static org.junit.Assert.*;
 
 import net.floodlightcontroller.core.IOFSwitch;
 import net.floodlightcontroller.core.ImmutablePort;
+import net.floodlightcontroller.packet.Ethernet;
+
 import org.junit.Test;
 import org.junit.Before;
 import org.openflow.protocol.OFFlowMod;
@@ -219,17 +221,53 @@ public class VLANSlicerTest {
 		
 		OFPacketOut out = new OFPacketOut();
 		List<OFAction> actions = new ArrayList<OFAction>();
-		OFAction act = new OFAction();
-		act.setType(OFActionType.OUTPUT);
-		OFActionOutput output = (OFActionOutput) act;
+		OFActionOutput output = new OFActionOutput();
+		output.setType(OFActionType.OUTPUT);
 		output.setPort((short)1);
-		actions.add(act);
+		actions.add(output);
 		out.setActions(actions);
 		
+		Ethernet pkt = new Ethernet();
+		pkt.setVlanID((short)1000);
+		pkt.setDestinationMACAddress("aa:bb:cc:dd:ee:ff");
+		pkt.setSourceMACAddress("ff:ee:dd:cc:bb:aa");
+		pkt.setEtherType((short)35020);
+		out.setPacketData(pkt.serialize());
 		
+		List<OFPacketOut> outPackets = slicer.allowedPacketOut(out);
+		assertTrue("OutPacket size is correct, expected 1 got " + outPackets.size(), outPackets.size() == 1);
 		
-		
+		pkt.setVlanID((short)2000);
+		out.setPacketData(pkt.serialize());
+		outPackets = slicer.allowedPacketOut(out);
+		assertTrue("Packet out was denied", outPackets.size() == 0);
 	}
+	
+	/**
+	 * tests packetOut event slicing
+	 */
+	@Test
+	public void testAllowedPacketOutALL(){
+		
+		OFPacketOut out = new OFPacketOut();
+		List<OFAction> actions = new ArrayList<OFAction>();
+		OFActionOutput output = new OFActionOutput();
+		output.setType(OFActionType.OUTPUT);
+		output.setPort(OFPort.OFPP_ALL.getValue());
+		actions.add(output);
+		out.setActions(actions);
+		
+		Ethernet pkt = new Ethernet();
+		pkt.setVlanID((short)1000);
+		pkt.setDestinationMACAddress("aa:bb:cc:dd:ee:ff");
+		pkt.setSourceMACAddress("ff:ee:dd:cc:bb:aa");
+		pkt.setEtherType((short)35020);
+		out.setPacketData(pkt.serialize());
+		
+		List<OFPacketOut> outPackets = slicer.allowedPacketOut(out);
+		assertTrue("OutPacket size is correct, expected 5 got " + outPackets.size(), outPackets.size() == 5);
+	}
+	
 	
 	/**
 	 * tests the allowedFlows for matches (always an action that works)
