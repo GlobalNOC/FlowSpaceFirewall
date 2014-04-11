@@ -312,7 +312,7 @@ public class FlowStatSlicerTest {
 	
 	@Test
 	public void testSliceStatsMixed(){
-		List <OFStatistics> slicedStats = FlowStatSlicer.SliceStats(slicer, mixedStats);
+		//List <OFStatistics> slicedStats = FlowStatSlicer.SliceStats(slicer, mixedStats);
 		
 	}
 	
@@ -320,6 +320,7 @@ public class FlowStatSlicerTest {
 	public void testSliceStatsNull(){
 		thrown.expect(IllegalArgumentException.class);
 		thrown.expectMessage("FlowStat slicer got null stats!!");
+		@SuppressWarnings("unused")
 		List <OFStatistics> slicedStats = FlowStatSlicer.SliceStats(slicer, null);
 
 	}

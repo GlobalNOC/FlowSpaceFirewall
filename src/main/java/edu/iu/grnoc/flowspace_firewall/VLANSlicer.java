@@ -29,9 +29,11 @@ import net.floodlightcontroller.core.ImmutablePort;
 import org.openflow.protocol.OFFlowMod;
 import org.openflow.protocol.OFMatch;
 import org.openflow.protocol.OFPacketOut;
+import org.openflow.protocol.OFPort;
 import org.openflow.protocol.Wildcards.Flag;
 import org.openflow.protocol.action.OFAction;
 import org.openflow.protocol.action.OFActionOutput;
+import org.openflow.protocol.action.OFActionType;
 import org.openflow.protocol.action.OFActionVirtualLanIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -104,6 +106,18 @@ public class VLANSlicer implements Slicer{
 	
 	public void setPortConfig(String portName, PortConfig portConfig){
 		portList.put(portName, portConfig);
+		if(this.sw != null){
+			Iterator <ImmutablePort> portIterator = sw.getPorts().iterator();
+			while(portIterator.hasNext()){
+				ImmutablePort port = portIterator.next();
+				log.debug("port: " + port.getName() + ":" + port.getPortNumber());
+				if(port.getName().equals(portName)){
+					PortConfig ptCfg = this.getPortConfig(port.getName());
+					ptCfg.setPortId(port.getPortNumber());
+					log.debug("Set port " + portConfig.getPortName() + " to port id " + port.getPortNumber());
+				}
+			}
+		}
 	}
 	
 	/**
@@ -183,14 +197,106 @@ public class VLANSlicer implements Slicer{
 	}
 	
 	/**
+	 * expands the actions in a flowMod so that if we have an ALL
+	 * action it will be output to all ports but the port it came frome
+	 * @param flowMod
+	 * @return
+	 */
+	
+	private OFFlowMod expandActions(OFFlowMod flowMod){
+		//quick note... if we are here then we have already expanded
+		//the flow from wildcarded portId to individual portIds
+		//ie.. this is an ok assumption to make
+		Short portId = flowMod.getMatch().getInputPort();
+		
+		//get the list of actions
+		List<OFAction> actions = flowMod.getActions();
+		
+		if(actions == null || actions.isEmpty()){
+			log.debug("OFFlowMod actions are empty");
+			return null;
+		}
+		
+		List<OFAction> newActions = new ArrayList<OFAction>();
+		
+		for(OFAction action : actions){
+			log.debug("Checking Action Type: " + action.getType().name());
+			
+			if(action.getType() == OFActionType.OUTPUT){
+				OFActionOutput output = (OFActionOutput) action;
+				if(output.getPort() == OFPort.OFPP_ALL.getValue()){
+					log.debug("Expanding Action OUTPUT: ALL");
+					//first remove the current flow from the flowMods list
+					//loop through all interfaces we have access to 
+					//and add them to the list
+					
+					for(Map.Entry<String, PortConfig> port : this.portList.entrySet()){
+						//ALL should forward out all interfaces except the one the packet came from
+						if(port.getValue().getPortId() != portId){
+							OFActionOutput newAct;
+							try {
+								newAct = (OFActionOutput) action.clone();
+							} catch (CloneNotSupportedException e) {
+								// TODO Auto-generated catch block
+								//log.error(e.printStackTrace());
+								log.error("Unable to clone the output action");
+								log.error(e.getMessage());
+								return null;
+							}
+							
+							newAct.setPort(port.getValue().getPortId());
+							newActions.add(newAct);
+						}
+					}
+				}else if(output.getPort() == OFPort.OFPP_FLOOD.getValue()){
+					return null;
+				}else{
+					//nothing to do here
+					log.debug("Not an output of type all or flood");
+					newActions.add(action);
+				}
+			}else{
+				log.debug("Not an OUTPUT action");
+				newActions.add(action);			
+			}
+		}
+		
+		OFFlowMod newFlow;
+		try {
+			newFlow = flowMod.clone();
+		} catch (CloneNotSupportedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			return null;
+		}
+		newFlow.setActions(newActions);
+		return newFlow;
+		
+	}
+	
+	private OFPacketOut clonePacketOut(OFPacketOut packet){
+		OFPacketOut newOut = new OFPacketOut();
+		newOut.setActions(packet.getActions());
+		newOut.setPacketData(packet.getPacketData().clone());
+		newOut.setBufferId(packet.getBufferId());
+		newOut.setInPort(packet.getInPort());
+		newOut.setLength(packet.getLength());
+		newOut.setType(packet.getType());
+		newOut.setXid(packet.getXid());
+		return newOut;
+	}
+	
+	/**
 	 * process an OFPacketOut message to verify that it fits
 	 * in this slice properly.  We don't want one slice to
 	 * be able to inject traffic into another slice erroneously
-	 * @param output the OFPacketOUt message to be properly sliced
+	 * @param output the OFPacketOut message to be properly sliced
 	 */
 	
-	public boolean isPacketOutAllowed(OFPacketOut outPacket){
+	public List<OFPacketOut> allowedPacketOut(OFPacketOut outPacket){
+		List <OFAction> newActions = new ArrayList<OFAction>();
 		List <OFAction> actions = outPacket.getActions();
+		List <OFPacketOut> packets = new ArrayList<OFPacketOut>();
 		Iterator <OFAction> it = actions.iterator();
 		OFMatch match = new OFMatch();
 		try{
@@ -198,7 +304,8 @@ public class VLANSlicer implements Slicer{
 		}
 		catch(Exception e){
 			log.error("Loading Match from packet failed: " + e.getMessage());
-			return false;
+			packets.clear();
+			return packets;
 		}
 		//start our current vlan
 		short curVlan = match.getDataLayerVirtualLan();
@@ -210,32 +317,82 @@ public class VLANSlicer implements Slicer{
 					//if its a set vlan then change our current vlan
 					OFActionVirtualLanIdentifier setvid = (OFActionVirtualLanIdentifier)action;
 					curVlan = setvid.getVirtualLanIdentifier();
+					newActions.add(action);
 					break;
 				case OUTPUT:
 					//if its an output, verify that the 
 					OFActionOutput output = (OFActionOutput)action;
-					PortConfig myPortCfg = this.getPortConfig(output.getPort());
-					if(myPortCfg == null){
-						log.info("output packet disallowed to port:" + output.getPort());
-						return false;
-					}
-			
-					//only return false if we fail
-					//need to continue looping through on true case
-					if(!myPortCfg.vlanAllowed(curVlan)){
-						log.info("Output packet disallowed for port:" + output.getPort() + " and vlan: " + curVlan);
-						return false;
+					if(output.getPort() == OFPort.OFPP_ALL.getValue()){
+						log.info("output to ALL expanding");
+
+						
+						for(Map.Entry<String, PortConfig> port : this.portList.entrySet()){
+							PortConfig myPortCfg = this.getPortConfig(port.getValue().getPortId());
+							if(myPortCfg == null){
+								log.info("output packet disallowed to port:" + port.getValue().getPortId());
+								packets.clear();
+								return packets;
+							}
+							if(!myPortCfg.vlanAllowed(curVlan)){
+								log.info("Output packet disallowed for port:" + port.getValue().getPortId() + " and vlan: " + curVlan);
+								packets.clear();
+								return packets;
+							}
+							log.debug("Complicated case of OUTPUT ALL adding for port " + port.getValue().getPortId());
+							List<OFAction> actualActions = new ArrayList<OFAction>();
+							actualActions.addAll(newActions);
+							OFPacketOut newOut = this.clonePacketOut(outPacket);
+							OFActionOutput newOutput = new OFActionOutput();
+							newOutput.setType(OFActionType.OUTPUT);
+							newOutput.setPort(port.getValue().getPortId());
+							actualActions.add(newOutput);
+							newOut.setActions(actualActions);
+							packets.add(newOut);
+						}
+						
+					}else if(output.getPort() == OFPort.OFPP_FLOOD.getValue()){
+						log.info("output to flood not supported");
+						packets.clear();
+						return packets;
+					}else{
+						PortConfig myPortCfg = this.getPortConfig(output.getPort());
+						if(myPortCfg == null){
+							log.info("output packet disallowed to port:" + output.getPort());
+							packets.clear();
+							return packets;
+						}
+				
+						//only return false if we fail
+						//need to continue looping through on true case
+						if(!myPortCfg.vlanAllowed(curVlan)){
+							log.info("Output packet disallowed for port:" + output.getPort() + " and vlan: " + curVlan);
+							packets.clear();
+							return packets;
+						}
+						
+						log.debug("Simple case, single output and it was allowed");
+						List<OFAction> actualActions = new ArrayList<OFAction>();
+						actualActions.addAll(newActions);
+						OFPacketOut newOut = this.clonePacketOut(outPacket);
+						OFActionOutput newOutput = new OFActionOutput();
+						newOutput.setType(OFActionType.OUTPUT);
+						newOutput.setPort(output.getPort());
+						actualActions.add(newOutput);
+						newOut.setActions(actualActions);
+						packets.add(newOut);
 					}
 					break;
 				case STRIP_VLAN:
 					curVlan = 0;
+					newActions.add(action);
 					break;
 				default:
+					newActions.add(action);
 					break;
 			}
 		}
-				
-		return true;
+		log.debug("OutPackets: " + packets.toString());
+		return packets;
 	}
 	
 	/**
@@ -249,6 +406,10 @@ public class VLANSlicer implements Slicer{
 		log.debug("Attempting to slice: " + flowMod.toString());
 		List <OFFlowMod> flowMods = new ArrayList<OFFlowMod>();
 		OFMatch match = flowMod.getMatch();
+		
+		if(match == null){
+			return flowMods;
+		}
 		
 		//if you wildcarded the vlan then tough we are blowing up now
 		//we require an input vlan
@@ -267,21 +428,31 @@ public class VLANSlicer implements Slicer{
 				Map.Entry<String, PortConfig> port = (Entry<String, PortConfig>) it.next();
 				if(port.getValue().getPortId() != 0){
 					//create a new match like our old match but change the port
-					log.debug("Expanding to port : " + port.getValue().getPortId());
+					log.debug("Expanding Match to port : " + port.getValue().getPortId());
 					
 					try{
 						//why might this not be cloneable?  ahh... might not be clonable if there is no action!!
 						OFFlowMod newFlow = flowMod.clone();
 						//override the match with our new one
-						//newFlow.setMatch(newMatch);
 						newFlow.getMatch().setInputPort(port.getValue().getPortId());
 						newFlow.getMatch().setWildcards(newFlow.getMatch().getWildcardObj().matchOn(Flag.IN_PORT));
 						//allowed or not?
 						log.debug("Attempting to verify expansion is allowed for port: " + newFlow.getMatch().getInputPort());
-						if(this.isFlowAllowed(newFlow)){
-							flowMods.add(newFlow);
+						//now to check and see if we need to expand because of output actions!
+						log.debug("Attempting to expand actions");
+						//expand actions
+						OFFlowMod expandedFlow = this.expandActions(newFlow);
+						
+						if(expandedFlow == null){
+							log.warn("Error exapnding actions for flow:" + newFlow.toString());
+							flowMods.clear();
+							return flowMods;
+						}
+						
+						if(this.isFlowAllowed(expandedFlow)){
+							flowMods.add(expandedFlow);
 						}else{
-							log.debug("Got back a null so its not allowed :(");
+							log.debug("denied Flow " + expandedFlow.toString());
 							flowMods.clear();
 							return flowMods;
 						}
@@ -296,6 +467,7 @@ public class VLANSlicer implements Slicer{
 			//a quick optimization
 			//if the number of flowMods = the number of ports on the switch
 			//original flow mod is good
+			log.debug("comparing number of flowMods to number of interfaces " + flowMods.size() + ":" + sw.getPorts().size());
 			if(flowMods.size() == sw.getPorts().size()){
 				log.debug("Number of flow rules matches the number if interfaces... original flow is good!");
 				flowMods.clear();
@@ -303,14 +475,27 @@ public class VLANSlicer implements Slicer{
 			}
 		}else{
 			//no expansion necessary
-			log.debug("No Expansion");
-			if(this.isFlowAllowed(flowMod)){
-				flowMods.add(flowMod);
+			log.debug("No Match Expansion");
+			
+			log.debug("Attempting to expand actions");
+			//expand actions
+			OFFlowMod expandedFlow = this.expandActions(flowMod);
+			
+			if(expandedFlow == null){
+				log.warn("Error expanding actions for flow:" + flowMod.toString());
+				flowMods.clear();
+				return flowMods;
+			}
+			
+			if(this.isFlowAllowed(expandedFlow)){
+				flowMods.add(expandedFlow);
 			}else{
+				log.debug("Denied flow " + expandedFlow.toString());
+				flowMods.clear();
 				return flowMods;
 			}
 		}
-		
+		log.debug("FLows: " + flowMods.toString());
 		return flowMods;
 	}
 	
@@ -324,6 +509,7 @@ public class VLANSlicer implements Slicer{
 	 */
 	
 	private Boolean isFlowAllowed(OFFlowMod flowMod){
+
 		log.debug("helper slicing: " + flowMod.toString());
 		OFMatch match = flowMod.getMatch();
 		
@@ -379,10 +565,15 @@ public class VLANSlicer implements Slicer{
 					//on this output port
 					case OUTPUT:
 						OFActionOutput output = (OFActionOutput)action;
-						if(output.getPort() < 0){
+						if(output.getPort() == OFPort.OFPP_CONTROLLER.getValue()){
 							log.debug("output is to controller");
 							break;
 						}
+						if(output.getPort() == OFPort.OFPP_ALL.getValue() || output.getPort() == OFPort.OFPP_FLOOD.getValue()){
+							//should have been expanded before it got here
+							return false;
+						}
+						
 						PortConfig myPortCfg = this.getPortConfig(output.getPort());
 						if(myPortCfg == null){
 							log.debug("no port config found for port:" + output.getPort());
