@@ -196,11 +196,24 @@ public class VLANSlicer implements Slicer{
 		return portList.get(portName);
 	}
 	
+	/**
+	 * expands the actions in a flowMod so that if we have an ALL
+	 * action it will be output to all ports but the port it came frome
+	 * @param flowMod
+	 * @return
+	 */
+	
 	private OFFlowMod expandActions(OFFlowMod flowMod){
+		//quick note... if we are here then we have already expanded
+		//the flow from wildcarded portId to individual portIds
+		//ie.. this is an ok assumption to make
+		Short portId = flowMod.getMatch().getInputPort();
 		
+		//get the list of actions
 		List<OFAction> actions = flowMod.getActions();
 		
 		if(actions == null || actions.isEmpty()){
+			log.debug("OFFlowMod actions are empty");
 			return null;
 		}
 		
@@ -218,22 +231,23 @@ public class VLANSlicer implements Slicer{
 					//and add them to the list
 					
 					for(Map.Entry<String, PortConfig> port : this.portList.entrySet()){
+						//ALL should forward out all interfaces except the one the packet came from
+						if(port.getValue().getPortId() != portId){
+							OFActionOutput newAct;
+							try {
+								newAct = (OFActionOutput) action.clone();
+							} catch (CloneNotSupportedException e) {
+								// TODO Auto-generated catch block
+								//log.error(e.printStackTrace());
+								log.error("Unable to clone the output action");
+								log.error(e.getMessage());
+								return null;
+							}
 							
-						OFActionOutput newAct;
-						try {
-							newAct = (OFActionOutput) action.clone();
-						} catch (CloneNotSupportedException e) {
-							// TODO Auto-generated catch block
-							//log.error(e.printStackTrace());
-							log.error("Unable to clone the output action");
-							log.error(e.getMessage());
-							return null;
+							newAct.setPort(port.getValue().getPortId());
+							newActions.add(newAct);
 						}
-						
-						newAct.setPort(port.getValue().getPortId());
-						newActions.add(newAct);
 					}
-					
 				}else if(output.getPort() == OFPort.OFPP_FLOOD.getValue()){
 					return null;
 				}else{
@@ -241,6 +255,9 @@ public class VLANSlicer implements Slicer{
 					log.debug("Not an output of type all or flood");
 					newActions.add(action);
 				}
+			}else{
+				log.debug("Not an OUTPUT action");
+				newActions.add(action);			
 			}
 		}
 		
@@ -375,6 +392,11 @@ public class VLANSlicer implements Slicer{
 						//expand actions
 						OFFlowMod expandedFlow = this.expandActions(newFlow);
 						
+						if(expandedFlow == null){
+							log.warn("Error exapnding actions for flow:" + newFlow.toString());
+							flowMods.clear();
+							return flowMods;
+						}
 						
 						if(this.isFlowAllowed(expandedFlow)){
 							flowMods.add(expandedFlow);
@@ -408,6 +430,12 @@ public class VLANSlicer implements Slicer{
 			//expand actions
 			OFFlowMod expandedFlow = this.expandActions(flowMod);
 			
+			if(expandedFlow == null){
+				log.warn("Error expanding actions for flow:" + flowMod.toString());
+				flowMods.clear();
+				return flowMods;
+			}
+			
 			if(this.isFlowAllowed(expandedFlow)){
 				flowMods.add(expandedFlow);
 			}else{
@@ -430,6 +458,7 @@ public class VLANSlicer implements Slicer{
 	 */
 	
 	private Boolean isFlowAllowed(OFFlowMod flowMod){
+
 		log.debug("helper slicing: " + flowMod.toString());
 		OFMatch match = flowMod.getMatch();
 		

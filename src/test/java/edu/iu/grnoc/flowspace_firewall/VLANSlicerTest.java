@@ -399,4 +399,50 @@ public class VLANSlicerTest {
 		
 	}
 	
+	/**
+	 * tests isFlowModAllowed for expansions
+	 */
+	@Test 
+	public void testIsFlowModALLAllowedWildcardExpansions(){
+		List<OFAction> actions = new ArrayList<OFAction>();
+		OFActionOutput output = new OFActionOutput();
+		OFActionVirtualLanIdentifier setVid = new OFActionVirtualLanIdentifier();
+		setVid.setVirtualLanIdentifier((short)1000);
+		actions.add(setVid);
+		output.setPort(OFPort.OFPP_ALL.getValue());
+		actions.add(output);
+		
+		PortConfig pConfig5 = new PortConfig();
+		pConfig5.setPortName("foo5");
+		VLANRange range = new VLANRange();
+		range.setVlanAvail((short)104, true);
+		range.setVlanAvail((short)1000, true);
+		pConfig5.setVLANRange(range);
+		slicer.setPortConfig("foo5", pConfig5);
+		
+		PortConfig pConfig4 = new PortConfig();
+		pConfig4.setPortName("foo4");
+		range = new VLANRange();
+		range.setVlanAvail((short)104, true);
+		range.setVlanAvail((short)1000, true);
+		pConfig4.setVLANRange(range);
+		slicer.setPortConfig("foo4", pConfig4);
+		
+		OFFlowMod flow = new OFFlowMod();
+		OFMatch match = new OFMatch();
+		match.setInputPort((short)0);
+		match.setDataLayerVirtualLan((short)1000);
+		flow.setMatch(match);
+		flow.setActions(actions);
+		
+		List<OFFlowMod>flows = slicer.allowedFlows(flow);
+		
+		assertTrue("flow was denied",flows.size() != 0);
+		assertTrue("Flow Expansion worked had a size of " + flows.size(), flows.size() == 1);
+		
+		OFFlowMod expanded = flows.get(0);
+		assertTrue("Correct number of actions expected 5 got " + expanded.getActions().size(), expanded.getActions().size() == 2);
+		
+	}
+	
 }
