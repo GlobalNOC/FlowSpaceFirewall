@@ -57,4 +57,4 @@ rm -rf $RPM_BUILD_ROOT
 /etc/init.d/fsfw
 %config(noreplace) /etc/fsfw/fsfw.xml
 %config(noreplace) /etc/fsfw/logback.xml
-%config /etc/fsf/fsfw.xsd
+%config /etc/fsfw/fsfw.xsd
