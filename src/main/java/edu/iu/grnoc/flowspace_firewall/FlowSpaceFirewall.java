@@ -24,6 +24,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Timer;
 
+import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.xpath.XPathExpressionException;
+
 
 import net.floodlightcontroller.core.FloodlightContext;
 import net.floodlightcontroller.core.IFloodlightProviderService;
@@ -186,6 +189,10 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 
 		try {
 			this.slices = ConfigParser.parseConfig("/etc/fsfw/fsfw.xml");
+			if(this.slices.size() == 0){
+				logger.error("Unable to reload config due to a problem in the configuration!");
+				return false;
+			}
 			//newSlices is a clone so we can modify it without modifying slices
 			//we will use this to figure out which ones we have updated and which
 			//slices need to be created and connected to a currently active switch
@@ -244,6 +251,12 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 			return false;
 		} catch (SAXException e) {
 			e.printStackTrace();
+			return false;
+		} catch(ParserConfigurationException e){
+			logger.error(e.getMessage());
+			return false;
+		} catch(XPathExpressionException e){
+			logger.error(e.getMessage());
 			return false;
 		}
 		return true;
@@ -310,8 +323,16 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 			logger.error("Problems parsing /etc/fsf/fsf.xml: " + e.getMessage());
 		}catch (IOException e){
 			logger.error("Problems parsing /etc/fsf/fsf.xml: " + e.getMessage());
+		} catch(ParserConfigurationException e){
+			logger.error(e.getMessage());
+		} catch(XPathExpressionException e){
+			logger.error(e.getMessage());
 		}
 
+		if(this.slices.size() == 0){
+			logger.error("Problem with the configuration file!");
+			throw new FloodlightModuleException("Problem with the Config!");
+		}
 
         
 	}

@@ -202,4 +202,35 @@ public class VLANRangeTest {
 		assertFalse("wildcard not allowed", range.allowWildcard());
 	}
 	
+	@Test
+	public void testCompareRanges(){
+		
+		short[] allowed = new short[9];
+		allowed[0] = 1;
+		allowed[1] = 150;
+		allowed[2] = 2;
+		allowed[3] = -1;
+		allowed[4] = 102;
+		allowed[5] = 5;
+		allowed[6] = 100;
+		allowed[7] = 1000;
+		allowed[8] = 4000;
+		VLANRange range = new VLANRange(allowed,true);
+		short[] allowed2 = new short[4];
+		allowed2[0] = 3;
+		allowed2[1] = 151;
+		allowed2[2] = 4;
+		allowed2[3] = 409;
+		VLANRange range2 = new VLANRange(allowed2,true);
+		assertFalse(range.rangeOverlap(range2));
+		
+		short[] allowed3 = new short[4];
+		allowed3[0] = 3;
+		allowed3[1] = 151;
+		allowed3[2] = 4;
+		allowed3[3] = 2;
+		VLANRange range3 = new VLANRange(allowed3,true);
+		assertTrue(range.rangeOverlap(range3));
+	}
+	
 }
