@@ -75,6 +75,10 @@ public class PortConfig {
 		this.vlanRange = vlans;
 	}
 	
+	public VLANRange getVlanRange(){
+		return this.vlanRange;
+	}
+	
 	/**
 	 * set the port name
 	 * @param portName
