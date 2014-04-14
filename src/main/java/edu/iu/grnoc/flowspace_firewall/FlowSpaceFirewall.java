@@ -24,6 +24,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Timer;
 
+import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.xpath.XPathExpressionException;
+
 
 import net.floodlightcontroller.core.FloodlightContext;
 import net.floodlightcontroller.core.IFloodlightProviderService;
@@ -249,6 +252,12 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 		} catch (SAXException e) {
 			e.printStackTrace();
 			return false;
+		} catch(ParserConfigurationException e){
+			logger.error(e.getMessage());
+			return false;
+		} catch(XPathExpressionException e){
+			logger.error(e.getMessage());
+			return false;
 		}
 		return true;
 	}
@@ -314,6 +323,10 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 			logger.error("Problems parsing /etc/fsf/fsf.xml: " + e.getMessage());
 		}catch (IOException e){
 			logger.error("Problems parsing /etc/fsf/fsf.xml: " + e.getMessage());
+		} catch(ParserConfigurationException e){
+			logger.error(e.getMessage());
+		} catch(XPathExpressionException e){
+			logger.error(e.getMessage());
 		}
 
 		if(this.slices.size() == 0){

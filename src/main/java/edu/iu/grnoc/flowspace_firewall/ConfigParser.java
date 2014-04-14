@@ -57,6 +57,7 @@ public final class ConfigParser {
 	private static final Logger log = LoggerFactory.getLogger(ConfigParser.class);
 
 	private static boolean isValidConfig(List<HashMap<Long, Slicer>> slices){
+		
 		if(slices.size() == 0){
 			return false;
 		}
@@ -76,11 +77,12 @@ public final class ConfigParser {
 				}
 			}
 		}
+		
 		return true;
 	}
 	
 	//the only method we need here
-	public static ArrayList<HashMap<Long, Slicer>> parseConfig(String xmlFile) throws IOException, SAXException{
+	public static ArrayList<HashMap<Long, Slicer>> parseConfig(String xmlFile) throws IOException, SAXException, ParserConfigurationException,XPathExpressionException{
 		ArrayList<HashMap<Long, Slicer>> newSlices = new ArrayList<HashMap<Long, Slicer>>();
 		Document document;
     	try {
@@ -143,10 +145,8 @@ public final class ConfigParser {
 	        				log.debug("Processing Slice for Switch: " + switchConfig.getAttributes().getNamedItem("name"));
 	        				Slicer slicer = new VLANSlicer();
 	        				slicer.setSliceName(sliceName);
-	        			    //TODO set the slicer's max_floxs attribute
 	        				int numberOfFlows = Integer.parseInt(switchConfig.getAttributes().getNamedItem("max_flows").getTextContent());
-	        				slicer.setMaxFlows(numberOfFlows);
-	        				
+	        				slicer.setMaxFlows(numberOfFlows);      				
 	        				int flowRate = Integer.parseInt(switchConfig.getAttributes().getNamedItem("flow_rate").getTextContent());
 	        				slicer.setFlowRate(flowRate);
 	        				NodeList ports = switchConfig.getChildNodes();
@@ -169,7 +169,7 @@ public final class ConfigParser {
 		        						continue;
 		        					}
 		        					for(short m = Short.parseShort(range.getAttributes().getNamedItem("start").getTextContent()); 
-		        							m < Short.parseShort(range.getAttributes().getNamedItem("end").getTextContent()); m++){
+		        							m <= Short.parseShort(range.getAttributes().getNamedItem("end").getTextContent()); m++){
 		        						myRange.setVlanAvail(m, true);
 		        					}
 		        				}
@@ -203,11 +203,15 @@ public final class ConfigParser {
     	}catch (SAXException e) {
             // instance document is invalid!
     		log.error("Problems parsing /etc/fsf/fsf.xml: " + e.getMessage());
+    		throw e;
         }catch (ParserConfigurationException e){
         	log.error("Problems parsing /etc/fsf/fsf.xml: " + e.getMessage());
+        	throw e;
         }catch (XPathExpressionException e){
         	log.error("Problems parsing /etc/fsf/fsf.xml: " + e.getMessage());
+        	throw e;
         }
+    	
     	//now validate config
     	if(isValidConfig(newSlices)){
     		return newSlices;
