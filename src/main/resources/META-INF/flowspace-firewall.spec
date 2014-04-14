@@ -36,6 +36,7 @@ rm -rf $RPM_BUILD_ROOT
 
 %{__install} jars/*.jar %{buildroot}//usr/share/fsfw/
 %{__install} conf/*.xml %{buildroot}/etc/fsfw/
+%{__install} conf/*.xsd %{buildroot}/etc/fsfw/
 %{__install} conf/fsfw.init %{buildroot}/etc/init.d/fsfw
 
 # clean up buildroot                                                                                                                                                                                                   
