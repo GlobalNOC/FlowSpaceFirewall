@@ -94,7 +94,7 @@ public final class ConfigParser {
 	        SchemaFactory factory = SchemaFactory.newInstance("http://www.w3.org/2001/XMLSchema");
 	
 	        // load a WXS schema, represented by a Schema instance
-	        Source schemaFile = new StreamSource(new File("/etc/fsfw/mySchema.xsd"));
+	        Source schemaFile = new StreamSource(new File("/etc/fsfw/fsfw.xsd"));
 	        Schema schema = factory.newSchema(schemaFile);
 	        
 	        // create a Validator instance, which can be used to validate an instance document
