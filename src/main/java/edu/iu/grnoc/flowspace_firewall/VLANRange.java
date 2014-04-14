@@ -117,4 +117,14 @@ public class VLANRange {
 		return true;
 	}
 	
+	public boolean rangeOverlap(VLANRange otherRange){
+		for(short i=MIN_VLAN; i<MAX_VLAN; i++){
+			if(vlans.get(i)){
+				if(otherRange.vlans.get(i)){
+					return true;
+				}
+			}
+		}
+		return false;
+	}	
 }

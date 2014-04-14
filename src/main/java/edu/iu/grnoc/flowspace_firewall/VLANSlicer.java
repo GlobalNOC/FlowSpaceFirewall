@@ -672,6 +672,14 @@ public class VLANSlicer implements Slicer{
 		this.name = name;
 	}
 	
-	
-	
+	public boolean hasOverlap(Slicer otherSlicer){
+		for(String portName : this.portList.keySet()){
+			if(otherSlicer.isPortPartOfSlice(portName)){
+				if(this.getPortConfig(portName).getVlanRange().rangeOverlap(otherSlicer.getPortConfig(portName).getVlanRange())){
+					return true;
+				}
+			}
+		}
+		return false;
+	}
 }

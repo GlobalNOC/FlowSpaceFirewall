@@ -21,11 +21,13 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.transform.Source;
+import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamSource;
 import javax.xml.validation.Schema;
 import javax.xml.validation.SchemaFactory;
@@ -54,6 +56,28 @@ public final class ConfigParser {
 	//the logger
 	private static final Logger log = LoggerFactory.getLogger(ConfigParser.class);
 
+	private static boolean isValidConfig(List<HashMap<Long, Slicer>> slices){
+		if(slices.size() == 0){
+			return false;
+		}
+		
+		for(HashMap<Long, Slicer> slice : slices){
+			for(Long dpid : slice.keySet()){
+				Slicer config = slice.get(dpid);
+				for(HashMap<Long, Slicer> otherSlice : slices){
+					if(otherSlice.containsKey(dpid)){
+						Slicer otherConfig = otherSlice.get(dpid);
+						if(otherConfig.getSliceName() != config.getSliceName()){
+							if(config.hasOverlap(otherConfig)){
+								return false;
+							}
+						}
+					}
+				}
+			}
+		}
+		return true;
+	}
 	
 	//the only method we need here
 	public static ArrayList<HashMap<Long, Slicer>> parseConfig(String xmlFile) throws IOException, SAXException{
@@ -72,11 +96,10 @@ public final class ConfigParser {
 	        Schema schema = factory.newSchema(schemaFile);
 	        
 	        // create a Validator instance, which can be used to validate an instance document
-	        @SuppressWarnings("unused")
 			Validator validator = schema.newValidator();
 	       
 	        // validate the DOM tree
-	        //validator.validate(new DOMSource(document));
+	        validator.validate(new DOMSource(document));
     	
 	        //get a list of all switches and slices
 	        XPath xPath = XPathFactory.newInstance().newXPath();
@@ -177,8 +200,6 @@ public final class ConfigParser {
 	        	//add to the new configuration slicer object
 	        	newSlices.add(dpidSlicer);
 	        }
-	        //return the results
-	        
     	}catch (SAXException e) {
             // instance document is invalid!
     		log.error("Problems parsing /etc/fsf/fsf.xml: " + e.getMessage());
@@ -187,8 +208,14 @@ public final class ConfigParser {
         }catch (XPathExpressionException e){
         	log.error("Problems parsing /etc/fsf/fsf.xml: " + e.getMessage());
         }
-    	
-    	return newSlices;
+    	//now validate config
+    	if(isValidConfig(newSlices)){
+    		return newSlices;
+    	}else{
+    		log.error("Problem with configuration.  Unable to load config");
+    		newSlices.clear();
+    		return newSlices;
+    	}
 	}
 	
 }

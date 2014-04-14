@@ -39,6 +39,7 @@ public interface Slicer {
 	PortConfig getPortConfig(String portName);
 	PortConfig getPortConfig(short portId);
 	boolean isOkToProcessMessage();
+	boolean hasOverlap(Slicer otherSlicer);
 	String getSliceName();
 	void setSliceName(String name);
 	double getRate();

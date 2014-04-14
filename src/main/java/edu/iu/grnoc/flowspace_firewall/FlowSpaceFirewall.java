@@ -186,6 +186,10 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 
 		try {
 			this.slices = ConfigParser.parseConfig("/etc/fsfw/fsfw.xml");
+			if(this.slices.size() == 0){
+				logger.error("Unable to reload config due to a problem in the configuration!");
+				return false;
+			}
 			//newSlices is a clone so we can modify it without modifying slices
 			//we will use this to figure out which ones we have updated and which
 			//slices need to be created and connected to a currently active switch
@@ -312,6 +316,10 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 			logger.error("Problems parsing /etc/fsf/fsf.xml: " + e.getMessage());
 		}
 
+		if(this.slices.size() == 0){
+			logger.error("Problem with the configuration file!");
+			throw new FloodlightModuleException("Problem with the Config!");
+		}
 
         
 	}
