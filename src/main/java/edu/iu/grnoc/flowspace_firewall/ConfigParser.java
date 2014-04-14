@@ -94,7 +94,7 @@ public final class ConfigParser {
 	        SchemaFactory factory = SchemaFactory.newInstance("http://www.w3.org/2001/XMLSchema");
 	
 	        // load a WXS schema, represented by a Schema instance
-	        Source schemaFile = new StreamSource(new File("/etc/fsf/mySchema.xsd"));
+	        Source schemaFile = new StreamSource(new File("/etc/fsfw/mySchema.xsd"));
 	        Schema schema = factory.newSchema(schemaFile);
 	        
 	        // create a Validator instance, which can be used to validate an instance document
@@ -201,14 +201,13 @@ public final class ConfigParser {
 	        	newSlices.add(dpidSlicer);
 	        }
     	}catch (SAXException e) {
-            // instance document is invalid!
-    		log.error("Problems parsing /etc/fsf/fsf.xml: " + e.getMessage());
+    		log.error("Problems parsing " + xmlFile + ": " + e.getMessage());
     		throw e;
         }catch (ParserConfigurationException e){
-        	log.error("Problems parsing /etc/fsf/fsf.xml: " + e.getMessage());
+        	log.error("Problems parsing " + xmlFile + ": " + e.getMessage());
         	throw e;
         }catch (XPathExpressionException e){
-        	log.error("Problems parsing /etc/fsf/fsf.xml: " + e.getMessage());
+        	log.error("Problems parsing " + xmlFile + ": " + e.getMessage());
         	throw e;
         }
     	
