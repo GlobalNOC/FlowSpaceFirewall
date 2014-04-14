@@ -492,4 +492,63 @@ public class VLANSlicerTest {
 		
 	}
 	
+	/**
+	 * tests the hasOverlap method to 
+	 */
+	@Test
+	public void testHasOverlap(){
+		VLANSlicer otherSlicer = new VLANSlicer();
+		
+		pConfig = new PortConfig();
+		pConfig.setPortName("foo");
+		VLANRange range = new VLANRange();
+		range.setVlanAvail((short)101,true);
+		range.setVlanAvail((short)1001,true);
+		pConfig.setVLANRange(range);
+		otherSlicer.setPortConfig("foo", pConfig);
+		
+		pConfig2 = new PortConfig();
+		pConfig2.setPortName("foo2");
+		range = new VLANRange();
+		range.setVlanAvail((short)103,true);
+		range.setVlanAvail((short)1003,true);
+		pConfig2.setVLANRange(range);
+		otherSlicer.setPortConfig("foo2", pConfig2);
+
+		pConfig3 = new PortConfig();
+		pConfig3.setPortName("foo3");
+		range = new VLANRange();
+		range.setVlanAvail((short)104,true);
+		range.setVlanAvail((short)1005,true);
+		pConfig3.setVLANRange(range);
+		otherSlicer.setPortConfig("foo3", pConfig3);
+		
+		pConfig5 = new PortConfig();
+		pConfig5.setPortName("foo5");
+		range = new VLANRange();
+		range.setVlanAvail((short)106,true);
+		range.setVlanAvail((short)1006,true);
+		pConfig5.setVLANRange(range);
+		otherSlicer.setPortConfig("foo5", pConfig5);
+		
+		pConfig6 = new PortConfig();
+		pConfig6.setPortName("foo6");
+		range = new VLANRange();
+		range.setVlanAvail((short)107,true);
+		range.setVlanAvail((short)1007,true);
+		pConfig6.setVLANRange(range);
+		otherSlicer.setPortConfig("foo6", pConfig6);
+		
+		assertFalse(slicer.hasOverlap(otherSlicer));
+		
+		pConfig = new PortConfig();
+		pConfig.setPortName("foo");
+		range = new VLANRange();
+		range.setVlanAvail((short)100,true);
+		range.setVlanAvail((short)1000,true);
+		pConfig.setVLANRange(range);
+		otherSlicer.setPortConfig("foo", pConfig);
+		assertTrue(slicer.hasOverlap(otherSlicer));
+	}
+	
 }
