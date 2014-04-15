@@ -688,6 +688,7 @@ class OFControllerChannelHandler
     }
 
     public void sendMessage(OFMessage m) throws IOException{
+    	log.debug("attempting to send message: " + m.toString());
     	if(channel != null && channel.isConnected()){
     		channel.write(Collections.singletonList(m));
     	}else{

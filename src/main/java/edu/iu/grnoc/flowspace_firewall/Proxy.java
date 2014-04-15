@@ -208,6 +208,7 @@ public class Proxy {
 			case OFFlowMod.OFPFC_ADD:
 				if( this.mySlicer.isGreaterThanMaxFlows(this.flowCount + 1) ) {
 					log.warn("Flow count is already at threshold. Skipping flow mod");
+					this.sendError((OFMessage)msg);
 					return;
 				}
 				this.updateFlowCount(1);
@@ -215,6 +216,7 @@ public class Proxy {
 			case OFFlowMod.OFPFF_CHECK_OVERLAP:
 				if( this.mySlicer.isGreaterThanMaxFlows(this.flowCount + 1) ) {
 					log.warn("Flow count is already at threshold. Skipping flow mod");
+					this.sendError((OFMessage)msg);
 					return;
 				}
 				this.updateFlowCount(1);
@@ -536,6 +538,12 @@ public class Proxy {
 				return;
 			case STATS_REQUEST:
 				handleStatsRequest(msg);
+				return;
+			case PORT_MOD:
+				this.sendError((OFMessage)msg);
+				return;
+			case SET_CONFIG:
+				this.sendError((OFMessage)msg);
 				return;
 			default:
 				//do nothing.. basically fall through to the write

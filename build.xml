@@ -224,10 +224,11 @@
     	<cobertura-instrument datafile="${target}/cobertura.ser"
                 todir="bin-coverage/"
                 classpathref="classpath-cobertura">
-      	<fileset dir="bin/">
-        	<include name="**/*.class"/>
-    	</fileset>
-      </cobertura-instrument>
+    		<ignore regex="edu.iu.grnoc.flowspace_firewall.web.*" />
+    		<fileset dir="bin/">
+        		<include name="**/*.class"/>
+	    	</fileset>
+      	</cobertura-instrument>
     </target>
 	
 	<target name="coverage-report">
