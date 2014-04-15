@@ -539,6 +539,12 @@ public class Proxy {
 			case STATS_REQUEST:
 				handleStatsRequest(msg);
 				return;
+			case PORT_MOD:
+				this.sendError((OFMessage)msg);
+				return;
+			case SET_CONFIG:
+				this.sendError((OFMessage)msg);
+				return;
 			default:
 				//do nothing.. basically fall through to the write
 				break;
