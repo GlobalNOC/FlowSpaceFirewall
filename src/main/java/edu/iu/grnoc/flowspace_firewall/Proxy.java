@@ -519,7 +519,7 @@ public class Proxy {
 				return;
 			case PACKET_OUT:
 				//super simple case no need for the extra method
-				List<OFPacketOut> allowed = this.mySlicer.allowedPacketOut((OFPacketOut)msg);
+				List<OFMessage> allowed = this.mySlicer.allowedPacketOut((OFPacketOut)msg);
 				if(allowed.isEmpty()){
 					//really we need to send a perm error
 					log.info("PacketOut is not allowed");
@@ -527,9 +527,9 @@ public class Proxy {
 					return;
 				}else{
 					log.info("PacketOut is allowed");
-					mapXids((OFMessage)allowed);
+					mapXids(allowed);
 					try {
-						mySwitch.write((OFMessage)allowed, null);
+						mySwitch.write(allowed, null);
 					} catch (IOException e) {
 						e.printStackTrace();
 					}

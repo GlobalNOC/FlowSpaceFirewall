@@ -19,6 +19,7 @@ import static org.easymock.EasyMock.createMock;
 import static org.easymock.EasyMock.expect;
 import static org.junit.Assert.*;
 
+import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -27,8 +28,11 @@ import java.util.List;
 import net.floodlightcontroller.core.FloodlightContext;
 import net.floodlightcontroller.core.IOFSwitch;
 import net.floodlightcontroller.core.ImmutablePort;
+import net.floodlightcontroller.packet.Ethernet;
+import net.floodlightcontroller.packetstreamer.thrift.OFMessageType;
 
 import org.easymock.EasyMock;
+import org.easymock.IAnswer;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipeline;
@@ -40,6 +44,7 @@ import org.junit.rules.ExpectedException;
 import org.openflow.protocol.OFFlowMod;
 import org.openflow.protocol.OFMatch;
 import org.openflow.protocol.OFMessage;
+import org.openflow.protocol.OFPacketOut;
 import org.openflow.protocol.action.OFAction;
 import org.openflow.protocol.action.OFActionOutput;
 import org.openflow.protocol.action.OFActionType;
@@ -62,11 +67,14 @@ public class ProxyTest {
 	OFControllerChannelHandler handler;
 	FloodlightContext cntx;
 	
-	public void setupChannel(){
+	private List<OFMessage> messagesSentToController;
+	private List<OFMessage> messagesSentToSwitch;
+	
+	public void setupChannel() throws IOException{
 		ChannelFuture future = createMock(org.jboss.netty.channel.ChannelFuture.class);
 		ChannelPipeline pipeline = createMock(org.jboss.netty.channel.ChannelPipeline.class);
 		ChannelHandlerContext context = createMock(org.jboss.netty.channel.ChannelHandlerContext.class);
-		handler = EasyMock.createNiceMock(edu.iu.grnoc.flowspace_firewall.OFControllerChannelHandler.class);
+		handler = EasyMock.createMock(edu.iu.grnoc.flowspace_firewall.OFControllerChannelHandler.class);
 		channel = EasyMock.createNiceMock(org.jboss.netty.channel.socket.SocketChannel.class);
 		
 		ChannelFuture otherFuture = createMock(org.jboss.netty.channel.ChannelFuture.class);
@@ -76,6 +84,21 @@ public class ProxyTest {
 		expect(channel.connect(EasyMock.isA(java.net.InetSocketAddress.class))).andReturn(future).anyTimes();
 		expect(channel.write(EasyMock.isA(org.openflow.protocol.OFMessage.class))).andReturn(otherFuture).anyTimes();
 		
+		handler.setSwitch(EasyMock.isA(net.floodlightcontroller.core.IOFSwitch.class));
+		EasyMock.expectLastCall().anyTimes();
+		
+		handler.setProxy(EasyMock.isA(edu.iu.grnoc.flowspace_firewall.Proxy.class));
+		EasyMock.expectLastCall().anyTimes();
+		
+		handler.sendMessage(EasyMock.isA(org.openflow.protocol.OFMessage.class));
+		EasyMock.expectLastCall().andAnswer(new IAnswer<Object>() {
+		    public Object answer() {
+		        //supply your mock implementation here...
+		        messagesSentToController.add((OFMessage)EasyMock.getCurrentArguments()[0]);
+		        //return the value to be returned by the method (null for void)
+		        return null;
+		    }
+		}).anyTimes();
 		
 		EasyMock.replay(future);
 		EasyMock.replay(pipeline);
@@ -132,7 +155,7 @@ public class ProxyTest {
 		
 	}
 	
-	public void setupSwitch(){
+	public void setupSwitch() throws IOException{
 		ArrayList <ImmutablePort> ports = new ArrayList <ImmutablePort>();
 		
 		ImmutablePort p = createMock(ImmutablePort.class);
@@ -185,8 +208,16 @@ public class ProxyTest {
         
         expect(sw.getNextTransactionId()).andReturn(1).once().andReturn(2).once()
 		.andReturn(3).once().andReturn(4).once().andReturn(5).once().andReturn(6).once();
-	
-        
+        sw.write(EasyMock.isA(org.openflow.protocol.OFMessage.class), EasyMock.isA(net.floodlightcontroller.core.FloodlightContext.class));
+        EasyMock.expectLastCall().andAnswer(new IAnswer<Object>() {
+		    public Object answer() {
+		    	log.debug("Here!");
+		        //supply your mock implementation here...
+		        messagesSentToSwitch.add((OFMessage)EasyMock.getCurrentArguments()[0]);
+		        //return the value to be returned by the method (null for void)
+		        return null;
+		    }
+		}).anyTimes();
         
         EasyMock.replay(sw);
 	}
@@ -198,10 +229,19 @@ public class ProxyTest {
 	
 	@Before
 	public void setUp(){
+		
+		messagesSentToController = new ArrayList<OFMessage>();
+		messagesSentToSwitch = new ArrayList<OFMessage>();
 		cntx = new FloodlightContext();
 		setupFSFW();
-		setupSwitch();
-		setupChannel();
+		
+		try {
+			setupChannel();
+			setupSwitch();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 		setupSlicer();
 		
 		
@@ -229,6 +269,8 @@ public class ProxyTest {
 	
 	@Test
 	public void testFlowModAllowedTest(){
+		messagesSentToSwitch.clear();
+		messagesSentToController.clear();
 		Proxy proxy = new Proxy(sw, slicer, fsfw);
 		expect(channel.isConnected()).andReturn(true).anyTimes();
 		EasyMock.replay(channel);
@@ -250,13 +292,20 @@ public class ProxyTest {
 		actions.add(act1);
 		actions.add(act2);
 		flow.setActions(actions);
-		proxy.toSwitch(flow, null);
+		proxy.toSwitch(flow, cntx);
 		assertTrue("Flow was successfully pushed", proxy.getFlowCount() == 1);
+		assertTrue("Flow was pushed to the switch", messagesSentToSwitch.size() == 1);
+		OFMessage msg = messagesSentToSwitch.get(0);
+		assertTrue("Message is a FlowMod", msg.getType().getTypeValue() == OFMessageType.FLOW_MOD.getValue());
+		OFFlowMod sentFlow = (OFFlowMod) msg;
+		assertTrue("Sent Flow matches what we actually sent", sentFlow.equals(flow));
 	}
 
 	@Test
 	public void testFlowModNotAllowedTest(){
 		setupSlicer();
+		messagesSentToSwitch.clear();
+		messagesSentToController.clear();
 		Proxy proxy = new Proxy(sw, slicer, fsfw);
 		expect(channel.isConnected()).andReturn(true).anyTimes();
 		EasyMock.replay(channel);
@@ -289,11 +338,14 @@ public class ProxyTest {
 		//send it
 		proxy.toSwitch((OFMessage)flow, cntx);
 		assertTrue("Flow as not pushed... have " + proxy.getFlowCount() + " flows", proxy.getFlowCount() == 0);
+		
 	}
 	
 	@Test
 	public void testFlowModMaxLimit(){
 		setupSlicer();
+		messagesSentToSwitch.clear();
+		messagesSentToController.clear();
 		slicer.setMaxFlows(4);
 		Proxy proxy = new Proxy(sw, slicer, fsfw);
 		expect(channel.isConnected()).andReturn(true).anyTimes();
@@ -334,5 +386,279 @@ public class ProxyTest {
 		
 	}
 	
+	
+	@Test
+	public void testPacketOut(){
+		setupSlicer();
+		messagesSentToSwitch.clear();
+		messagesSentToController.clear();
+		Proxy proxy = new Proxy(sw, slicer, fsfw);
+		expect(channel.isConnected()).andReturn(true).anyTimes();
+		
+		EasyMock.replay(channel);
+		assertNotNull("Proxy was created",proxy);
+		assertFalse("Proxy is not connected as expected", proxy.connected());
+		proxy.connect(channel);
+		assertTrue("Proxy is now connected", proxy.connected());
+		
+		OFPacketOut out = new OFPacketOut();
+		List<OFAction> actions = new ArrayList<OFAction>();
+		OFActionOutput output = new OFActionOutput();
+		output.setType(OFActionType.OUTPUT);
+		output.setPort((short)1);
+		actions.add(output);
+		out.setActions(actions);
+		
+		Ethernet pkt = new Ethernet();
+		pkt.setVlanID((short)1000);
+		pkt.setDestinationMACAddress("aa:bb:cc:dd:ee:ff");
+		pkt.setSourceMACAddress("ff:ee:dd:cc:bb:aa");
+		pkt.setEtherType((short)35020);
+		out.setPacketData(pkt.serialize());
+		
+		proxy.toSwitch(out, cntx);
+		
+	}
+	
+	
+	@Test
+	public void testPacketOutDeny(){
+		setupSlicer();
+		Proxy proxy = new Proxy(sw, slicer, fsfw);
+		expect(channel.isConnected()).andReturn(true).anyTimes();
+		EasyMock.replay(channel);
+		assertNotNull("Proxy was created",proxy);
+		assertFalse("Proxy is not connected as expected", proxy.connected());
+		proxy.connect(channel);
+		assertTrue("Proxy is now connected", proxy.connected());
+		
+		OFPacketOut out = new OFPacketOut();
+		List<OFAction> actions = new ArrayList<OFAction>();
+		OFActionOutput output = new OFActionOutput();
+		output.setType(OFActionType.OUTPUT);
+		output.setPort((short)1);
+		actions.add(output);
+		out.setActions(actions);
+		
+		Ethernet pkt = new Ethernet();
+		pkt.setVlanID((short)3000);
+		pkt.setDestinationMACAddress("aa:bb:cc:dd:ee:ff");
+		pkt.setSourceMACAddress("ff:ee:dd:cc:bb:aa");
+		pkt.setEtherType((short)35020);
+		out.setPacketData(pkt.serialize());
+		//TODO: figure out the right size to set this too... this works for now
+		out.setLengthU(out.getPacketData().length + 40);
+		
+		proxy.toSwitch(out, cntx);
+		
+	}
+	
+	@Test
+	public void testPacketOutLimit() throws InterruptedException{
+		setupSlicer();
+		Proxy proxy = new Proxy(sw, slicer, fsfw);
+		expect(channel.isConnected()).andReturn(true).anyTimes();
+		EasyMock.replay(channel);
+		assertNotNull("Proxy was created",proxy);
+		assertFalse("Proxy is not connected as expected", proxy.connected());
+		proxy.connect(channel);
+		assertTrue("Proxy is now connected", proxy.connected());
+		
+		OFPacketOut out = new OFPacketOut();
+		List<OFAction> actions = new ArrayList<OFAction>();
+		OFActionOutput output = new OFActionOutput();
+		output.setType(OFActionType.OUTPUT);
+		output.setPort((short)1);
+		actions.add(output);
+		out.setActions(actions);
+		
+		Ethernet pkt = new Ethernet();
+		pkt.setVlanID((short)1000);
+		pkt.setDestinationMACAddress("aa:bb:cc:dd:ee:ff");
+		pkt.setSourceMACAddress("ff:ee:dd:cc:bb:aa");
+		pkt.setEtherType((short)35020);
+		out.setPacketData(pkt.serialize());
+		
+		//TODO: figure out the right size to set this too... this works for now
+		out.setLengthU(out.getPacketData().length + 40);
+		slicer.setFlowRate(2);
+		
+		
+		for(int i=0;i<10;i++){
+			java.lang.Thread.sleep(250);
+			double rate = proxy.getSlicer().getRate();
+			proxy.toSwitch(out, cntx);
+			if(rate >= 2){
+				//we should not let this go through
+				//how to verify we got an error back?
+				
+			}
+			
+			
+			
+		}
+		
+		//figure out how to tell if a packet got denied because of 
+		
+	}
+	
+	@Test
+	public void testPortMod(){
+		setupSlicer();
+		Proxy proxy = new Proxy(sw, slicer, fsfw);
+		expect(channel.isConnected()).andReturn(true).anyTimes();
+		EasyMock.replay(channel);
+		assertNotNull("Proxy was created",proxy);
+		assertFalse("Proxy is not connected as expected", proxy.connected());
+		proxy.connect(channel);
+		assertTrue("Proxy is now connected", proxy.connected());
+		
+		
+	}
+	
+	@Test
+	public void testSetConfig(){
+		setupSlicer();
+		Proxy proxy = new Proxy(sw, slicer, fsfw);
+		expect(channel.isConnected()).andReturn(true).anyTimes();
+		EasyMock.replay(channel);
+		assertNotNull("Proxy was created",proxy);
+		assertFalse("Proxy is not connected as expected", proxy.connected());
+		proxy.connect(channel);
+		assertTrue("Proxy is now connected", proxy.connected());
+		
+		
+	}
 
+	@Test
+	public void testBarrierReply(){
+		setupSlicer();
+		Proxy proxy = new Proxy(sw, slicer, fsfw);
+		expect(channel.isConnected()).andReturn(true).anyTimes();
+		EasyMock.replay(channel);
+		assertNotNull("Proxy was created",proxy);
+		assertFalse("Proxy is not connected as expected", proxy.connected());
+		proxy.connect(channel);
+		assertTrue("Proxy is now connected", proxy.connected());
+		
+		
+	}
+	
+	@Test
+	public void testErrorReturned(){
+		setupSlicer();
+		Proxy proxy = new Proxy(sw, slicer, fsfw);
+		expect(channel.isConnected()).andReturn(true).anyTimes();
+		EasyMock.replay(channel);
+		assertNotNull("Proxy was created",proxy);
+		assertFalse("Proxy is not connected as expected", proxy.connected());
+		proxy.connect(channel);
+		assertTrue("Proxy is now connected", proxy.connected());
+		
+		
+	}
+	
+	@Test
+	public void testErrorReturnedNotPartOfSlice(){
+		setupSlicer();
+		Proxy proxy = new Proxy(sw, slicer, fsfw);
+		expect(channel.isConnected()).andReturn(true).anyTimes();
+		EasyMock.replay(channel);
+		assertNotNull("Proxy was created",proxy);
+		assertFalse("Proxy is not connected as expected", proxy.connected());
+		proxy.connect(channel);
+		assertTrue("Proxy is now connected", proxy.connected());
+		
+		
+	}
+	
+	@Test
+	public void testFlowRemoved(){
+		setupSlicer();
+		Proxy proxy = new Proxy(sw, slicer, fsfw);
+		expect(channel.isConnected()).andReturn(true).anyTimes();
+		EasyMock.replay(channel);
+		assertNotNull("Proxy was created",proxy);
+		assertFalse("Proxy is not connected as expected", proxy.connected());
+		proxy.connect(channel);
+		assertTrue("Proxy is now connected", proxy.connected());
+		
+		
+	}
+	
+	@Test
+	public void testFlowRemovedNotPartOfSlice(){
+		setupSlicer();
+		Proxy proxy = new Proxy(sw, slicer, fsfw);
+		expect(channel.isConnected()).andReturn(true).anyTimes();
+		EasyMock.replay(channel);
+		assertNotNull("Proxy was created",proxy);
+		assertFalse("Proxy is not connected as expected", proxy.connected());
+		proxy.connect(channel);
+		assertTrue("Proxy is now connected", proxy.connected());
+		
+		
+	}
+	
+	@Test
+	public void testPacketINPartOfSlice(){
+		setupSlicer();
+		Proxy proxy = new Proxy(sw, slicer, fsfw);
+		expect(channel.isConnected()).andReturn(true).anyTimes();
+		EasyMock.replay(channel);
+		assertNotNull("Proxy was created",proxy);
+		assertFalse("Proxy is not connected as expected", proxy.connected());
+		proxy.connect(channel);
+		assertTrue("Proxy is now connected", proxy.connected());
+		
+		
+	}
+	
+	@Test
+	public void testPacketINNotPartofSlice(){
+		setupSlicer();
+		Proxy proxy = new Proxy(sw, slicer, fsfw);
+		expect(channel.isConnected()).andReturn(true).anyTimes();
+		EasyMock.replay(channel);
+		assertNotNull("Proxy was created",proxy);
+		assertFalse("Proxy is not connected as expected", proxy.connected());
+		proxy.connect(channel);
+		assertTrue("Proxy is now connected", proxy.connected());
+		
+		
+	}
+	
+	@Test
+	public void testPortStatus(){
+		setupSlicer();
+		Proxy proxy = new Proxy(sw, slicer, fsfw);
+		expect(channel.isConnected()).andReturn(true).anyTimes();
+		EasyMock.replay(channel);
+		assertNotNull("Proxy was created",proxy);
+		assertFalse("Proxy is not connected as expected", proxy.connected());
+		proxy.connect(channel);
+		assertTrue("Proxy is now connected", proxy.connected());
+		
+		
+	}
+	
+	@Test
+	public void testPortStatusNotPartOfSlice(){
+		setupSlicer();
+		Proxy proxy = new Proxy(sw, slicer, fsfw);
+		expect(channel.isConnected()).andReturn(true).anyTimes();
+		EasyMock.replay(channel);
+		assertNotNull("Proxy was created",proxy);
+		assertFalse("Proxy is not connected as expected", proxy.connected());
+		proxy.connect(channel);
+		assertTrue("Proxy is now connected", proxy.connected());
+		
+		
+	}
+	
+	@Test
+	public void testFlowStatsRequest(){
+		
+	}
 }
+
