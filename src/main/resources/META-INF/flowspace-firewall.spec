@@ -10,7 +10,7 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 BuildArch: noarch
 Requires(pre): /usr/sbin/useradd, /usr/bin/getent
 Requires(postun): /usr/sbin/userdel
-Requires: java-1.6.0-ibm
+Requires: java-1.6.0-sun
 
 %description
 Flowspace firewall application 
@@ -57,4 +57,4 @@ rm -rf $RPM_BUILD_ROOT
 /etc/init.d/fsfw
 %config(noreplace) /etc/fsfw/fsfw.xml
 %config(noreplace) /etc/fsfw/logback.xml
-%config /etc/fsf/fsfw.xsd
+%config /etc/fsfw/fsfw.xsd
