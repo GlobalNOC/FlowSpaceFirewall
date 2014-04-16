@@ -277,11 +277,15 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 		Iterator <Proxy> it = proxies.iterator();
 		while(it.hasNext()){
 			Proxy p = it.next();
-			try{
-				p.toController(msg,cntx);
-			}catch (Exception e){
-				//don't die please... just keep going and error the stack trace
-				logger.error("FSFW experienced an error:" + e.getMessage(), e);
+			if(!p.getAdminStatus()){
+				logger.debug("slice disabled... skipping");
+			}else{
+				try{
+					p.toController(msg,cntx);
+				}catch (Exception e){
+					//don't die please... just keep going and error the stack trace
+					logger.error("FSFW experienced an error:" + e.getMessage(), e);
+				}
 			}
 		}
 		return Command.CONTINUE;

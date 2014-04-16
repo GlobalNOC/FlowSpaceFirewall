@@ -44,6 +44,7 @@ import org.junit.rules.ExpectedException;
 import org.openflow.protocol.*;
 import org.openflow.protocol.OFError.OFErrorType;
 import org.openflow.protocol.action.*;
+import org.openflow.protocol.statistics.OFStatistics;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -146,6 +147,7 @@ public class ProxyTest {
 		slicer.setPortConfig("foo6", pConfig6);
 		slicer.setMaxFlows(2);
 		slicer.setController(new InetSocketAddress("globalnoc.iu.edu", 6633));
+		slicer.setPacketInRate(10);
 		
 	}
 	
@@ -234,7 +236,9 @@ public class ProxyTest {
 	
 	public void setupFSFW(){
 		fsfw = createMock(FlowSpaceFirewall.class);
-		
+		List<OFStatistics> stats = new ArrayList<OFStatistics>();
+		expect(fsfw.getStats(EasyMock.anyLong())).andReturn(stats).anyTimes();
+		EasyMock.replay(fsfw);
 	}
 	
 	@Before
@@ -789,6 +793,44 @@ public class ProxyTest {
 		OFPacketIn newIn = (OFPacketIn) msg;
 		assertTrue("message matches what we sent", newIn.equals(packetIn));
 		
+	}
+	
+	@Test
+	public void testPacketINRateLimit(){
+		setupSlicer();
+		messagesSentToSwitch.clear();
+		messagesSentToController.clear();
+		Proxy proxy = new Proxy(sw, slicer, fsfw);
+		expect(channel.isConnected()).andReturn(true).once().andReturn(false).once();
+		EasyMock.replay(channel);
+		assertNotNull("Proxy was created",proxy);
+		assertFalse("Proxy is not connected as expected", proxy.connected());
+		proxy.connect(channel);
+		assertTrue("Proxy is now connected", proxy.connected());
+		
+		OFPacketIn packetIn = new OFPacketIn();
+		packetIn.setInPort((short)1);
+		
+		Ethernet pkt = new Ethernet();
+		pkt.setVlanID((short)100);
+		pkt.setDestinationMACAddress("aa:bb:cc:dd:ee:ff");
+		pkt.setSourceMACAddress("ff:ee:dd:cc:bb:aa");
+		pkt.setEtherType((short)33024);
+		
+		packetIn.setPacketData(pkt.serialize());
+		
+		for(int i=0;i<100;i++){
+			try {
+				Thread.sleep(10);
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+			log.debug("sending packet out");
+			proxy.toController(packetIn, cntx);
+		}
+		assertTrue("message was sent to controller sent a total of " + messagesSentToController.size(), messagesSentToController.size() > 1 && messagesSentToController.size() < 99);
+		assertFalse("Slice is now disabled", proxy.getAdminStatus());
+		assertFalse("Slice is now disconnected", proxy.connected());
 	}
 	
 	@Test

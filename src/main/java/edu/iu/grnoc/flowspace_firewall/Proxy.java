@@ -71,6 +71,8 @@ public class Proxy {
 	
 	private static final Logger log = LoggerFactory.getLogger(Proxy.class);
 	private Integer flowCount;
+	private Boolean adminStatus;
+	private RateTracker packetInRate;
 	
 	public Proxy(IOFSwitch switchImp, Slicer slicer, FlowSpaceFirewall fsf){
 		mySlicer = slicer;
@@ -79,8 +81,59 @@ public class Proxy {
 		parent = fsf;
 		flowCount = 0;
 		xidMap = new XidMap();
+		adminStatus = true;
+		packetInRate = new RateTracker(100,10);
 	}
 	
+	public void setAdminStatus(Boolean status){
+		adminStatus = status;
+		if(status){
+			log.warn("Slice is re-enabled");
+		}else{
+			log.error("Disabling Slice!");
+			this.removeFlows();
+			this.disconnect();
+			this.parent.getSwitchProxies(this.getSwitch().getId()).remove(this);
+		}
+	}
+	
+	public boolean getAdminStatus(){
+		return this.adminStatus;
+	}
+	
+	public void removeFlows(){
+		List<OFStatistics> stats = this.parent.getStats(mySwitch.getId());
+		List<OFStatistics> results = null;
+		try{
+			results = FlowStatSlicer.SliceStats(mySlicer, stats);
+		}catch(IllegalArgumentException e){
+			
+		}
+		
+		if(results == null){
+			log.debug("Slicing failed!");
+			return;
+		}
+		
+		List<OFMessage> deletes = new ArrayList<OFMessage>();
+		
+		for(OFStatistics stat : results){
+			OFFlowStatisticsReply flowStat = (OFFlowStatisticsReply) stat;
+			OFFlowMod flow = new OFFlowMod();
+			flow.setMatch(flowStat.getMatch());
+			flow.setActions(flowStat.getActions());
+			flow.setCommand(OFFlowMod.OFPFC_DELETE);
+			deletes.add(flow);
+		}
+		
+		try {
+			this.mySwitch.write(deletes, null);
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+	}
 	
 	public IOFSwitch getSwitch(){
 		return this.mySwitch;
@@ -91,6 +144,9 @@ public class Proxy {
 	 * @param channel
 	 */
 	public void connect(SocketChannel channel){
+		if(!this.adminStatus){
+			return;
+		}
 		if(myController != null && myController.isConnected()){
 			return;
 		}
@@ -131,7 +187,7 @@ public class Proxy {
 		
 		this.mySlicer = newSlicer;
 		this.mySlicer.setSwitch(this.mySwitch);
-		
+		this.packetInRate.setRate(this.getSlicer().getPacketInRate());
 	}
 	
 	/**
@@ -591,7 +647,17 @@ public class Proxy {
 				log.debug("Packet in Not allowed for this slice");
 				return;
 			}
-			break;
+			
+			if(this.packetInRate.okToProcess()){
+				break;
+			}else{
+				log.error("Packet in Rate for Slice: " +
+			this.getSlicer().getSliceName() + ":" + this.getSwitch().getStringId() +
+			" has passed the packet in rate limit Disabling slice!!!!");
+				this.setAdminStatus(false);
+				return;
+			}
+			
 		case PORT_STATUS:
 			//only send port status messages
 			//for interfaces involved with this slice
