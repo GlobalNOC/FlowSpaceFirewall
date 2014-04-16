@@ -33,6 +33,7 @@ import org.junit.Test;
 import org.junit.Before;
 import org.openflow.protocol.OFFlowMod;
 import org.openflow.protocol.OFMatch;
+import org.openflow.protocol.OFMessage;
 import org.openflow.protocol.OFPacketOut;
 import org.openflow.protocol.OFPort;
 import org.openflow.protocol.action.OFAction;
@@ -234,7 +235,7 @@ public class VLANSlicerTest {
 		pkt.setEtherType((short)35020);
 		out.setPacketData(pkt.serialize());
 		
-		List<OFPacketOut> outPackets = slicer.allowedPacketOut(out);
+		List<OFMessage> outPackets = slicer.allowedPacketOut(out);
 		assertTrue("OutPacket size is correct, expected 1 got " + outPackets.size(), outPackets.size() == 1);
 		
 		pkt.setVlanID((short)2000);
@@ -264,7 +265,7 @@ public class VLANSlicerTest {
 		pkt.setEtherType((short)35020);
 		out.setPacketData(pkt.serialize());
 		
-		List<OFPacketOut> outPackets = slicer.allowedPacketOut(out);
+		List<OFMessage> outPackets = slicer.allowedPacketOut(out);
 		assertTrue("OutPacket size is correct, expected 5 got " + outPackets.size(), outPackets.size() == 5);
 	}
 	

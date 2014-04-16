@@ -28,6 +28,7 @@ import net.floodlightcontroller.core.ImmutablePort;
 
 import org.openflow.protocol.OFFlowMod;
 import org.openflow.protocol.OFMatch;
+import org.openflow.protocol.OFMessage;
 import org.openflow.protocol.OFPacketOut;
 import org.openflow.protocol.OFPort;
 import org.openflow.protocol.Wildcards.Flag;
@@ -214,7 +215,7 @@ public class VLANSlicer implements Slicer{
 		
 		if(actions == null || actions.isEmpty()){
 			log.debug("OFFlowMod actions are empty");
-			return null;
+			return flowMod;
 		}
 		
 		List<OFAction> newActions = new ArrayList<OFAction>();
@@ -293,10 +294,10 @@ public class VLANSlicer implements Slicer{
 	 * @param output the OFPacketOut message to be properly sliced
 	 */
 	
-	public List<OFPacketOut> allowedPacketOut(OFPacketOut outPacket){
+	public List<OFMessage> allowedPacketOut(OFPacketOut outPacket){
 		List <OFAction> newActions = new ArrayList<OFAction>();
 		List <OFAction> actions = outPacket.getActions();
-		List <OFPacketOut> packets = new ArrayList<OFPacketOut>();
+		List <OFMessage> packets = new ArrayList<OFMessage>();
 		Iterator <OFAction> it = actions.iterator();
 		OFMatch match = new OFMatch();
 		try{

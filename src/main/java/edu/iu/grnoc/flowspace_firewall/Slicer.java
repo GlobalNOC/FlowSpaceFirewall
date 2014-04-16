@@ -21,12 +21,13 @@ import java.util.List;
 import net.floodlightcontroller.core.IOFSwitch;
 
 import org.openflow.protocol.OFFlowMod;
+import org.openflow.protocol.OFMessage;
 import org.openflow.protocol.OFPacketOut;
 
 public interface Slicer {
 
 	List <OFFlowMod> allowedFlows(OFFlowMod flow);
-	List<OFPacketOut> allowedPacketOut(OFPacketOut output);
+	List<OFMessage> allowedPacketOut(OFPacketOut output);
 	void setController(InetSocketAddress addr);
 	InetSocketAddress getControllerAddress();
 	void setSwitch(IOFSwitch mySwitch);
