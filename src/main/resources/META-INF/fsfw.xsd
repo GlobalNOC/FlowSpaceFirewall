@@ -26,14 +26,15 @@
   </xs:element>
   <xs:element name="switch">
     <xs:complexType>
-      <xs:sequence>
-        <xs:element minOccurs="0" maxOccurs="unbounded" ref="port"/>
-      </xs:sequence>
-      <xs:attribute name="dpid" type="xs:NMTOKEN"/>
-      <xs:attribute name="flow_rate" type="xs:integer"/>
-      <xs:attribute name="flush_rules_on_connect" type="xs:boolean"/>
-      <xs:attribute name="max_flows" type="xs:integer"/>
-      <xs:attribute name="name" use="required" type="xs:NCName"/>
+    	<xs:sequence>
+    		<xs:element minOccurs="0" maxOccurs="unbounded" ref="port" />
+    	</xs:sequence>
+    	<xs:attribute name="dpid" type="xs:NMTOKEN" />
+    	<xs:attribute name="flow_rate" type="xs:integer" />
+    	<xs:attribute name="flush_rules_on_connect" type="xs:boolean" />
+    	<xs:attribute name="max_flows" type="xs:integer" />
+    	<xs:attribute name="name" use="required" type="xs:NCName" />
+    	<xs:attribute name="packet_in_rate" type="xs:int"></xs:attribute>
     </xs:complexType>
   </xs:element>
   <xs:element name="port">

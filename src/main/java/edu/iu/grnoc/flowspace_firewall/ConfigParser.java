@@ -149,6 +149,8 @@ public final class ConfigParser {
 	        				slicer.setMaxFlows(numberOfFlows);      				
 	        				int flowRate = Integer.parseInt(switchConfig.getAttributes().getNamedItem("flow_rate").getTextContent());
 	        				slicer.setFlowRate(flowRate);
+	        				int packetInRate = Integer.parseInt(switchConfig.getAttributes().getNamedItem("packet_in_rate").getTextContent());
+	        				slicer.setPacketInRate(packetInRate);
 	        				NodeList ports = switchConfig.getChildNodes();
 	        				//for every port create a port config
 	        				for(int k=0; k < ports.getLength(); k++){
