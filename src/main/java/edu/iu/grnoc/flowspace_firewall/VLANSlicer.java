@@ -215,7 +215,7 @@ public class VLANSlicer implements Slicer{
 		
 		if(actions == null || actions.isEmpty()){
 			log.debug("OFFlowMod actions are empty");
-			return null;
+			return flowMod;
 		}
 		
 		List<OFAction> newActions = new ArrayList<OFAction>();

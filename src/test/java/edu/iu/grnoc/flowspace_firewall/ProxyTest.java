@@ -41,15 +41,9 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.Before;
 import org.junit.rules.ExpectedException;
-import org.openflow.protocol.OFFlowMod;
-import org.openflow.protocol.OFMatch;
-import org.openflow.protocol.OFMessage;
-import org.openflow.protocol.OFPacketOut;
-import org.openflow.protocol.action.OFAction;
-import org.openflow.protocol.action.OFActionOutput;
-import org.openflow.protocol.action.OFActionType;
-
-import org.openflow.protocol.action.OFActionVirtualLanIdentifier;
+import org.openflow.protocol.*;
+import org.openflow.protocol.OFError.OFErrorType;
+import org.openflow.protocol.action.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -155,6 +149,7 @@ public class ProxyTest {
 		
 	}
 	
+	@SuppressWarnings("unchecked")
 	public void setupSwitch() throws IOException{
 		ArrayList <ImmutablePort> ports = new ArrayList <ImmutablePort>();
 		
@@ -211,15 +206,30 @@ public class ProxyTest {
         sw.write(EasyMock.isA(org.openflow.protocol.OFMessage.class), EasyMock.isA(net.floodlightcontroller.core.FloodlightContext.class));
         EasyMock.expectLastCall().andAnswer(new IAnswer<Object>() {
 		    public Object answer() {
-		    	log.debug("Here!");
+		    	log.error("Here!");
 		        //supply your mock implementation here...
 		        messagesSentToSwitch.add((OFMessage)EasyMock.getCurrentArguments()[0]);
 		        //return the value to be returned by the method (null for void)
 		        return null;
 		    }
 		}).anyTimes();
+                
+        sw.write(EasyMock.isA(java.util.List.class), EasyMock.isA(net.floodlightcontroller.core.FloodlightContext.class));
+        EasyMock.expectLastCall().andAnswer(new IAnswer<Object>() {
+		    public Object answer() {
+		    	log.error("Here!");
+		        //supply your mock implementation here...
+		    	List<OFMessage> msgs = (List<OFMessage>)EasyMock.getCurrentArguments()[0];
+		        for(OFMessage msg : msgs){
+		        	messagesSentToSwitch.add(msg);
+		        }
+		        //return the value to be returned by the method (null for void)
+		        return null;
+		    }
+		}).anyTimes();
         
         EasyMock.replay(sw);
+	
 	}
 	
 	public void setupFSFW(){
@@ -239,7 +249,6 @@ public class ProxyTest {
 			setupChannel();
 			setupSwitch();
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 		setupSlicer();
@@ -338,7 +347,10 @@ public class ProxyTest {
 		//send it
 		proxy.toSwitch((OFMessage)flow, cntx);
 		assertTrue("Flow as not pushed... have " + proxy.getFlowCount() + " flows", proxy.getFlowCount() == 0);
-		
+		assertTrue("No Flow was sent to the switch", messagesSentToSwitch.size() == 0);
+		assertTrue("A message was sent to the controller", messagesSentToController.size() == 1);
+		OFMessage msg = messagesSentToController.get(0);
+		assertTrue("message was an error", msg.getType().getTypeValue() == OFMessageType.ERROR.getValue());		
 	}
 	
 	@Test
@@ -383,6 +395,10 @@ public class ProxyTest {
 		proxy.toSwitch((OFMessage)flow, cntx);
 		proxy.toSwitch((OFMessage)flow, cntx);
 		assertTrue("4 flows pushed 1 denied because over max limit " + proxy.getFlowCount() + " flows", proxy.getFlowCount() == 4);
+		assertTrue("4 message went to switch", messagesSentToSwitch.size() == 4);
+		assertTrue("1 message went to the controller", messagesSentToController.size() == 1);
+		OFMessage msg = messagesSentToController.get(0);
+		assertTrue("Message to Controller was an error", msg.getType().getTypeValue() == OFMessageType.ERROR.getValue());
 		
 	}
 	
@@ -417,6 +433,14 @@ public class ProxyTest {
 		out.setPacketData(pkt.serialize());
 		
 		proxy.toSwitch(out, cntx);
+		assertTrue("1 message was sent to the switch", messagesSentToSwitch.size() == 1);
+		OFMessage msg = messagesSentToSwitch.get(0);
+		assertTrue("message was of type PacketOut", msg.getType().getTypeValue() == OFMessageType.PACKET_OUT.getValue());
+		OFPacketOut result = (OFPacketOut)msg;
+		log.debug("PacketOut: " + result.toString());
+		log.debug("Original Packet out: " + result.toString());
+		//even though as far as I can tell these match... they don't work via equals
+		//assertTrue("Packet matches what we sent", result.equals(out));
 		
 	}
 	
@@ -424,6 +448,8 @@ public class ProxyTest {
 	@Test
 	public void testPacketOutDeny(){
 		setupSlicer();
+		messagesSentToSwitch.clear();
+		messagesSentToController.clear();
 		Proxy proxy = new Proxy(sw, slicer, fsfw);
 		expect(channel.isConnected()).andReturn(true).anyTimes();
 		EasyMock.replay(channel);
@@ -450,12 +476,18 @@ public class ProxyTest {
 		out.setLengthU(out.getPacketData().length + 40);
 		
 		proxy.toSwitch(out, cntx);
+		assertTrue("no messages to the switch were sent", messagesSentToSwitch.size() == 0);
+		assertTrue("1 message was sent to the controller", messagesSentToController.size() == 1);
+		OFMessage msg = messagesSentToController.get(0);
+		assertTrue("Message to the controller was an Error", msg.getType().getTypeValue() == OFMessageType.ERROR.getValue());
 		
 	}
 	
 	@Test
 	public void testPacketOutLimit() throws InterruptedException{
 		setupSlicer();
+		messagesSentToSwitch.clear();
+		messagesSentToController.clear();
 		Proxy proxy = new Proxy(sw, slicer, fsfw);
 		expect(channel.isConnected()).andReturn(true).anyTimes();
 		EasyMock.replay(channel);
@@ -478,33 +510,29 @@ public class ProxyTest {
 		pkt.setSourceMACAddress("ff:ee:dd:cc:bb:aa");
 		pkt.setEtherType((short)35020);
 		out.setPacketData(pkt.serialize());
-		
 		//TODO: figure out the right size to set this too... this works for now
 		out.setLengthU(out.getPacketData().length + 40);
 		slicer.setFlowRate(2);
 		
-		
 		for(int i=0;i<10;i++){
-			java.lang.Thread.sleep(250);
-			double rate = proxy.getSlicer().getRate();
-			proxy.toSwitch(out, cntx);
-			if(rate >= 2){
-				//we should not let this go through
-				//how to verify we got an error back?
-				
+			try {
+				Thread.sleep(250);
+			} catch (InterruptedException e) {
+				e.printStackTrace();
 			}
-			
-			
-			
+			proxy.toSwitch(out, cntx);
 		}
-		
-		//figure out how to tell if a packet got denied because of 
+		//verify some of the rules got pushed through and some got rejected
+		assertTrue("Message to Switch actual = " + messagesSentToSwitch.size(), messagesSentToSwitch.size() > 1 && messagesSentToSwitch.size() < 8);
+		assertTrue("Message to Controller actual = " + messagesSentToController.size(), messagesSentToController.size() > 1 && messagesSentToController.size() < 8);
 		
 	}
 	
 	@Test
 	public void testPortMod(){
 		setupSlicer();
+		messagesSentToSwitch.clear();
+		messagesSentToController.clear();
 		Proxy proxy = new Proxy(sw, slicer, fsfw);
 		expect(channel.isConnected()).andReturn(true).anyTimes();
 		EasyMock.replay(channel);
@@ -513,12 +541,26 @@ public class ProxyTest {
 		proxy.connect(channel);
 		assertTrue("Proxy is now connected", proxy.connected());
 		
+		OFPortMod portMod = new OFPortMod();
+		portMod.setPortNumber((short)1);
+		portMod.setConfig(0);
+		portMod.setAdvertise(1);
+		byte[] hardwareAddr = {(byte)0xe0, (byte)0x4f, (byte)0xd0,
+			    (byte)0x20, (byte)0xea, (byte)0x3a};
+		portMod.setHardwareAddress(hardwareAddr);
 		
+		proxy.toSwitch(portMod, cntx);
+		assertTrue("message was not sent to switch", messagesSentToSwitch.size() == 0);
+		assertTrue("message was sent to controller", messagesSentToController.size() == 1);
+		OFMessage msg = messagesSentToController.get(0);
+		assertTrue("Was an OpenFlow Error", msg.getType().getTypeValue() == OFMessageType.ERROR.getValue());		
 	}
 	
 	@Test
 	public void testSetConfig(){
 		setupSlicer();
+		messagesSentToSwitch.clear();
+		messagesSentToController.clear();
 		Proxy proxy = new Proxy(sw, slicer, fsfw);
 		expect(channel.isConnected()).andReturn(true).anyTimes();
 		EasyMock.replay(channel);
@@ -527,12 +569,21 @@ public class ProxyTest {
 		proxy.connect(channel);
 		assertTrue("Proxy is now connected", proxy.connected());
 		
+		OFSetConfig setConfig = new OFSetConfig();
+		setConfig.setFlags((short)0);
+		proxy.toSwitch(setConfig, cntx);
+		assertTrue("message was not sent to switch", messagesSentToSwitch.size() == 0);
+		assertTrue("message was sent to controller", messagesSentToController.size() == 1);
+		OFMessage msg = messagesSentToController.get(0);
+		assertTrue("Was an OpenFlow Error", msg.getType().getTypeValue() == OFMessageType.ERROR.getValue());
 		
 	}
 
 	@Test
 	public void testBarrierReply(){
 		setupSlicer();
+		messagesSentToSwitch.clear();
+		messagesSentToController.clear();
 		Proxy proxy = new Proxy(sw, slicer, fsfw);
 		expect(channel.isConnected()).andReturn(true).anyTimes();
 		EasyMock.replay(channel);
@@ -541,12 +592,43 @@ public class ProxyTest {
 		proxy.connect(channel);
 		assertTrue("Proxy is now connected", proxy.connected());
 		
+		OFBarrierRequest barrierRequest = new OFBarrierRequest();
+		barrierRequest.setXid(10);
+		
+		proxy.toSwitch(barrierRequest, cntx);
+		
+		OFBarrierReply barrierReply = new OFBarrierReply();
+		barrierReply.setXid(1);
+		
+		proxy.toController(barrierReply, cntx);
+		
+		log.debug(messagesSentToSwitch.toString());
+		assertTrue("Message was sent to Switch", messagesSentToSwitch.size() == 1);
+		assertTrue("Message was sent to Controller", messagesSentToController.size() == 1);
+		
+		messagesSentToSwitch.clear();
+		messagesSentToController.clear();
+		
+		barrierRequest = new OFBarrierRequest();
+		barrierRequest.setXid(11);
+		
+		proxy.toSwitch(barrierRequest, cntx);
+		
+		barrierReply = new OFBarrierReply();
+		barrierReply.setXid(3);
+		
+		proxy.toController(barrierReply, cntx);
+		log.debug(messagesSentToSwitch.toString());
+		assertTrue("Message was sent to Switch", messagesSentToSwitch.size() == 1);
+		assertTrue("Message was not sent to Controller", messagesSentToController.size() == 0);
 		
 	}
 	
 	@Test
 	public void testErrorReturned(){
 		setupSlicer();
+		messagesSentToSwitch.clear();
+		messagesSentToController.clear();
 		Proxy proxy = new Proxy(sw, slicer, fsfw);
 		expect(channel.isConnected()).andReturn(true).anyTimes();
 		EasyMock.replay(channel);
@@ -554,6 +636,41 @@ public class ProxyTest {
 		assertFalse("Proxy is not connected as expected", proxy.connected());
 		proxy.connect(channel);
 		assertTrue("Proxy is now connected", proxy.connected());
+		
+		//build the match
+		OFMatch match = new OFMatch();
+		match.setDataLayerVirtualLan((short)100);
+		match.setInputPort((short)1);
+		List<OFAction> actions = new ArrayList<OFAction>();
+				
+		//create the output action
+		OFActionOutput act2 = new OFActionOutput();
+		act2.setPort((short)1);
+		act2.setType(OFActionType.OUTPUT);
+		
+		//add the actions to the action list
+		actions.add(act2);
+				
+		//build the flow
+		OFFlowMod flow = new OFFlowMod();
+		flow.setCommand(OFFlowMod.OFPFC_ADD);
+		flow.setXid(101);
+		flow.setMatch(match);
+		flow.setActions(actions);
+		flow.setLengthU(80);
+		flow.setXid(10);
+		proxy.toSwitch(flow, cntx);
+		
+		OFError error = new OFError();
+		error.setErrorType(OFErrorType.OFPET_BAD_REQUEST);
+		error.setErrorCode(OFError.OFBadRequestCode.OFPBRC_EPERM);
+		error.setOffendingMsg(flow);
+		error.setXid(1);
+		proxy.toController(error, cntx);
+		
+		log.debug(messagesSentToSwitch.toString());
+		assertTrue("Message was sent to Switch", messagesSentToSwitch.size() == 1);
+		assertTrue("Message was not sent to Controller", messagesSentToController.size() == 1);
 		
 		
 	}
@@ -561,6 +678,8 @@ public class ProxyTest {
 	@Test
 	public void testErrorReturnedNotPartOfSlice(){
 		setupSlicer();
+		messagesSentToSwitch.clear();
+		messagesSentToController.clear();
 		Proxy proxy = new Proxy(sw, slicer, fsfw);
 		expect(channel.isConnected()).andReturn(true).anyTimes();
 		EasyMock.replay(channel);
@@ -569,12 +688,47 @@ public class ProxyTest {
 		proxy.connect(channel);
 		assertTrue("Proxy is now connected", proxy.connected());
 		
+		//build the match
+		OFMatch match = new OFMatch();
+		match.setDataLayerVirtualLan((short)100);
+		match.setInputPort((short)1);
+		List<OFAction> actions = new ArrayList<OFAction>();
+				
+		//create the output action
+		OFActionOutput act2 = new OFActionOutput();
+		act2.setPort((short)1);
+		act2.setType(OFActionType.OUTPUT);
 		
+		//add the actions to the action list
+		actions.add(act2);
+				
+		//build the flow
+		OFFlowMod flow = new OFFlowMod();
+		flow.setCommand(OFFlowMod.OFPFC_ADD);
+		flow.setXid(101);
+		flow.setMatch(match);
+		flow.setActions(actions);
+		flow.setLengthU(80);
+		flow.setXid(10);
+		proxy.toSwitch(flow, cntx);
+		
+		OFError error = new OFError();
+		error.setErrorType(OFErrorType.OFPET_BAD_REQUEST);
+		error.setErrorCode(OFError.OFBadRequestCode.OFPBRC_EPERM);
+		error.setOffendingMsg(flow);
+		error.setXid(2);
+		proxy.toController(error, cntx);
+		
+		log.debug(messagesSentToSwitch.toString());
+		assertTrue("Message was sent to Switch", messagesSentToSwitch.size() == 1);
+		assertTrue("Message was not sent to Controller", messagesSentToController.size() == 0);
 	}
 	
 	@Test
 	public void testFlowRemoved(){
 		setupSlicer();
+		messagesSentToSwitch.clear();
+		messagesSentToController.clear();
 		Proxy proxy = new Proxy(sw, slicer, fsfw);
 		expect(channel.isConnected()).andReturn(true).anyTimes();
 		EasyMock.replay(channel);
@@ -582,6 +736,7 @@ public class ProxyTest {
 		assertFalse("Proxy is not connected as expected", proxy.connected());
 		proxy.connect(channel);
 		assertTrue("Proxy is now connected", proxy.connected());
+		
 		
 		
 	}
@@ -589,6 +744,8 @@ public class ProxyTest {
 	@Test
 	public void testFlowRemovedNotPartOfSlice(){
 		setupSlicer();
+		messagesSentToSwitch.clear();
+		messagesSentToController.clear();
 		Proxy proxy = new Proxy(sw, slicer, fsfw);
 		expect(channel.isConnected()).andReturn(true).anyTimes();
 		EasyMock.replay(channel);
@@ -603,6 +760,8 @@ public class ProxyTest {
 	@Test
 	public void testPacketINPartOfSlice(){
 		setupSlicer();
+		messagesSentToSwitch.clear();
+		messagesSentToController.clear();
 		Proxy proxy = new Proxy(sw, slicer, fsfw);
 		expect(channel.isConnected()).andReturn(true).anyTimes();
 		EasyMock.replay(channel);
@@ -611,12 +770,32 @@ public class ProxyTest {
 		proxy.connect(channel);
 		assertTrue("Proxy is now connected", proxy.connected());
 		
+		OFPacketIn packetIn = new OFPacketIn();
+		packetIn.setInPort((short)1);
+		
+		Ethernet pkt = new Ethernet();
+		pkt.setVlanID((short)100);
+		pkt.setDestinationMACAddress("aa:bb:cc:dd:ee:ff");
+		pkt.setSourceMACAddress("ff:ee:dd:cc:bb:aa");
+		pkt.setEtherType((short)33024);
+		
+		packetIn.setPacketData(pkt.serialize());
+
+		proxy.toController(packetIn, cntx);
+		
+		assertTrue("message was sent to controller", messagesSentToController.size() == 1);
+		OFMessage msg = messagesSentToController.get(0);
+		assertTrue("message is of type packet in", msg.getType().getTypeValue() == OFMessageType.PACKET_IN.getValue());
+		OFPacketIn newIn = (OFPacketIn) msg;
+		assertTrue("message matches what we sent", newIn.equals(packetIn));
 		
 	}
 	
 	@Test
 	public void testPacketINNotPartofSlice(){
 		setupSlicer();
+		messagesSentToSwitch.clear();
+		messagesSentToController.clear();
 		Proxy proxy = new Proxy(sw, slicer, fsfw);
 		expect(channel.isConnected()).andReturn(true).anyTimes();
 		EasyMock.replay(channel);
@@ -625,12 +804,27 @@ public class ProxyTest {
 		proxy.connect(channel);
 		assertTrue("Proxy is now connected", proxy.connected());
 		
+		OFPacketIn packetIn = new OFPacketIn();
+		packetIn.setInPort((short)1);
 		
+		Ethernet pkt = new Ethernet();
+		pkt.setVlanID((short)3000);
+		pkt.setDestinationMACAddress("aa:bb:cc:dd:ee:ff");
+		pkt.setSourceMACAddress("ff:ee:dd:cc:bb:aa");
+		pkt.setEtherType((short)35020);
+		
+		packetIn.setPacketData(pkt.serialize());
+
+		proxy.toController(packetIn, cntx);
+		
+		assertTrue("message was sent to controller", messagesSentToController.size() == 0);
 	}
 	
 	@Test
 	public void testPortStatus(){
 		setupSlicer();
+		messagesSentToSwitch.clear();
+		messagesSentToController.clear();
 		Proxy proxy = new Proxy(sw, slicer, fsfw);
 		expect(channel.isConnected()).andReturn(true).anyTimes();
 		EasyMock.replay(channel);
@@ -638,6 +832,17 @@ public class ProxyTest {
 		assertFalse("Proxy is not connected as expected", proxy.connected());
 		proxy.connect(channel);
 		assertTrue("Proxy is now connected", proxy.connected());
+		
+		OFPortStatus portStat = new OFPortStatus();
+		OFPhysicalPort port = new OFPhysicalPort();
+		port.setPortNumber((short)1);
+		port.setState(1);
+		port.setName("foo");
+		portStat.setDesc(port);
+		
+		proxy.toController(portStat, cntx);
+		
+		assertTrue("sent message to controller", messagesSentToController.size() == 1);
 		
 		
 	}
@@ -645,6 +850,8 @@ public class ProxyTest {
 	@Test
 	public void testPortStatusNotPartOfSlice(){
 		setupSlicer();
+		messagesSentToSwitch.clear();
+		messagesSentToController.clear();
 		Proxy proxy = new Proxy(sw, slicer, fsfw);
 		expect(channel.isConnected()).andReturn(true).anyTimes();
 		EasyMock.replay(channel);
@@ -652,8 +859,15 @@ public class ProxyTest {
 		assertFalse("Proxy is not connected as expected", proxy.connected());
 		proxy.connect(channel);
 		assertTrue("Proxy is now connected", proxy.connected());
+		OFPortStatus portStat = new OFPortStatus();
+		OFPhysicalPort port = new OFPhysicalPort();
+		port.setPortNumber((short)4);
+		port.setState(1);
+		port.setName("foo4");
+		portStat.setDesc(port);
 		
-		
+		proxy.toController(portStat, cntx);
+		assertTrue("sent message to controller", messagesSentToController.size() == 0);
 	}
 	
 	@Test

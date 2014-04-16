@@ -188,7 +188,7 @@ public class Proxy {
 		}
 	}
 	
-	private void processFlowMod(OFMessage msg){
+	private void processFlowMod(OFMessage msg, FloodlightContext cntx){
 		List <OFFlowMod> flows = this.mySlicer.allowedFlows((OFFlowMod)msg);
 		if(flows.size() == 0){
 			//really we need to send a perm error
@@ -235,7 +235,7 @@ public class Proxy {
 		
 		mapXids(messages);
 		try {
-			mySwitch.write(messages, null);
+			mySwitch.write(messages, cntx);
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -511,11 +511,12 @@ public class Proxy {
 		if(!this.mySlicer.isOkToProcessMessage()){
 			log.warn("Slice Rate limit exceeded");
 			this.sendError((OFMessage)msg);
+			return;
 		}
 		
 		switch(msg.getType()){
 			case FLOW_MOD:
-				processFlowMod(msg);
+				processFlowMod(msg, cntx);
 				return;
 			case PACKET_OUT:
 				//super simple case no need for the extra method
@@ -529,7 +530,7 @@ public class Proxy {
 					log.info("PacketOut is allowed");
 					mapXids(allowed);
 					try {
-						mySwitch.write(allowed, null);
+						mySwitch.write(allowed, cntx);
 					} catch (IOException e) {
 						e.printStackTrace();
 					}
@@ -553,7 +554,7 @@ public class Proxy {
 		
 		mapXids(msg);
 		try {
-			mySwitch.write(msg, null);
+			mySwitch.write(msg, cntx);
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
