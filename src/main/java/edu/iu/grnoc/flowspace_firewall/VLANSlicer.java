@@ -55,6 +55,7 @@ public class VLANSlicer implements Slicer{
 	private RateTracker myRateTracker;
 	private int maxFlows;
 	private String name;
+	private int packetInRate;
 
 	private static final Logger log = LoggerFactory.getLogger(VLANSlicer.class);
 	
@@ -74,8 +75,13 @@ public class VLANSlicer implements Slicer{
 	
 	public VLANSlicer(){
 		myRateTracker = new RateTracker(10,100);
+		packetInRate = 10;
 		portList = new HashMap<String,PortConfig>();
 		name = "";
+	}
+	
+	public void setPacketInRate(int rate){
+		this.packetInRate = rate;
 	}
 	
 	/**
@@ -682,5 +688,11 @@ public class VLANSlicer implements Slicer{
 			}
 		}
 		return false;
+	}
+
+
+	@Override
+	public int getPacketInRate() {
+		return this.packetInRate;
 	}
 }

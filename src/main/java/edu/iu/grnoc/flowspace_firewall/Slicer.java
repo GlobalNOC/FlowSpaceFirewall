@@ -45,5 +45,7 @@ public interface Slicer {
 	void setSliceName(String name);
 	double getRate();
 	int getMaxFlows();
+	int getPacketInRate();
+	void setPacketInRate(int rate);
 	
 }
