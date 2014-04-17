@@ -64,6 +64,7 @@ public class ProxyTest {
 	
 	private List<OFMessage> messagesSentToController;
 	private List<OFMessage> messagesSentToSwitch;
+	private List<Proxy> proxies;
 	
 	public void setupChannel() throws IOException{
 		ChannelFuture future = createMock(org.jboss.netty.channel.ChannelFuture.class);
@@ -237,7 +238,10 @@ public class ProxyTest {
 	public void setupFSFW(){
 		fsfw = createMock(FlowSpaceFirewall.class);
 		List<OFStatistics> stats = new ArrayList<OFStatistics>();
+		proxies = new ArrayList<Proxy>();
 		expect(fsfw.getStats(EasyMock.anyLong())).andReturn(stats).anyTimes();
+		
+		expect(fsfw.getSwitchProxies(EasyMock.anyLong())).andReturn(proxies).anyTimes();
 		EasyMock.replay(fsfw);
 	}
 	
@@ -801,6 +805,8 @@ public class ProxyTest {
 		messagesSentToSwitch.clear();
 		messagesSentToController.clear();
 		Proxy proxy = new Proxy(sw, slicer, fsfw);
+		proxies.add(proxy);
+		
 		expect(channel.isConnected()).andReturn(true).once().andReturn(false).once();
 		EasyMock.replay(channel);
 		assertNotNull("Proxy was created",proxy);

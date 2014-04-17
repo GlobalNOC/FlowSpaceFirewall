@@ -51,6 +51,7 @@ import org.xml.sax.SAXException;
 
 import edu.iu.grnoc.flowspace_firewall.web.FlowSpaceFirewallWebRoutable;
 import edu.iu.grnoc.flowspace_firewall.web.IFlowSpaceFirewallService;
+import edu.iu.grnoc.flowspace_firewall.FlowStatCacher;
 
 public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener, IOFSwitchListener, IFlowSpaceFirewallService{
 
