@@ -16,37 +16,18 @@
 package edu.iu.grnoc.flowspace_firewall.web;
 
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
+
+import net.floodlightcontroller.core.IOFSwitch;
 
 import org.restlet.resource.Get;
 import org.restlet.resource.ServerResource;
 
-import edu.iu.grnoc.flowspace_firewall.Slicer;
 
 public class FlowSpaceFirewallSwitches extends ServerResource{
 	@Get("json")
-	public HashMap<Long,List<Slicer>> getSwitches(){
+	public List<IOFSwitch> getSwitches(){
 		IFlowSpaceFirewallService iFSFs = (IFlowSpaceFirewallService)getContext().getAttributes().get(IFlowSpaceFirewallService.class.getCanonicalName());
-		List<HashMap<Long,Slicer>> slices = iFSFs.getSlices();
-		HashMap<Long,List<Slicer>> results = new HashMap<Long,List<Slicer>>();
-		Iterator <HashMap<Long,Slicer>> sliceIt = slices.iterator();
-		while(sliceIt.hasNext()){
-			HashMap<Long,Slicer> slice = sliceIt.next();
-			Iterator<Long> dpidIt = slice.keySet().iterator();
-			while(dpidIt.hasNext()){
-				Long dpid = dpidIt.next();
-				if(results.containsKey(dpid)){
-					results.get(dpid).add(slice.get(dpid));
-				}else{
-					ArrayList<Slicer> sliceList = new ArrayList<Slicer>();
-					sliceList.add(slice.get(dpid));
-					results.put(dpid, sliceList);
-				}
-			}
-		}
-		return results;
+		return iFSFs.getSwitches();
 	}
 }

@@ -16,6 +16,7 @@
 package edu.iu.grnoc.flowspace_firewall.web;
 
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
@@ -25,10 +26,27 @@ import edu.iu.grnoc.flowspace_firewall.*;
 
 public class FlowSpaceFirewallSlices extends ServerResource{
 	@Get("json")
-	public List<HashMap<Long,Slicer>> Slices(){
+	public HashMap<String, List<Slicer>> Slices(){
 		IFlowSpaceFirewallService iFSFs = (IFlowSpaceFirewallService)getContext().getAttributes().get(IFlowSpaceFirewallService.class.getCanonicalName());
 		List<HashMap<Long,Slicer>> slices = iFSFs.getSlices();
-		return slices;
+		
+		HashMap<String, List<Slicer>> newSlices = new HashMap<String,List<Slicer>>();
+		
+		for(HashMap<Long,Slicer> slice : slices){
+			for(Long dpid : slice.keySet()){
+				if(newSlices.containsKey(slice.get(dpid).getSliceName())){
+					List<Slicer> curSlices = newSlices.get(slice.get(dpid).getSliceName());
+					curSlices.add(slice.get(dpid));
+				}else{
+					List<Slicer> curSlices = new ArrayList<Slicer>();
+					curSlices.add(slice.get(dpid));
+					newSlices.put(slice.get(dpid).getSliceName(), curSlices);
+				}
+			}
+		}
+		
+		
+		return newSlices;
 	}
 
 }
