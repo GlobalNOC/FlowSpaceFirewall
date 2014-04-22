@@ -105,6 +105,10 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
         	}
         }
 	}
+	
+	public List<IOFSwitch> getSwitches(){
+		return this.switches;
+	}
 
 	public HashMap<Short, OFStatistics> getPortStats(long switchId){
 		return statsCacher.getPortStats(switchId);
