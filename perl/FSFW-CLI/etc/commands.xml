@@ -1,0 +1,27 @@
+<commands>
+
+<command match="show status (\S*)? (\S*)?" method="/fsfw/status/[slice_name]/[dpid]">
+  <parameter order="1" name="[slice_name]" >
+  <parameter order="2" name="[dpid]">
+</command>
+
+<command match="show flows (\S*)? (\S*)?" method="/fsfw/status/[slice_name]/[dpid]">
+  <parameter order="1" name="[slice_name]" >
+  <parameter order="2" name="[dpid]">
+</command>
+
+<command match="show status (\S*)? (\S*)?" method="/fsfw/status/[slice_name]/[dpid]">
+  <parameter order="1" name="[slice_name]" >
+  <parameter order="2" name="[dpid]">
+</command>
+
+<command match="show slices" method="/fsfw/admin/slices">
+</command>
+<command match="show switches" method="/fsfw/admin/switches" method="/fsfw/admin/switches">
+</command>
+
+
+
+
+</commands>
+
