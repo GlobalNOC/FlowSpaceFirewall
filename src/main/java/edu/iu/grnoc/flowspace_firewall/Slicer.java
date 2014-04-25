@@ -47,5 +47,6 @@ public interface Slicer {
 	int getMaxFlows();
 	int getPacketInRate();
 	void setPacketInRate(int rate);
+	IOFSwitch getSwitch();
 	
 }

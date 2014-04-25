@@ -691,6 +691,9 @@ public class VLANSlicer implements Slicer{
 		return false;
 	}
 
+	public IOFSwitch getSwitch(){
+		return this.sw;
+	}
 
 	@Override
 	public int getPacketInRate() {
