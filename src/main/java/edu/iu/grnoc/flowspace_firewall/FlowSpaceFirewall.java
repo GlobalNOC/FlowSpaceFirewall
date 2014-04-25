@@ -91,7 +91,19 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 	
 	@Override
 	public void switchAdded(long switchId) {
-
+        logger.debug("Switch " + switchId + " has joined");
+        IOFSwitch sw = floodlightProvider.getSwitch(switchId);
+        this.switches.add(sw);
+        this.statsCacher.addSwitch(sw);
+        //loop through all slices
+        for(HashMap<Long, Slicer> slice: slices){
+        	//loop through all switches in the slice
+        	if(slice.containsKey(switchId)){
+        		Slicer vlanSlicer = slice.get(switchId);
+        		//build the controller channel
+        		controllerConnector.addProxy(switchId, new Proxy(sw, vlanSlicer, this));
+        	}
+        }
 	}
 	
 	public List<IOFSwitch> getSwitches(){
@@ -153,19 +165,11 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 
 	@Override
 	public void switchActivated(long switchId) {
-        logger.debug("Switch " + switchId + " has joined");
-        IOFSwitch sw = floodlightProvider.getSwitch(switchId);
-        this.switches.add(sw);
-        this.statsCacher.addSwitch(sw);
-        //loop through all slices
-        for(HashMap<Long, Slicer> slice: slices){
-        	//loop through all switches in the slice
-        	if(slice.containsKey(switchId)){
-        		Slicer vlanSlicer = slice.get(switchId);
-        		//build the controller channel
-        		controllerConnector.addProxy(switchId, new Proxy(sw, vlanSlicer, this));
-        	}
-        }
+
+	}
+	
+	public void removeProxy(Long switchId, Proxy p){
+		this.controllerConnector.removeProxy(switchId, p);
 	}
 
 	@Override
@@ -275,12 +279,13 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 		}
 		
 		List <Proxy> proxies = controllerConnector.getSwitchProxies(sw.getId());
+		
 		if(proxies == null){
 			return Command.CONTINUE;
 		}
-		Iterator <Proxy> it = proxies.iterator();
-		while(it.hasNext()){
-			Proxy p = it.next();
+
+		
+		for(Proxy p : proxies){
 			if(!p.getAdminStatus()){
 				logger.debug("slice disabled... skipping");
 			}else{
