@@ -21,11 +21,13 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.transform.Source;
+import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamSource;
 import javax.xml.validation.Schema;
 import javax.xml.validation.SchemaFactory;
@@ -54,9 +56,33 @@ public final class ConfigParser {
 	//the logger
 	private static final Logger log = LoggerFactory.getLogger(ConfigParser.class);
 
+	private static boolean isValidConfig(List<HashMap<Long, Slicer>> slices){
+		
+		if(slices.size() == 0){
+			return false;
+		}
+		
+		for(HashMap<Long, Slicer> slice : slices){
+			for(Long dpid : slice.keySet()){
+				Slicer config = slice.get(dpid);
+				for(HashMap<Long, Slicer> otherSlice : slices){
+					if(otherSlice.containsKey(dpid)){
+						Slicer otherConfig = otherSlice.get(dpid);
+						if(otherConfig.getSliceName() != config.getSliceName()){
+							if(config.hasOverlap(otherConfig)){
+								return false;
+							}
+						}
+					}
+				}
+			}
+		}
+		
+		return true;
+	}
 	
 	//the only method we need here
-	public static ArrayList<HashMap<Long, Slicer>> parseConfig(String xmlFile) throws IOException, SAXException{
+	public static ArrayList<HashMap<Long, Slicer>> parseConfig(String xmlFile) throws IOException, SAXException, ParserConfigurationException,XPathExpressionException{
 		ArrayList<HashMap<Long, Slicer>> newSlices = new ArrayList<HashMap<Long, Slicer>>();
 		Document document;
     	try {
@@ -68,15 +94,14 @@ public final class ConfigParser {
 	        SchemaFactory factory = SchemaFactory.newInstance("http://www.w3.org/2001/XMLSchema");
 	
 	        // load a WXS schema, represented by a Schema instance
-	        Source schemaFile = new StreamSource(new File("/etc/fsf/mySchema.xsd"));
+	        Source schemaFile = new StreamSource(new File("/etc/fsfw/fsfw.xsd"));
 	        Schema schema = factory.newSchema(schemaFile);
 	        
 	        // create a Validator instance, which can be used to validate an instance document
-	        @SuppressWarnings("unused")
 			Validator validator = schema.newValidator();
 	       
 	        // validate the DOM tree
-	        //validator.validate(new DOMSource(document));
+	        validator.validate(new DOMSource(document));
     	
 	        //get a list of all switches and slices
 	        XPath xPath = XPathFactory.newInstance().newXPath();
@@ -120,12 +145,12 @@ public final class ConfigParser {
 	        				log.debug("Processing Slice for Switch: " + switchConfig.getAttributes().getNamedItem("name"));
 	        				Slicer slicer = new VLANSlicer();
 	        				slicer.setSliceName(sliceName);
-	        			    //TODO set the slicer's max_floxs attribute
 	        				int numberOfFlows = Integer.parseInt(switchConfig.getAttributes().getNamedItem("max_flows").getTextContent());
-	        				slicer.setMaxFlows(numberOfFlows);
-	        				
+	        				slicer.setMaxFlows(numberOfFlows);      				
 	        				int flowRate = Integer.parseInt(switchConfig.getAttributes().getNamedItem("flow_rate").getTextContent());
 	        				slicer.setFlowRate(flowRate);
+	        				int packetInRate = Integer.parseInt(switchConfig.getAttributes().getNamedItem("packet_in_rate").getTextContent());
+	        				slicer.setPacketInRate(packetInRate);
 	        				NodeList ports = switchConfig.getChildNodes();
 	        				//for every port create a port config
 	        				for(int k=0; k < ports.getLength(); k++){
@@ -146,7 +171,7 @@ public final class ConfigParser {
 		        						continue;
 		        					}
 		        					for(short m = Short.parseShort(range.getAttributes().getNamedItem("start").getTextContent()); 
-		        							m < Short.parseShort(range.getAttributes().getNamedItem("end").getTextContent()); m++){
+		        							m <= Short.parseShort(range.getAttributes().getNamedItem("end").getTextContent()); m++){
 		        						myRange.setVlanAvail(m, true);
 		        					}
 		        				}
@@ -177,18 +202,25 @@ public final class ConfigParser {
 	        	//add to the new configuration slicer object
 	        	newSlices.add(dpidSlicer);
 	        }
-	        //return the results
-	        
     	}catch (SAXException e) {
-            // instance document is invalid!
-    		log.error("Problems parsing /etc/fsf/fsf.xml: " + e.getMessage());
+    		log.error("Problems parsing " + xmlFile + ": " + e.getMessage());
+    		throw e;
         }catch (ParserConfigurationException e){
-        	log.error("Problems parsing /etc/fsf/fsf.xml: " + e.getMessage());
+        	log.error("Problems parsing " + xmlFile + ": " + e.getMessage());
+        	throw e;
         }catch (XPathExpressionException e){
-        	log.error("Problems parsing /etc/fsf/fsf.xml: " + e.getMessage());
+        	log.error("Problems parsing " + xmlFile + ": " + e.getMessage());
+        	throw e;
         }
     	
-    	return newSlices;
+    	//now validate config
+    	if(isValidConfig(newSlices)){
+    		return newSlices;
+    	}else{
+    		log.error("Problem with configuration.  Unable to load config");
+    		newSlices.clear();
+    		return newSlices;
+    	}
 	}
 	
 }

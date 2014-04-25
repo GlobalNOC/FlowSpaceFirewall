@@ -21,27 +21,33 @@ import java.util.List;
 import net.floodlightcontroller.core.IOFSwitch;
 
 import org.openflow.protocol.OFFlowMod;
+import org.openflow.protocol.OFMessage;
 import org.openflow.protocol.OFPacketOut;
 
 public interface Slicer {
 
 	List <OFFlowMod> allowedFlows(OFFlowMod flow);
+	List<OFMessage> allowedPacketOut(OFPacketOut output);
 	void setController(InetSocketAddress addr);
 	InetSocketAddress getControllerAddress();
 	void setSwitch(IOFSwitch mySwitch);
 	void setMaxFlows(int numberOfFlows);
 	void setFlowRate(int flowRate);
+	int getMaxFlowRate();
 	boolean isGreaterThanMaxFlows(int numberOfFlows);
-	boolean isPacketOutAllowed(OFPacketOut output);
 	boolean isPortPartOfSlice(String portName);
 	boolean isPortPartOfSlice(short portId);
 	void setPortConfig(String portName, PortConfig pConfig);
 	PortConfig getPortConfig(String portName);
 	PortConfig getPortConfig(short portId);
 	boolean isOkToProcessMessage();
+	boolean hasOverlap(Slicer otherSlicer);
 	String getSliceName();
 	void setSliceName(String name);
 	double getRate();
 	int getMaxFlows();
+	int getPacketInRate();
+	void setPacketInRate(int rate);
+	IOFSwitch getSwitch();
 	
 }

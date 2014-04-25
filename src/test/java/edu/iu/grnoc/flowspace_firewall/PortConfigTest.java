@@ -40,14 +40,16 @@ public class PortConfigTest {
 		
 		thrown.expect(IllegalArgumentException.class);
 		thrown.expectMessage("VLANRange not allowed to null!");
+		@SuppressWarnings("unused")
 		PortConfig pConfig = new PortConfig("Foo",null);
-	
+
 	}
 	
 	@Test
 	public void testParamInit2() throws IllegalArgumentException{
 		thrown.expect(IllegalArgumentException.class);
 		thrown.expectMessage("PortName not allowed to be null!");
+		@SuppressWarnings("unused")
 		PortConfig pConfig = new PortConfig(null,new VLANRange());
 		
 	}

@@ -1,7 +1,7 @@
 <configuration scan="true">
 
   <appender name="file" class="ch.qos.logback.core.FileAppender">
-    <file>/tmp/fsf.log</file>
+    <file>/tmp/fsfw.log</file>
     <append>true</append>
     <encoder>
       <pattern>%date{yyyy-MM-dd HH:mm:ss.S} %-5level [%logger{15}] %msg%n</pattern>

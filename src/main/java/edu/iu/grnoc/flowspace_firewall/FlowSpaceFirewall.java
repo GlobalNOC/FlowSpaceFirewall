@@ -24,6 +24,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Timer;
 
+import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.xpath.XPathExpressionException;
+
 
 import net.floodlightcontroller.core.FloodlightContext;
 import net.floodlightcontroller.core.IFloodlightProviderService;
@@ -48,6 +51,7 @@ import org.xml.sax.SAXException;
 
 import edu.iu.grnoc.flowspace_firewall.web.FlowSpaceFirewallWebRoutable;
 import edu.iu.grnoc.flowspace_firewall.web.IFlowSpaceFirewallService;
+import edu.iu.grnoc.flowspace_firewall.FlowStatCacher;
 
 public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener, IOFSwitchListener, IFlowSpaceFirewallService{
 
@@ -100,6 +104,10 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
         		controllerConnector.addProxy(switchId, new Proxy(sw, vlanSlicer, this));
         	}
         }
+	}
+	
+	public List<IOFSwitch> getSwitches(){
+		return this.switches;
 	}
 
 	public HashMap<Short, OFStatistics> getPortStats(long switchId){
@@ -157,8 +165,11 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 
 	@Override
 	public void switchActivated(long switchId) {
-		//nothing to do here
-		
+
+	}
+	
+	public void removeProxy(Long switchId, Proxy p){
+		this.controllerConnector.removeProxy(switchId, p);
 	}
 
 	@Override
@@ -185,7 +196,11 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 		//need to put it in place
 
 		try {
-			this.slices = ConfigParser.parseConfig("/etc/fsf/fsf.xml");
+			this.slices = ConfigParser.parseConfig("/etc/fsfw/fsfw.xml");
+			if(this.slices.size() == 0){
+				logger.error("Unable to reload config due to a problem in the configuration!");
+				return false;
+			}
 			//newSlices is a clone so we can modify it without modifying slices
 			//we will use this to figure out which ones we have updated and which
 			//slices need to be created and connected to a currently active switch
@@ -245,6 +260,12 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 		} catch (SAXException e) {
 			e.printStackTrace();
 			return false;
+		} catch(ParserConfigurationException e){
+			logger.error(e.getMessage());
+			return false;
+		} catch(XPathExpressionException e){
+			logger.error(e.getMessage());
+			return false;
 		}
 		return true;
 	}
@@ -258,17 +279,22 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 		}
 		
 		List <Proxy> proxies = controllerConnector.getSwitchProxies(sw.getId());
+		
 		if(proxies == null){
 			return Command.CONTINUE;
 		}
-		Iterator <Proxy> it = proxies.iterator();
-		while(it.hasNext()){
-			Proxy p = it.next();
-			try{
-				p.toController(msg,cntx);
-			}catch (Exception e){
-				//don't die please... just keep going and error the stack trace
-				logger.error("FSF experienced an error:" + e.getMessage(), e);
+
+		
+		for(Proxy p : proxies){
+			if(!p.getAdminStatus()){
+				logger.debug("slice disabled... skipping");
+			}else{
+				try{
+					p.toController(msg,cntx);
+				}catch (Exception e){
+					//don't die please... just keep going and error the stack trace
+					logger.error("FSFW experienced an error:" + e.getMessage(), e);
+				}
 			}
 		}
 		return Command.CONTINUE;
@@ -305,13 +331,21 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
         restApi = context.getServiceImpl(IRestApiService.class);
 		//parses the config
 		try{
-			this.slices = ConfigParser.parseConfig("/etc/fsf/fsf.xml");
+			this.slices = ConfigParser.parseConfig("/etc/fsfw/fsfw.xml");
 		}catch (SAXException e){
-			logger.error("Problems parsing /etc/fsf/fsf.xml: " + e.getMessage());
+			logger.error("Problems parsing /etc/fsfw/fsfw.xml: " + e.getMessage());
 		}catch (IOException e){
-			logger.error("Problems parsing /etc/fsf/fsf.xml: " + e.getMessage());
+			logger.error("Problems parsing /etc/fsfw/fsfw.xml: " + e.getMessage());
+		} catch(ParserConfigurationException e){
+			logger.error(e.getMessage());
+		} catch(XPathExpressionException e){
+			logger.error(e.getMessage());
 		}
 
+		if(this.slices.size() == 0){
+			logger.error("Problem with the configuration file!");
+			throw new FloodlightModuleException("Problem with the Config!");
+		}
 
         
 	}
