@@ -91,19 +91,7 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 	
 	@Override
 	public void switchAdded(long switchId) {
-        logger.debug("Switch " + switchId + " has joined");
-        IOFSwitch sw = floodlightProvider.getSwitch(switchId);
-        this.switches.add(sw);
-        this.statsCacher.addSwitch(sw);
-        //loop through all slices
-        for(HashMap<Long, Slicer> slice: slices){
-        	//loop through all switches in the slice
-        	if(slice.containsKey(switchId)){
-        		Slicer vlanSlicer = slice.get(switchId);
-        		//build the controller channel
-        		controllerConnector.addProxy(switchId, new Proxy(sw, vlanSlicer, this));
-        	}
-        }
+
 	}
 	
 	public List<IOFSwitch> getSwitches(){
@@ -165,8 +153,19 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 
 	@Override
 	public void switchActivated(long switchId) {
-		//nothing to do here
-		
+        logger.debug("Switch " + switchId + " has joined");
+        IOFSwitch sw = floodlightProvider.getSwitch(switchId);
+        this.switches.add(sw);
+        this.statsCacher.addSwitch(sw);
+        //loop through all slices
+        for(HashMap<Long, Slicer> slice: slices){
+        	//loop through all switches in the slice
+        	if(slice.containsKey(switchId)){
+        		Slicer vlanSlicer = slice.get(switchId);
+        		//build the controller channel
+        		controllerConnector.addProxy(switchId, new Proxy(sw, vlanSlicer, this));
+        	}
+        }
 	}
 
 	@Override
