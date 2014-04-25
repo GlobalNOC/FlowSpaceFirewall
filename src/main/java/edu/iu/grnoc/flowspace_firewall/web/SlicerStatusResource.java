@@ -60,6 +60,7 @@ public class SlicerStatusResource extends ServerResource{
 			results.put("total_flows", 0);
 			results.put("max_flows", mySlice.getMaxFlows());
 			results.put("connected",  false);
+			results.put("DPID", mySlice.getSwitch().getStringId() );
 			
 		}
 		

@@ -386,6 +386,7 @@ public class VLANSlicer implements Slicer{
 						newOutput.setPort(output.getPort());
 						actualActions.add(newOutput);
 						newOut.setActions(actualActions);
+						newOut.setActionsLength((short)actualActions.size());
 						packets.add(newOut);
 					}
 					break;
@@ -690,6 +691,9 @@ public class VLANSlicer implements Slicer{
 		return false;
 	}
 
+	public IOFSwitch getSwitch(){
+		return this.sw;
+	}
 
 	@Override
 	public int getPacketInRate() {
