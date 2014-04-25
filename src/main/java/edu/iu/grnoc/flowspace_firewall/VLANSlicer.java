@@ -350,10 +350,17 @@ public class VLANSlicer implements Slicer{
 							actualActions.addAll(newActions);
 							OFPacketOut newOut = this.clonePacketOut(outPacket);
 							OFActionOutput newOutput = new OFActionOutput();
+							newOutput.setMaxLength(Short.MAX_VALUE);
 							newOutput.setType(OFActionType.OUTPUT);
+							newOutput.setLength((short)OFActionOutput.MINIMUM_LENGTH);
 							newOutput.setPort(port.getValue().getPortId());
 							actualActions.add(newOutput);
 							newOut.setActions(actualActions);
+							int size = 0;
+							for(OFAction act : actualActions){
+								size = size + act.getLengthU();
+							}
+							newOut.setActionsLength((short)size);
 							packets.add(newOut);
 						}
 						
@@ -381,12 +388,14 @@ public class VLANSlicer implements Slicer{
 						List<OFAction> actualActions = new ArrayList<OFAction>();
 						actualActions.addAll(newActions);
 						OFPacketOut newOut = this.clonePacketOut(outPacket);
-						OFActionOutput newOutput = new OFActionOutput();
-						newOutput.setType(OFActionType.OUTPUT);
-						newOutput.setPort(output.getPort());
-						actualActions.add(newOutput);
+						actualActions.add(output);
 						newOut.setActions(actualActions);
-						newOut.setActionsLength((short)actualActions.size());
+						int size = 0;
+						for(OFAction act : actualActions){
+							size = size + act.getLengthU();
+						}
+						newOut.setActionsLength((short)size);
+						
 						packets.add(newOut);
 					}
 					break;
