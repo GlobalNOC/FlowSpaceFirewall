@@ -60,7 +60,9 @@ public class SlicerStatusResource extends ServerResource{
 			results.put("total_flows", 0);
 			results.put("max_flows", mySlice.getMaxFlows());
 			results.put("connected",  false);
-			results.put("DPID", mySlice.getSwitch().getStringId() );
+			results.put("DPID", dpidStr );
+			results.put("max_packet_in_rate",  mySlice.getPacketInRate());
+			results.put("packet_in_rate", 0);
 			
 		}
 		
@@ -83,6 +85,11 @@ public class SlicerStatusResource extends ServerResource{
 		results.put("total_flows", myProxy.getFlowCount());
 		results.put("max_flows",  myProxy.getSlicer().getMaxFlows());
 		results.put("connected", myProxy.connected());
+		results.put("DPID", myProxy.getSwitch().getStringId());
+		results.put("max_packet_in_rate",  myProxy.getSlicer().getPacketInRate());
+		results.put("packet_in_rate", myProxy.getPacketInRate());
+		results.put("max_flow_rule", myProxy.getSlicer().getMaxFlowRate());
+		
 		return results;
 		
 	}	
