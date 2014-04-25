@@ -20,26 +20,27 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
+import org.openflow.util.HexString;
 import org.restlet.resource.Get;
 import org.restlet.resource.ServerResource;
 import edu.iu.grnoc.flowspace_firewall.*;
 
 public class FlowSpaceFirewallSlices extends ServerResource{
 	@Get("json")
-	public HashMap<String, List<Slicer>> Slices(){
+	public HashMap<String, List<String>> Slices(){
 		IFlowSpaceFirewallService iFSFs = (IFlowSpaceFirewallService)getContext().getAttributes().get(IFlowSpaceFirewallService.class.getCanonicalName());
 		List<HashMap<Long,Slicer>> slices = iFSFs.getSlices();
 		
-		HashMap<String, List<Slicer>> newSlices = new HashMap<String,List<Slicer>>();
+		HashMap<String, List<String>> newSlices = new HashMap<String,List<String>>();
 		
 		for(HashMap<Long,Slicer> slice : slices){
 			for(Long dpid : slice.keySet()){
 				if(newSlices.containsKey(slice.get(dpid).getSliceName())){
-					List<Slicer> curSlices = newSlices.get(slice.get(dpid).getSliceName());
-					curSlices.add(slice.get(dpid));
+					List<String> curSlices = newSlices.get(slice.get(dpid).getSliceName());
+					curSlices.add(HexString.toHexString(dpid));
 				}else{
-					List<Slicer> curSlices = new ArrayList<Slicer>();
-					curSlices.add(slice.get(dpid));
+					List<String> curSlices = new ArrayList<String>();
+					curSlices.add(HexString.toHexString(dpid));
 					newSlices.put(slice.get(dpid).getSliceName(), curSlices);
 				}
 			}

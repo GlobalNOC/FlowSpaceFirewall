@@ -82,7 +82,7 @@ public class Proxy {
 		flowCount = 0;
 		xidMap = new XidMap();
 		adminStatus = true;
-		packetInRate = new RateTracker(100,1000);
+		packetInRate = new RateTracker(100,slicer.getPacketInRate());
 	}
 	
 	public void setAdminStatus(Boolean status){
@@ -99,6 +99,10 @@ public class Proxy {
 	
 	public boolean getAdminStatus(){
 		return this.adminStatus;
+	}
+	
+	public double getPacketInRate(){
+		return this.packetInRate.getRate();
 	}
 	
 	public void removeFlows(){

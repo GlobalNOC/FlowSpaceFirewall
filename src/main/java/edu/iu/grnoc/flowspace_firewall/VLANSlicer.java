@@ -293,6 +293,10 @@ public class VLANSlicer implements Slicer{
 		return newOut;
 	}
 	
+	public int getMaxFlowRate(){
+		return this.myRateTracker.getMaxRate();
+	}
+	
 	/**
 	 * process an OFPacketOut message to verify that it fits
 	 * in this slice properly.  We don't want one slice to
