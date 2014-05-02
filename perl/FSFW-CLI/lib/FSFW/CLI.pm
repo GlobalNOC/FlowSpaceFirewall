@@ -8,16 +8,19 @@
 #----- $HeadURL:
 #----- $Id:
 #-----
-#----- cli code
+#----- Library that acts as a CLI for the FSFW Webservices
 #---------------------------------------------------------------------
 
 package FSFW::CLI;
+
 use strict;
-use Term::ReadLine;    #using Term::ReadLine::Gnu
+use Term::ReadLine;    #using Term::ReadLine::Gnu however best practices say not to require it directly?
 use GRNOC::Config;
 use FindBin;
 use Data::Dumper;
 use GRNOC::WebService::Client;
+#use Text::Table;
+
 sub new {
 
     my $proto = shift;
@@ -35,7 +38,7 @@ sub new {
     my $self = \%attributes;
 
     bless( $self, $class );
-    warn Dumper($self);
+
     $self->_init();
 
     return $self;
@@ -45,13 +48,17 @@ sub new {
 sub _init {
     my $self = shift;
 
-    #$self->{config} = GRNOC::Config->new()
+    $self->{config} = GRNOC::Config->new(config_file=>'/etc/fsfw/cli_config.xml');
+    my $base_url = $self->{'config'}->get('/config/base_url');
+    my $port = $self->{'config'}->get('/config/port');
+    $base_url='http://localhost';
+    $port='8080';
     $self->{history}       = [];
     $self->{history_index} = 0;
     
     
     $self->{'ws'} = GRNOC::WebService::Client->new(
-	url => 'http://localhost:8080/admin/switches/json',
+	url => "$base_url:$port/admin/switches/json",
 	uid => 'test_user',
 	passwd => 'supersecretpassword',
 	realm => 'foo',
@@ -64,14 +71,14 @@ sub _init {
 
     
     my $attribs = $self->{'term'}->Attribs;
-    #diy completion function for the win.
+
+    #setting completion function up for Term::Readline
     my $cli = $self;
     $attribs->{completion_function} = sub {
         my ( $text, $line, $start ) = @_;
         $self->command_complete( $text, $line, $start );
     };
-
-    
+  
 
     return;
 }
@@ -85,18 +92,31 @@ sub expand_commands {
     my @input_parts   = split( " ", $input );
     my $command_list  = $self->get_command_list();
     my $times_matched = 0;
+    my $exact_match ={};
     foreach my $command (@$command_list) {
         my $matching_parts = 0;
+
         my @command_parts = split( " ", $command );
         for ( my $i = 0 ; $i < scalar(@input_parts) ; $i++ ) {
+	   
+	    if ($command_parts[$i] =~ /^$input_parts[$i]$/ ) {
+		$exact_match->{$command} +=1;
+	    }
             if ( $command_parts[$i] =~ /^$input_parts[$i].*/ ) {
                 $matching_parts++;
             }
+
+
+	    
         }
         if ( $matching_parts == scalar(@command_parts) ) {
             $new_text = $command;
             $times_matched++;
         }
+	else {
+		#has to match all parts to have any count in exact matches
+		$exact_match->{$command} =0;
+	}
     }
     if ( $new_text && $times_matched == 1 ) {
         return ( 0, $new_text );
@@ -105,22 +125,31 @@ sub expand_commands {
         print "Command not found!\n";
     }
     elsif ( $times_matched > 1 ) {
+	my $new_command;
+	my $low_bar=0;
+	foreach my $command (keys %$exact_match){
+	    if ($exact_match->{$command} > $low_bar){
+		$new_command=$command;
+	    }
+	}
+	if($new_command){
+	    warn "expanding $input to $new_command\n";
+	    return (0, $new_command);
+	}
         print "Command not unique!\n";
     }
 
-    #couldn't figure it out;
     return ( 1, $input );
 }
 
 sub command_complete {
     my $self = shift;
 
-    #warn Dumper ($self);
+
     my ( $text, $line, $start ) = @_;
     my $command_list = $self->get_command_list();
     my @matches      = ();
 
-    #warn Dumper $command_list;
     foreach my $command (@$command_list) {
         my $offset        = 0;
         my $is_match      = 1;
@@ -128,19 +157,19 @@ sub command_complete {
         my @command_parts = split( " ", $command );
         my $last_word     = $command_parts[0];
 
-        #	unless (scalar(@$text_parts) ){
-        #	    push (@matches,$command_parts[0]);
-        #	}
         for ( my $i = 0 ; $i < scalar(@text_parts) ; $i++ ) {
-
-            #warn "checking if $text_parts[$i] is in $command_parts[$i]\n";
+	    my $is_exact_match=0;
+	    if ($command_parts[$i] =~ /^$text_parts[$i]$/ ) {
+		$is_exact_match=1;
+	    }
             unless ( $command_parts[$i] =~ /^$text_parts[$i].*/ ) {
 
-                #warn "it isn't\n";
                 $is_match = 0;
                 last;
             }
-            $last_word = $command_parts[$i];
+	    unless ($is_exact_match){
+		$last_word = $command_parts[$i];
+	    }
             if ( length( $text_parts[$i] ) == length( $command_parts[$i] ) ) {
                 $last_word = $command_parts[ $i + 1 ];
             }
@@ -148,20 +177,21 @@ sub command_complete {
         }
         if ($is_match) {
 
-            #warn "adding $last_word to matches\n";
+
             push( @matches, $last_word );
         }
     }
 
-    #warn Dumper (\@matches);
+
     return @matches;
 }
 
+#stubbed out in case we ever have a legitimate auth system for the WS.
 sub login {
 
     my $self = shift;
 
-    return 1;    #NONPROD
+    return 1;  
 
 }
 
@@ -170,20 +200,43 @@ sub build_command_list {
     my $self = shift;
     my $ws = $self->{'ws'};
 
-    $self->{'possible_commands'} = [ 'show slices', 'show switches', 'quit', 'exit' ];    #NONPROD
+    my $base_url = $self->{'config'}->get('/config/base_url');
+    my $port = $self->{'config'}->get('/config/port');
+    $base_url='http://localhost';
+    $port='8080';
+
+    $self->{'possible_commands'} = [ 'show slices', 'show switches', 'quit', 'exit' ];  
 
     my @expandable_commands = ('show status','show flows');
-    push (@{$self->{'possible_commands'} },@expandable_commands );
     
-    $ws->set_url("http://localhost:8080/fsf/admin/slices/json"); #NONPROD
+    $ws->set_url("$base_url:$port/fsfw/admin/slices/json"); 
     my $slices_obj = $ws->foo();
-    warn Dumper ($slices_obj);
+    #warn Dumper ($slices_obj);
+    my @slices;
+    foreach my $slice (keys %$slices_obj){
+	push (@slices, $slice);
+    }
 
-    #$ws->set_url("http://localhost:8080/fsf/admin/switches/json"); #NONPROD
-    #my $dpids_obj = $ws->foo();
+    $ws->set_url("$base_url:$port/fsfw/admin/switches/json"); 
+    my $dpids_obj = $ws->foo();
     my $dpid_per_slice = {};
-   
-#    warn Dumper ($dpids_obj);
+    foreach my $slice (@slices){
+	$dpid_per_slice->{$slice}=[];
+    }
+
+    foreach my $switch (@$dpids_obj){
+	foreach my $slice (@slices){
+	    push @{$dpid_per_slice->{$slice}},$switch->{'dpid'}
+	}
+    }
+    
+    foreach my $expandable_command (@expandable_commands){
+	foreach my $slice (@slices){
+	    foreach my $dpid (@{$dpid_per_slice->{$slice}}){
+		push (@{$self->{'possible_commands'}}, "$expandable_command $slice $dpid");
+	    }
+	}
+    }
 
     return;
 }
@@ -208,29 +261,70 @@ sub handle_input {
     my $self           = shift;
     my $input          = shift;
     my $insert_text = 0;
-    print "Got Command : $input \n";    #NONPROD
-    ( $insert_text, $input ) = $self->expand_commands($input);
-    print "expanded input to $input\n";
-    
+    my $ws = $self->{'ws'};
+    my $base_url = $self->{'config'}->get('/config/base_url');
+    my $port = $self->{'config'}->get('/config/port');
+    $base_url='http://localhost';
+    $port='8080';
+    ( $insert_text, $input ) = $self->expand_commands($input);  
     
     if ( $input =~ /exit/ || $input =~ /quit/ ) {
         exit;
     }
     elsif ( $input =~ /^show switches$/ ) {
-        $self->show_switches();
+	$ws->set_url("$base_url:$port/fsfw/admin/switches/json"); 
+	my $status_obj = $ws->foo();
+#	print Dumper ($status_obj); #NONPROD
+    
+	foreach my $switch (@$status_obj){
+
+	    my ($address) = $switch->{'inetAddress'} =~ /\/(\S+):\d+/;
+	    print "IP:\t$address\n";
+	    print "DPID:\t$switch->{'dpid'}\n";
+	    print "Vendor:\t".$switch->{'descriptionStatistics'}->{'manufacturerDescription'}."\n";
+	    print "Device:\t".$switch->{'descriptionStatistics'}->{'hardwareDescription'}."\n";
+	    print "Software Version:\t".$switch->{'descriptionStatistics'}->{'softwareDescription'}."\n";
+	    print "Ports:\n";
+	    print "Name\tPort Number\tStatus\n\n";
+	    #my $port_table=Text::Table->new("Port Name","Port Number", "Status");
+	    foreach my $port (@{$switch->{'ports'}}) {
+		
+		my $port_num = unpack("S",pack("s",$port->{'portNumber'}));
+#		$port_table->load([$port->{'name'},$port_num,'up']);
+		print "$port->{'name'}\t$port_num\tUP\n";
+#sprintf "%u\n", $port->{'portNumber'};
+		
+		
+		
+	    }
+	    print "\n\n";
+	}
+
+    }
+    elsif ( $input =~ /^show slices$/ ) {
+	$ws->set_url("$base_url:$port/fsfw/admin/slices/json"); 
+	my $status_obj = $ws->foo();
+	print Dumper ($status_obj); #NONPROD
+    }
+    elsif ( $input =~/^show flows (\S+) (\S+)/){
+	$ws->set_url("$base_url:$port/fsfw/flows/$1/$2/json"); 
+	    my $status_obj = $ws->foo();
+	    print Dumper ($status_obj); #NONPROD
+
+    }
+    elsif ( $input =~/^show status (\S+) (\S+)/){
+	    $ws->set_url("$base_url:$port/fsfw/status/$1/$2/json"); 
+	    my $status_obj = $ws->foo();
+	    print Dumper ($status_obj); #NONPROD
     }
 
-    return $insert_text;
+    return ;#$insert_text;
 }
 
 sub terminal_loop {
 
     my $self = shift;
 
-    #my $process_input = shift;
-    #my $command_complete = shift;
-
-    #$self->print_prompt();
     my $line;
     my $term = $self->{'term'};
     my $insert_text;
