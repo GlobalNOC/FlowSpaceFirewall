@@ -25,6 +25,7 @@ import org.openflow.protocol.statistics.OFStatistics;
 import edu.iu.grnoc.flowspace_firewall.Proxy;
 import edu.iu.grnoc.flowspace_firewall.Slicer;
 
+import net.floodlightcontroller.core.IOFSwitch;
 import net.floodlightcontroller.core.module.IFloodlightService;
 
 public interface IFlowSpaceFirewallService extends IFloodlightService {
@@ -35,7 +36,7 @@ public interface IFlowSpaceFirewallService extends IFloodlightService {
 	public List<OFStatistics> getStats(long switchId);
 	public List<Proxy> getSwitchProxies(long switchId);
 	public List<HashMap<Long,Slicer>> getSlices();
+	public List<IOFSwitch> getSwitches();
 	public HashMap<Long,Slicer> getSlice(String name);
-	//public HashMap<Long, Slicer> getSwithces();
 
 }

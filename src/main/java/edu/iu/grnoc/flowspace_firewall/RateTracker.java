@@ -52,13 +52,13 @@ public class RateTracker {
 			return 0;
 		}
 		log.debug("calculating current rate");
-		long end = myFifo.get(myFifo.size() - 1).getTime() / 1000;
-		long start = myFifo.get(0).getTime() / 1000;
+		long end = myFifo.get(myFifo.size() - 1).getTime();
+		long start = myFifo.get(0).getTime();
 		log.debug("#packets = " + myFifo.size() + " / end = " + end + " start = " + start);
 		if(end - start <= 0){
 			return 0;
 		}
-		return (myFifo.size() / (end - start));
+		return (myFifo.size() / ((end - start)/1000.0));
 	}
 	
 	public synchronized double getRate(Date now){

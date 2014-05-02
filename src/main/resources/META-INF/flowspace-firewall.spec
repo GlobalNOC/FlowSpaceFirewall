@@ -1,5 +1,5 @@
 Name: flowspace-firewall
-Version: 1.0.1
+Version: 1.0.2
 Release: 1
 Summary: Flowspace Firewall
 License: CHECK(Distributable)
@@ -10,7 +10,7 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 BuildArch: noarch
 Requires(pre): /usr/sbin/useradd, /usr/bin/getent
 Requires(postun): /usr/sbin/userdel
-Requires: java-1.6.0-ibm
+Requires: java-1.6.0-sun
 
 %description
 Flowspace firewall application 
@@ -19,24 +19,25 @@ Flowspace firewall application
 %setup -q -n %{name}
 
 %pre
-/usr/bin/getent passwd fsf || /usr/sbin/useradd -r -d /var/lib/fsf -s /bin/false fsf
+/usr/bin/getent passwd fsfw || /usr/sbin/useradd -r -d /var/lib/fsfw -s /bin/false fsfw
 
 %postun
-/usr/sbin/userdel fsf
+/usr/sbin/userdel fsfw
 
 %build
 
 %install
 rm -rf $RPM_BUILD_ROOT
-%{__install} -d -p %{buildroot}/usr/share/fsf/
-%{__install} -d -p %{buildroot}/etc/fsf/
+%{__install} -d -p %{buildroot}/usr/share/fsfw/
+%{__install} -d -p %{buildroot}/etc/fsfw/
 %{__install} -d -p %{buildroot}/etc/init.d/
 %{__install} -d -p %{buildroot}/var/lib/floodlight/
 %{__install} -d -p %{buildroot}/var/log/floodlight/
 
-%{__install} jars/*.jar %{buildroot}//usr/share/fsf/
-%{__install} conf/*.xml %{buildroot}/etc/fsf/
-%{__install} conf/fsf.init %{buildroot}/etc/init.d/fsf
+%{__install} jars/*.jar %{buildroot}//usr/share/fsfw/
+%{__install} conf/*.xml %{buildroot}/etc/fsfw/
+%{__install} conf/*.xsd %{buildroot}/etc/fsfw/
+%{__install} conf/fsfw.init %{buildroot}/etc/init.d/fsfw
 
 # clean up buildroot                                                                                                                                                                                                   
 find %{buildroot} -name .packlist -exec %{__rm} {} \;
@@ -47,12 +48,13 @@ find %{buildroot} -name .packlist -exec %{__rm} {} \;
 rm -rf $RPM_BUILD_ROOT
 
 %files
-%defattr(755 ,fsf, root, -)
-/usr/share/fsf/floodlight.jar
-/usr/share/fsf/flowspace_firewall.jar
+%defattr(755 ,fsfw, root, -)
+/usr/share/fsfw/floodlight.jar
+/usr/share/fsfw/flowspace_firewall.jar
 /var/lib/floodlight
 
 %defattr(755, root, root, -)
-/etc/init.d/fsf
-%config(noreplace) /etc/fsf/fsf.xml
-%config(noreplace) /etc/fsf/logback.xml
+/etc/init.d/fsfw
+%config(noreplace) /etc/fsfw/fsfw.xml
+%config(noreplace) /etc/fsfw/logback.xml
+%config /etc/fsfw/fsfw.xsd
