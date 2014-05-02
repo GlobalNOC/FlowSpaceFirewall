@@ -1,7 +1,5 @@
 #!/usr/bin/perl
 use strict;
-use FindBin; #NONPROD
-use lib "$FindBin::Bin/../lib/"; #NONPROD
 
 use FSFW::CLI;
 

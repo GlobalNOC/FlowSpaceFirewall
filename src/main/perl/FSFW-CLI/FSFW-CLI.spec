@@ -7,7 +7,7 @@ Group: Flowspace Firewall Utilities
 URL: http://globalnoc.iu.edu/sdn/fsfw.html
 Source0: %{name}-%{version}.tar.gz
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
-BuildArch:noarch
+BuildArch: noarch
 Requires: perl
 Requires: perl-Term-ReadLine-Gnu
 Requires: perl-GRNOC-Config
@@ -26,14 +26,17 @@ FSFW CLI
 make
 
 %install
+rm -rf $RPM_BUILD_ROOT
+make pure_install
+
+
 %{__install} -d -m0755 %{buildroot}%{perl_sitelib}/FSFW/
 %{__install} -d -p %{buildroot}/usr/bin/
 
-%{__install} lib/FSFW/CLI.pm %{buildroot}%{perl_sitelib}/FSFW/
-%{__install} bin/fsfw-cli.pl %{buildroot}/usr/bin/fsfw-cli
+%{__install} lib/FSFW/CLI.pm %{buildroot}%{perl_vendorlib}/FSFW/CLI.pm
+%{__install} bin/fsfw-cli.pl %{buildroot}/usr/bin/fsfw-cli.pl
 
-rm -rf $RPM_BUILD_ROOT
-make pure_install
+
 
 find %{buildroot} -name .packlist -exec %{__rm} {} \;
 
@@ -48,7 +51,7 @@ rm -rf $RPM_BUILD_ROOT
 %{perl_vendorlib}/FSFW/CLI.pm
 
 %defattr(0755,root,root,-)
-/usr/bin/fsfw-cli
+/usr/bin/fsfw-cli.pl
 %doc
 
 

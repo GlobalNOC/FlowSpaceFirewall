@@ -8,7 +8,7 @@ use FindBin;
 
 sub MY::postamble { <<"END"; }
 
-rpm: manifest dist
+rpm: dist
 	rpmbuild -ta FSFW-CLI-\$(VERSION).tar.gz
 
 test_jenkins :
@@ -17,12 +17,13 @@ test_jenkins :
 END
 
 WriteMakefile(
-              NAME                => 'FSFW::CLI',
-              AUTHOR              => 'GRNOC Software Engineering',
-              VERSION_FROM        => 'lib/FSFW/CLI.pm',
-    PL_FILES            => {},
+	      NAME		  => 'FSFW::CLI',
+	      AUTHOR		  => 'GRNOC Software Engineering',
+	      VERSION_FROM	  => 'lib/FSFW/CLI.pm',
+    PL_FILES		=> {},
     PREREQ_PM => {
     },
-    dist                => { COMPRESS => 'gzip -9f', SUFFIX => 'gz', },
-    clean               => { FILES => 'FSFW-CLI*.gz' },
+    dist		=> { COMPRESS => 'gzip -9f', SUFFIX => 'gz', },
+    clean		=> { FILES => 'FSFW-CLI*.gz' },
     );
+
