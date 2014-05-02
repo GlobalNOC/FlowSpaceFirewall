@@ -13,6 +13,7 @@
 
 package FSFW::CLI;
 
+
 use strict;
 use Term::ReadLine;    #using Term::ReadLine::Gnu however best practices say not to require it directly?
 use GRNOC::Config;
@@ -20,6 +21,7 @@ use FindBin;
 use Data::Dumper;
 use GRNOC::WebService::Client;
 #use Text::Table;
+our $VERSION = "1.0.0";
 
 sub new {
 
