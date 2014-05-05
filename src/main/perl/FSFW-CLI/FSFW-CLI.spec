@@ -12,8 +12,8 @@ Requires: perl
 Requires: perl-Term-ReadLine-Gnu
 Requires: perl-GRNOC-Config
 Requires: perl-GRNOC-WebService-Client
-Requires: perl-Data-Dumper
-Requires: perl-FindBin
+
+
 
 
 %description
