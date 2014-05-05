@@ -316,12 +316,13 @@ sub handle_input {
 	    
 	    my $priority = $self->_unsign_int($flow->{'priority'});
 	    my $table_id = $self->_unsign_int($flow->{'tableId'});
+	    my $cookie = $self->_unsign_int($flow->{'cookie'});
 	    my $duration = $self->_unsign_int($flow->{'durationSeconds'});
 	    my $idle_timeout = $self->_unsign_int($flow->{'idleTimeout'});
 	    my $hard_timeout = $self->_unsign_int($flow->{'hardTimeout'});
 	    my $packet_count = $self->_unsign_int($flow->{'packetCount'});
 	    my $byte_count = $self->_unsign_int($flow->{'byteCount'});
-	    print "Table ID: $table_id\n";
+	    print "Table ID: $table_id\tCookie: $cookie\n";
 	    print "Priority: $priority Idle timeout(sec):$idle_timeout\tHard timeout(sec):$hard_timeout\n";
 	    print "Packet Count: $packet_count\tByte Count:$byte_count\n";
 	    my $match = $flow->{'match'};
