@@ -291,7 +291,7 @@ sub handle_input {
 	    #my $port_table=Text::Table->new("Port Name","Port Number", "Status");
 	    foreach my $port (@{$switch->{'ports'}}) {
 		
-		my $port_num = unpack("S",pack("s",$port->{'portNumber'}));
+		my $port_num = $self->_unsign_int($port->{'portNumber'}); #unpack("S",pack("s",$port->{'portNumber'}));
 #		$port_table->load([$port->{'name'},$port_num,'up']);
 		print "$port->{'name'}\t$port_num\tUP\n";
 #sprintf "%u\n", $port->{'portNumber'};
@@ -305,14 +305,67 @@ sub handle_input {
     }
     elsif ( $input =~ /^show slices$/ ) {
 	$ws->set_url("$base_url:$port/fsfw/admin/slices/json"); 
-	my $status_obj = $ws->foo();
-	print Dumper ($status_obj); #NONPROD
+	my $slices = $ws->foo();
+	print Dumper ($slices); #NONPROD
     }
     elsif ( $input =~/^show flows (\S+) (\S+)/){
 	$ws->set_url("$base_url:$port/fsfw/flows/$1/$2/json"); 
-	    my $status_obj = $ws->foo();
-	    print Dumper ($status_obj); #NONPROD
+	    my $flows = $ws->foo();
+	    print Dumper ($flows); #NONPROD
+	foreach my $flow (@$flows){
+	    
+	    my $priority = $self->_unsign_int($flow->{'priority'});
+	    my $table_id = $self->_unsign_int($flow->{'tableId'});
+	    my $duration = $self->_unsign_int($flow->{'durationSeconds'});
+	    my $idle_timeout = $self->_unsign_int($flow->{'idleTimeout'});
+	    my $hard_timeout = $self->_unsign_int($flow->{'hardTimeout'});
+	    my $packet_count = $self->_unsign_int($flow->{'packetCount'});
+	    my $byte_count = $self->_unsign_int($flow->{'byteCount'});
+	    print "Table ID: $table_id\n";
+	    print "Priority: $priority Idle timeout(sec):$idle_timeout\tHard timeout(sec):$hard_timeout\n";
+	    print "Packet Count: $packet_count\tByte Count:$byte_count\n";
+	    my $match = $flow->{'match'};
+	    print "Match:\n";
+	    foreach my $key ( sort keys %$match){
+		my $value = $match->{$key};
+		#wildcards?
+		if ($value == 0 || $value eq '0.0.0.0' || $value eq '00:00:00:00:00:00'){
+		    next;
+		}
+		#unsign ints
+		if ($value =~ /^-\d+$/ ){
+		    $value = $self->_unsign_int($value);
+		}
 
+		print "\t$key:\t$value\n";
+	    }
+	    print "Actions: ";
+	    
+	    my $actions = $flow->{'actions'};
+	    my @processed_actions;
+	    foreach my $action (@$actions){
+		my $type = $action->{'type'};
+		
+		my $action_str = "$type";
+		
+		foreach my $key (sort keys %$action){
+		
+		    if ($key eq 'length' || $key eq 'lengthU' || $key eq 'maxLength' || $key eq 'type'){
+			next;
+		    }
+		    my $value = $action->{$key};
+		    if ($value =~ /^-\d+$/ ){
+			$value = $self->_unsign_int($value);
+		    }
+		    $action_str .= " $value";
+		}
+		#warn "adding $action_str";
+		push (@processed_actions, $action_str);
+
+
+	    }
+	    print join(",",@processed_actions)."\n\n";
+	}
     }
     elsif ( $input =~/^show status (\S+) (\S+)/){
 	    $ws->set_url("$base_url:$port/fsfw/status/$1/$2/json"); 
@@ -343,6 +396,15 @@ sub terminal_loop {
 	
     }
 
+}
+
+
+#converts signed int to unsigned int;
+sub _unsign_int {
+    my $self = shift;
+    my $int = shift;
+
+    return unpack("S",pack("s",$int));
 }
 
 1;
