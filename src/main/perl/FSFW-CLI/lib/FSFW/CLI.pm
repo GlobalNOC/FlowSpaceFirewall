@@ -67,6 +67,9 @@ sub _init {
 	realm => 'foo',
 	usePost => 0,
 	);
+
+    
+
     $self->build_command_list();
     
     $self->{'term'} = Term::ReadLine->new('FSFW CLI');
@@ -313,7 +316,7 @@ sub build_command_list {
     $base_url='http://localhost';
     $port='8080';
 
-    $self->{'possible_commands'} = [ 'show slices', 'show switches', 'quit', 'exit' ];  
+    $self->{'possible_commands'} = [ 'show slices', 'show switches', 'help','?','quit', 'exit' ];  
 
     my @expandable_commands = ('show status','show flows');
     
@@ -324,9 +327,17 @@ sub build_command_list {
     foreach my $slice (keys %$slices_obj){
 	push (@slices, $slice);
     }
+    unless (grep { defined $_ } @slices ){
+	die "No slices found, check if FSFW is running? exiting.";
+    }
 
     $ws->set_url("$base_url:$port/fsfw/admin/switches/json"); 
     my $dpids_obj = $ws->foo();
+    
+        unless (grep { defined $_ } @$dpids_obj ){
+	print "No switches found connected to FSFW, show status and show flows will be unavailable.\n\n";
+    }
+
     my $dpid_per_slice = {};
     foreach my $slice (@slices){
 	$dpid_per_slice->{$slice}=[];
@@ -342,6 +353,11 @@ sub build_command_list {
 	foreach my $slice (@slices){
 	    foreach my $dpid (@{$dpid_per_slice->{$slice}}){
 		push (@{$self->{'possible_commands'}}, "$expandable_command $slice $dpid");
+		
+		if ($expandable_command eq 'show flows'){
+		   # push (@{$self->{'possible_commands'}}, "$expandable_command $slice $dpid vlan ".'(\d+)');
+		   # push (@{$self->{'possible_commands'}}, "$expandable_command $slice $dpid port ".'(\d+)');
+		}
 	    }
 	}
     }
@@ -379,13 +395,51 @@ sub handle_input {
     if ( $input =~ /^exit$/ || $input =~ /^quit$/ ) {
         exit;
     }
+    if ( $input =~ /^help$/ || $input =~ /^\?$/){
+	print <<END;
+show slices
+
+     Returns a list of slices, and for each slice a list of DPIDs configured to have access to it
+
+show switches ([dpid]):
+
+     Returns details of each switch connected to FSFW:
+
+     [dpid] parameter is optional and will filter to just dpid of switch you are interested in.
+
+show status [slice] [dpid]
+
+     returns status of the slice with parameters:
+
+show flows [slice] [dpid] 
+
+     returns all flows for this dpid with metadata, match and actions for each. 
+     
+quit
+     exit application
+
+exit 
+     alias for quit
+
+help
+    returns this message
+
+END
+
+    }
     elsif ( $input =~ /^show switches$/ ) {
+
+	my $dpid = $1 || undef;
 	$ws->set_url("$base_url:$port/fsfw/admin/switches/json"); 
 	my $status_obj = $ws->foo();
-#	print Dumper ($status_obj); #NONPROD
-    
-	foreach my $switch (@$status_obj){
 
+	unless (grep { defined $_ } @$status_obj){
+	    print "No switches found attached FSFW\n";
+	}
+	foreach my $switch (@$status_obj){
+	    if ($dpid && $switch->{'dpid'} != $dpid){
+		next;
+	    }
 	    my ($address) = $switch->{'inetAddress'} =~ /\/(\S+):\d+/;
 	    print "IP:\t$address\n";
 	    print "DPID:\t$switch->{'dpid'}\n";
@@ -397,10 +451,10 @@ sub handle_input {
 	    #my $port_table=Text::Table->new("Port Name","Port Number", "Status");
 	    foreach my $port (@{$switch->{'ports'}}) {
 		
-		my $port_num = $self->_unsign_int($port->{'portNumber'}); #unpack("S",pack("s",$port->{'portNumber'}));
-#		$port_table->load([$port->{'name'},$port_num,'up']);
+		my $port_num = $self->_unsign_int($port->{'portNumber'}); 
+
 		print "$port->{'name'}\t$port_num\tUP\n";
-#sprintf "%u\n", $port->{'portNumber'};
+
 		
 		
 		
@@ -412,19 +466,39 @@ sub handle_input {
     elsif ( $input =~ /^show slices$/ ) {
 	$ws->set_url("$base_url:$port/fsfw/admin/slices/json"); 
 	my $slices = $ws->foo();
-	print Dumper ($slices); #NONPROD
+
+	foreach my $slice ( keys %$slices){
+	    
+	    my $dpids = $slices->{$slice};
+	    print "Slice Name: $slice\n\nSwitches Configured for Slice:\n";
+
+	    unless (grep { defined $_ } @$dpids ){
+		print "No switches.\n";
+	    }
+	    
+	    foreach my $dpid (@$dpids) {
+		print "$dpid\n";
+	    }
+	    print "\n";
+	}
+	#print Dumper ($slices); 
     }
     elsif ( $input =~/^show flows (\S+) (\S+)/){
 	#warn "showing flows.";
+	my $vlan_id;
+	my $port_id;
+
+
 	$ws->set_url("$base_url:$port/fsfw/flows/$1/$2/json"); 
 	    my $flows = $ws->foo();
 	    #print Dumper ($flows); #NONPROD
 	
-	if (!defined($flows) || scalar (@$flows) == 0 ){
+	unless (defined($flows) && grep { defined $_ } @$flows  ){
 	    print "No Flows to display\n";
 	}
 	foreach my $flow (@$flows){
-	    
+	    my $output_text = "";
+	    my $flow_matches =1;
 	    my $priority = $self->_unsign_int($flow->{'priority'});
 	    my $table_id = $self->_unsign_int($flow->{'tableId'});
 	    my $cookie = $self->_unsign_int($flow->{'cookie'});
@@ -433,14 +507,21 @@ sub handle_input {
 	    my $hard_timeout = $self->_unsign_int($flow->{'hardTimeout'});
 	    my $packet_count = $self->_unsign_int($flow->{'packetCount'});
 	    my $byte_count = $self->_unsign_int($flow->{'byteCount'});
-	    print "Table ID: $table_id\tCookie: $cookie\n";
-	    print "Priority: $priority Idle timeout(sec):$idle_timeout\tHard timeout(sec):$hard_timeout\n";
-	    print "Packet Count: $packet_count\tByte Count:$byte_count\n";
+	    $output_text .="Table ID: $table_id\tCookie: $cookie\n";
+	    $output_text .="Priority: $priority Idle timeout(sec):$idle_timeout\tHard timeout(sec):$hard_timeout\n";
+	    $output_text .="Packet Count: $packet_count\tByte Count:$byte_count\n";
 	    my $match = $flow->{'match'};
-	    print "Match:\n";
+	    $output_text .="Match:\n";
 	    foreach my $key ( sort keys %$match){
 		my $value = $match->{$key};
 		#wildcards?
+		# if ($vlan_id){
+		#     if ($key eq 'dataLayerVirtualLan'){
+		# 	if ($value == $vlan_id){
+		# 	    $flow_matches =1;
+		# 	}
+		#     }
+		# }
 		if ($value == 0 || $value eq '0.0.0.0' || $value eq '00:00:00:00:00:00'){
 		    next;
 		}
@@ -449,9 +530,9 @@ sub handle_input {
 		    $value = $self->_unsign_int($value);
 		}
 
-		print "\t$key:\t$value\n";
+		$output_text .= "$key:\t$value\n";
 	    }
-	    print "Actions: ";
+	    $output_text .="Actions: ";
 	    
 	    my $actions = $flow->{'actions'};
 	    my @processed_actions;
@@ -476,13 +557,27 @@ sub handle_input {
 
 
 	    }
-	    print join(",",@processed_actions)."\n\n";
+	    $output_text .= join(",",@processed_actions)."\n\n";
+	
+	    #if ($vlan_id || $port_id){
+	#	if ($flow_matches){
+	#	    print $output_text;
+#		}
+#	    }
+	    #else {
+		print $output_text;
+	    #}
 	}
     }
     elsif ( $input =~/^show status (\S+) (\S+)/){
 	    $ws->set_url("$base_url:$port/fsfw/status/$1/$2/json"); 
 	    my $status_obj = $ws->foo();
-	    print Dumper ($status_obj); 
+	    #print Dumper ($status_obj); 
+	    print "Status for $2 in slice $1:\n\n";
+	    foreach my $key (sort keys %$status_obj){
+	      print "$key\t$status_obj->{$key}\n";
+		
+	    }
     }
 
     return ;#$insert_text;
