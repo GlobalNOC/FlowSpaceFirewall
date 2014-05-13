@@ -242,6 +242,13 @@ public class ProxyTest {
 		expect(fsfw.getStats(EasyMock.anyLong())).andReturn(stats).anyTimes();
 		
 		expect(fsfw.getSwitchProxies(EasyMock.anyLong())).andReturn(proxies).anyTimes();
+		fsfw.removeProxy(EasyMock.anyLong(), EasyMock.isA(Proxy.class));
+		EasyMock.expectLastCall().andAnswer(new IAnswer<Object>() {
+			public Object answer(){
+				log.error("removed the proxy!");
+				return null;
+			}
+		}).anyTimes();
 		EasyMock.replay(fsfw);
 	}
 	
