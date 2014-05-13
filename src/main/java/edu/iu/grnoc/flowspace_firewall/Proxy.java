@@ -82,7 +82,7 @@ public class Proxy {
 		flowCount = 0;
 		xidMap = new XidMap();
 		adminStatus = true;
-		packetInRate = new RateTracker(100,10);
+		packetInRate = new RateTracker(100,slicer.getPacketInRate());
 	}
 	
 	public void setAdminStatus(Boolean status){
@@ -93,12 +93,16 @@ public class Proxy {
 			log.error("Disabling Slice!");
 			this.removeFlows();
 			this.disconnect();
-			this.parent.getSwitchProxies(this.getSwitch().getId()).remove(this);
+			this.parent.removeProxy(this.getSwitch().getId(), this);
 		}
 	}
 	
 	public boolean getAdminStatus(){
 		return this.adminStatus;
+	}
+	
+	public double getPacketInRate(){
+		return this.packetInRate.getRate();
 	}
 	
 	public void removeFlows(){
@@ -122,6 +126,7 @@ public class Proxy {
 			OFFlowMod flow = new OFFlowMod();
 			flow.setMatch(flowStat.getMatch());
 			flow.setActions(flowStat.getActions());
+			flow.setLengthU( OFFlowMod.MAXIMUM_LENGTH );
 			flow.setCommand(OFFlowMod.OFPFC_DELETE);
 			deletes.add(flow);
 		}

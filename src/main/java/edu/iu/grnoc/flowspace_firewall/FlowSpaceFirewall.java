@@ -105,6 +105,10 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
         	}
         }
 	}
+	
+	public List<IOFSwitch> getSwitches(){
+		return this.switches;
+	}
 
 	public HashMap<Short, OFStatistics> getPortStats(long switchId){
 		return statsCacher.getPortStats(switchId);
@@ -161,8 +165,11 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 
 	@Override
 	public void switchActivated(long switchId) {
-		//nothing to do here
-		
+
+	}
+	
+	public void removeProxy(Long switchId, Proxy p){
+		this.controllerConnector.removeProxy(switchId, p);
 	}
 
 	@Override
@@ -272,12 +279,13 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 		}
 		
 		List <Proxy> proxies = controllerConnector.getSwitchProxies(sw.getId());
+		
 		if(proxies == null){
 			return Command.CONTINUE;
 		}
-		Iterator <Proxy> it = proxies.iterator();
-		while(it.hasNext()){
-			Proxy p = it.next();
+
+		
+		for(Proxy p : proxies){
 			if(!p.getAdminStatus()){
 				logger.debug("slice disabled... skipping");
 			}else{
