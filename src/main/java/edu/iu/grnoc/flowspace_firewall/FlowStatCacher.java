@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.TimerTask;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 import net.floodlightcontroller.core.IOFSwitch;
 
@@ -45,7 +46,7 @@ import org.slf4j.LoggerFactory;
 
 public class FlowStatCacher extends TimerTask{
 
-	List <IOFSwitch> mySwitches;
+	CopyOnWriteArrayList <IOFSwitch> mySwitches;
 	FlowStatCache statsCache;
 	private static final Logger log = LoggerFactory.getLogger(FlowStatCacher.class);
 	
@@ -55,7 +56,7 @@ public class FlowStatCacher extends TimerTask{
 	 */
 	
 	public FlowStatCacher(){
-		mySwitches = new ArrayList<IOFSwitch>();
+		mySwitches = new CopyOnWriteArrayList<IOFSwitch>();
 		statsCache = new FlowStatCache();
 	}
 	/**
@@ -64,7 +65,7 @@ public class FlowStatCacher extends TimerTask{
 	 * stores the stats in the statsCache object
 	 */
 	public void run(){
-		log.debug("Switches:" + this.mySwitches.toString());
+		//log.debug("Switches:" + this.mySwitches.toString());
 		Iterator <IOFSwitch> it = this.mySwitches.iterator();
 		while(it.hasNext()){
 			IOFSwitch sw = it.next();
