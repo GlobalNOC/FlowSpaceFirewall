@@ -53,6 +53,7 @@ import edu.iu.grnoc.flowspace_firewall.web.FlowSpaceFirewallWebRoutable;
 import edu.iu.grnoc.flowspace_firewall.web.IFlowSpaceFirewallService;
 import edu.iu.grnoc.flowspace_firewall.FlowStatCacher;
 
+
 public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener, IOFSwitchListener, IFlowSpaceFirewallService{
 
 	protected static Logger logger;
@@ -192,6 +193,7 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 	@SuppressWarnings("unchecked")
 	public boolean reloadConfig(){
 		ArrayList<HashMap<Long, Slicer>> newSlices;
+		ArrayList<IOFSwitch> newSwitches;
 		//have our new configuration
 		//need to put it in place
 
@@ -203,9 +205,12 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 			}
 			//newSlices is a clone so we can modify it without modifying slices
 			//we will use this to figure out which ones we have updated and which
-			//slices need to be created and connected to a currently active switch
+			//slices need to be created and connected to a currently active switch		
 			newSlices = (ArrayList<HashMap<Long, Slicer>>) this.slices.clone();
-			Iterator <IOFSwitch> it = this.switches.iterator();
+			
+			//added newSwitches clone so other processes can modify this.switches while reload is happening.
+			newSwitches = (ArrayList<IOFSwitch>) this.switches.clone();
+			Iterator <IOFSwitch> it = newSwitches.iterator();
 			while(it.hasNext()){
 				IOFSwitch sw = it.next();
 				List <Proxy> proxies = controllerConnector.getSwitchProxies(sw.getId());
