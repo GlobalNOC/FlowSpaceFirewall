@@ -560,15 +560,20 @@ class OFControllerChannelHandler
             throws Exception {
         if (e.getCause() instanceof ReadTimeoutException) {
             // switch timeout
-            log.error("Disconnecting from controller due to read timeout");            
+            log.error("Disconnecting slice {} from controller {} due to read timeout", this.proxy.getSlicer().getSliceName(),
+                    this.proxy.getSlicer().getControllerAddress().toString());
+           
             ctx.getChannel().close();
+            
         } else if (e.getCause() instanceof HandshakeTimeoutException) {
-            log.error("Disconnecting controller failed to complete handshake");           
+            log.error("Disconnecting slice "+ this.proxy.getSlicer().getSliceName() +" after controller "+
+            this.proxy.getSlicer().getControllerAddress().toString() + "failed to complete handshake");           
             ctx.getChannel().close();
         } else if (e.getCause() instanceof ClosedChannelException) {
             log.debug("Channel for controller already closed");
         } else if (e.getCause() instanceof IOException) {
-            log.error("Disconnecting controller due to IO Error: {}", e.getCause().getMessage());
+            log.error("Disconnecting  slice "+ this.proxy.getSlicer().getSliceName()+" controller "+
+            this.proxy.getSlicer().getControllerAddress().toString() + " due to IO Error: {}", e.getCause().getMessage());
             if (log.isDebugEnabled()) {
                 // still print stack trace if debug is enabled
                 log.debug("StackTrace for previous Exception: ", e.getCause());
@@ -576,7 +581,9 @@ class OFControllerChannelHandler
             
             ctx.getChannel().close();
         } else if (e.getCause() instanceof SwitchStateException) {
-            log.error("Disconnecting controller due to switch state error: {}", e.getCause().getMessage());
+            log.error("Disconnecting  slice "+ this.proxy.getSlicer().getSliceName()+" controller "+
+            this.proxy.getSlicer().getControllerAddress().toString() + " due to switch state error: {}", this.proxy.getSlicer().getSliceName(),
+                    e.getCause().getMessage());
             if (log.isDebugEnabled()) {
                 // still print stack trace if debug is enabled
                 log.debug("StackTrace for previous Exception: ", e.getCause());
@@ -584,19 +591,22 @@ class OFControllerChannelHandler
             
             ctx.getChannel().close();
         } else if (e.getCause() instanceof MessageParseException) {
-            log.error("Disconnecting controller due to message parse failure",
+            log.error("Disconnecting  slice "+ this.proxy.getSlicer().getSliceName()+" controller "+
+            this.proxy.getSlicer().getControllerAddress().toString() + " due to message parse failure",
                                  e.getCause());
             
             ctx.getChannel().close();
         } else if (e.getCause() instanceof StorageException) {
-            log.error("Terminating controller due to storage exception",
+            log.error("Terminating  slice "+ this.proxy.getSlicer().getSliceName()+" controller "+
+            this.proxy.getSlicer().getControllerAddress().toString() + " due to storage exception",
                       e.getCause());
             //this.controller.terminate();
         } else if (e.getCause() instanceof RejectedExecutionException) {
             log.warn("Could not process message: queue full");
             
         } else {
-            log.error("Error while processing message from controller state " + this.state, e.getCause());
+            log.error("Error while processing message from  slice "+ this.proxy.getSlicer().getSliceName()+" controller "+
+            this.proxy.getSlicer().getControllerAddress().toString() + " state " + this.state, e.getCause());
             
             ctx.getChannel().close();
         }
