@@ -401,11 +401,9 @@ show slices
 
      Returns a list of slices, and for each slice a list of DPIDs configured to have access to it
 
-show switches ([dpid]):
+show switches 
 
      Returns details of each switch connected to FSFW:
-
-     [dpid] parameter is optional and will filter to just dpid of switch you are interested in.
 
 show status [slice] [dpid]
 

@@ -1,7 +1,7 @@
 Summary: Flowspace Firewall CLI 
 Name: FSFW-CLI
 Version: 1.0.0
-Release: 1%{?dist}
+Release: 2%{?dist}
 License: CHECK
 Group: Flowspace Firewall Utilities
 URL: http://globalnoc.iu.edu/sdn/fsfw.html
