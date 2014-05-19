@@ -88,9 +88,9 @@ public class Proxy {
 	public void setAdminStatus(Boolean status){
 		adminStatus = status;
 		if(status){
-			log.warn("Slice is re-enabled");
+			log.warn("Slice: "+ this.mySlicer.getSliceName() +" is re-enabled");
 		}else{
-			log.error("Disabling Slice!");
+			log.error("Disabling Slice:"+this.mySlicer.getSliceName() );
 			this.removeFlows();
 			this.disconnect();
 			this.parent.removeProxy(this.getSwitch().getId(), this);
@@ -268,7 +268,7 @@ public class Proxy {
 			switch(flow.getCommand()){
 			case OFFlowMod.OFPFC_ADD:
 				if( this.mySlicer.isGreaterThanMaxFlows(this.flowCount + 1) ) {
-					log.warn("Flow count is already at threshold. Skipping flow mod");
+					log.warn("Switch: "+this.mySwitch.getStringId()+" Slice: "+this.mySlicer.getSliceName()+" Flow count is already at threshold. Skipping flow mod");
 					this.sendError((OFMessage)msg);
 					return;
 				}
@@ -276,7 +276,7 @@ public class Proxy {
 				break;
 			case OFFlowMod.OFPFF_CHECK_OVERLAP:
 				if( this.mySlicer.isGreaterThanMaxFlows(this.flowCount + 1) ) {
-					log.warn("Flow count is already at threshold. Skipping flow mod");
+					log.warn("Switch: "+this.mySwitch.getStringId()+" Slice: "+this.mySlicer.getSliceName()+"Flow count is already at threshold. Skipping flow mod");
 					this.sendError((OFMessage)msg);
 					return;
 				}
@@ -481,7 +481,7 @@ public class Proxy {
 	
 	private void handleFlowStatsRequest(OFMessage msg){
 		//we have the stats cached so slice n' dice and return
-		log.debug("Working on stats for switch: " + mySwitch.getId() + " for slice this slice");
+		log.debug("Working on stats for switch: " + mySwitch.getStringId() + " for slice this slice");
 		List<OFStatistics> stats = this.parent.getStats(mySwitch.getId());
 		List<OFStatistics> results = null;
 		try{
@@ -570,7 +570,7 @@ public class Proxy {
 		//first figure out what the message is
 		log.debug("Proxy Slicing request of type: " + msg.getType());
 		if(!this.mySlicer.isOkToProcessMessage()){
-			log.warn("Slice Rate limit exceeded");
+			log.warn("Switch: "+this.mySwitch.getStringId()+"Slice:"+this.mySlicer.getSliceName()+"Rate limit exceeded");
 			this.sendError((OFMessage)msg);
 			return;
 		}
@@ -649,7 +649,7 @@ public class Proxy {
 			flowMod.setMatch(match);
 			List <OFFlowMod> allowed = this.mySlicer.allowedFlows(flowMod);
 			if(allowed.size() == 0){
-				log.debug("Packet in Not allowed for this slice");
+				log.debug("Packet in Not allowed for slice: "+this.mySlicer.getSliceName());
 				return;
 			}
 			
@@ -669,7 +669,7 @@ public class Proxy {
 			OFPortStatus portStatus = (OFPortStatus)msg;
 			OFPhysicalPort port = portStatus.getDesc();
 			if(!this.mySlicer.isPortPartOfSlice(port.getPortNumber())){
-				log.debug("Port status even for port " + port.getName() + " is not allowed for this slice");
+				log.debug("Port status even for switch"+this.mySwitch.getStringId()+" port " + port.getName() + " is not allowed for slice"+this.mySlicer.getSliceName());
 				return;
 			}
 			break;
