@@ -271,10 +271,7 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 			}
 			
 			
-			//change the standing slices to this
-			synchronized(mySlices){
-				mySlices = newSlices;
-			}
+			
 		} catch (IOException e) {
 			e.printStackTrace();
 			return false;
