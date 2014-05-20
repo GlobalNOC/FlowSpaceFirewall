@@ -202,10 +202,13 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 		//need to put it in place
 
 		try {
-			this.slices = ConfigParser.parseConfig("/etc/fsfw/fsfw.xml");
-			if(this.slices.size() == 0){
-				logger.error("Unable to reload config due to a problem in the configuration!");
-				return false;
+			List<HashMap<Long,Slicer>> mySlices = Collections.synchronizedList(this.slices);
+			synchronized (mySlices){
+				mySlices = ConfigParser.parseConfig("/etc/fsfw/fsfw.xml");
+				if(mySlices.size() == 0){
+					logger.error("Unable to reload config due to a problem in the configuration!");
+					return false;
+				}
 			}
 			//newSlices is a clone so we can modify it without modifying slices
 			//we will use this to figure out which ones we have updated and which
@@ -233,13 +236,17 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 				        	if(slice.containsKey(sw.getId()) && slice.get(sw.getId()).getSliceName().equals(p.getSlicer().getSliceName())){
 				        		p.setSlicer(slice.get(sw.getId()));
 				        		slice.remove(sw.getId());
+				        		updated = true;
 				        		if(slice.isEmpty()){
+				        			
 				        			newSliceIt.remove();
 				        		}
-				        		updated = true;
+				        		
 				        	}
 				        }
 						if(updated == false){
+							logger.debug("Slice "
+									+p.getSlicer().getSliceName()+" was not found, removing");
 							p.disconnect();
 							controllerConnector.removeProxy(sw.getId(), p);
 						}
@@ -265,7 +272,9 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 			
 			
 			//change the standing slices to this
-			this.slices = newSlices;
+			synchronized(mySlices){
+				mySlices = newSlices;
+			}
 		} catch (IOException e) {
 			e.printStackTrace();
 			return false;
