@@ -18,6 +18,7 @@ package edu.iu.grnoc.flowspace_firewall;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -52,6 +53,7 @@ import org.xml.sax.SAXException;
 import edu.iu.grnoc.flowspace_firewall.web.FlowSpaceFirewallWebRoutable;
 import edu.iu.grnoc.flowspace_firewall.web.IFlowSpaceFirewallService;
 import edu.iu.grnoc.flowspace_firewall.FlowStatCacher;
+
 
 public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener, IOFSwitchListener, IFlowSpaceFirewallService{
 
@@ -145,14 +147,17 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 	}
 	
 	public HashMap<Long, Slicer> getSlice(String name){
-		Iterator <HashMap<Long,Slicer>> it = this.slices.iterator();
-		while(it.hasNext()){
-			HashMap<Long,Slicer> slice = it.next();
-			Iterator <Long> dpidIt = slice.keySet().iterator();
-			if(dpidIt.hasNext()){
-				Long dpid = dpidIt.next();
-				if(slice.get(dpid).getSliceName().equals(name)){
-					return slice;
+		List<HashMap<Long,Slicer>> mySlices = Collections.synchronizedList(this.slices);
+		synchronized (mySlices){
+			Iterator <HashMap<Long,Slicer>> it = mySlices.iterator();
+			while(it.hasNext()){
+				HashMap<Long,Slicer> slice = it.next();
+				Iterator <Long> dpidIt = slice.keySet().iterator();
+				if(dpidIt.hasNext()){
+					Long dpid = dpidIt.next();
+					if(slice.get(dpid).getSliceName().equals(name)){
+						return slice;
+					}
 				}
 			}
 		}
@@ -192,6 +197,7 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 	@SuppressWarnings("unchecked")
 	public boolean reloadConfig(){
 		ArrayList<HashMap<Long, Slicer>> newSlices;
+		ArrayList<IOFSwitch> newSwitches;
 		//have our new configuration
 		//need to put it in place
 
@@ -203,9 +209,12 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 			}
 			//newSlices is a clone so we can modify it without modifying slices
 			//we will use this to figure out which ones we have updated and which
-			//slices need to be created and connected to a currently active switch
+			//slices need to be created and connected to a currently active switch		
 			newSlices = (ArrayList<HashMap<Long, Slicer>>) this.slices.clone();
-			Iterator <IOFSwitch> it = this.switches.iterator();
+			
+			//added newSwitches clone so other processes can modify this.switches while reload is happening.
+			newSwitches = (ArrayList<IOFSwitch>) this.switches.clone();
+			Iterator <IOFSwitch> it = newSwitches.iterator();
 			while(it.hasNext()){
 				IOFSwitch sw = it.next();
 				List <Proxy> proxies = controllerConnector.getSwitchProxies(sw.getId());
@@ -242,7 +251,7 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 				HashMap<Long,Slicer> slice = sliceIt.next();
 				//for each slice iterator over any switches configured
 				for(Long dpid: slice.keySet()){
-					if(this.switches.contains(dpid)){
+					if(newSwitches.contains(dpid)){
 						//connect it up
 						IOFSwitch sw = floodlightProvider.getSwitch(dpid);
 						Slicer vlanSlicer = slice.get(dpid);
