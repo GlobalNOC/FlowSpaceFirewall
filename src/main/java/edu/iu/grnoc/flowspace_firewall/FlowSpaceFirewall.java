@@ -18,6 +18,7 @@ package edu.iu.grnoc.flowspace_firewall;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -146,14 +147,17 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 	}
 	
 	public HashMap<Long, Slicer> getSlice(String name){
-		Iterator <HashMap<Long,Slicer>> it = this.slices.iterator();
-		while(it.hasNext()){
-			HashMap<Long,Slicer> slice = it.next();
-			Iterator <Long> dpidIt = slice.keySet().iterator();
-			if(dpidIt.hasNext()){
-				Long dpid = dpidIt.next();
-				if(slice.get(dpid).getSliceName().equals(name)){
-					return slice;
+		List<HashMap<Long,Slicer>> mySlices = Collections.synchronizedList(this.slices);
+		synchronized (mySlices){
+			Iterator <HashMap<Long,Slicer>> it = mySlices.iterator();
+			while(it.hasNext()){
+				HashMap<Long,Slicer> slice = it.next();
+				Iterator <Long> dpidIt = slice.keySet().iterator();
+				if(dpidIt.hasNext()){
+					Long dpid = dpidIt.next();
+					if(slice.get(dpid).getSliceName().equals(name)){
+						return slice;
+					}
 				}
 			}
 		}
@@ -247,7 +251,7 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 				HashMap<Long,Slicer> slice = sliceIt.next();
 				//for each slice iterator over any switches configured
 				for(Long dpid: slice.keySet()){
-					if(this.switches.contains(dpid)){
+					if(newSwitches.contains(dpid)){
 						//connect it up
 						IOFSwitch sw = floodlightProvider.getSwitch(dpid);
 						Slicer vlanSlicer = slice.get(dpid);
