@@ -225,13 +225,16 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 						//we now know the proxy and the switch (so we know the slice name and the switch)
 						//now we need to find the slice in the newSlices variable and set the proxy to it
 						boolean updated = false;
-						for(HashMap<Long, Slicer> slice: newSlices){
+						Iterator <HashMap<Long,Slicer>> newSliceIt = newSlices.iterator();
+						while(newSliceIt.hasNext()){
+							HashMap<Long,Slicer> slice = newSliceIt.next();
+						//for(HashMap<Long, Slicer> slice: newSlices){
 				        	//loop through all switches in the slice
 				        	if(slice.containsKey(sw.getId()) && slice.get(sw.getId()).getSliceName().equals(p.getSlicer().getSliceName())){
 				        		p.setSlicer(slice.get(sw.getId()));
 				        		slice.remove(sw.getId());
 				        		if(slice.isEmpty()){
-				        			newSlices.remove((Object) slice);
+				        			newSliceIt.remove();
 				        		}
 				        		updated = true;
 				        	}
