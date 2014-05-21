@@ -220,38 +220,43 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 			Iterator <IOFSwitch> it = newSwitches.iterator();
 			while(it.hasNext()){
 				IOFSwitch sw = it.next();
-				List <Proxy> proxies = controllerConnector.getSwitchProxies(sw.getId());
-				if(proxies != null){
-					Iterator <Proxy> proxyIt = proxies.iterator();
-					while(proxyIt.hasNext()){
-						Proxy p = proxyIt.next();
-						//we now know the proxy and the switch (so we know the slice name and the switch)
-						//now we need to find the slice in the newSlices variable and set the proxy to it
-						boolean updated = false;
-						Iterator <HashMap<Long,Slicer>> newSliceIt = newSlices.iterator();
-						while(newSliceIt.hasNext()){
-							HashMap<Long,Slicer> slice = newSliceIt.next();
-						//for(HashMap<Long, Slicer> slice: newSlices){
-				        	//loop through all switches in the slice
-				        	if(slice.containsKey(sw.getId()) && slice.get(sw.getId()).getSliceName().equals(p.getSlicer().getSliceName())){
-				        		p.setSlicer(slice.get(sw.getId()));
-				        		slice.remove(sw.getId());
-				        		updated = true;
-				        		if(slice.isEmpty()){
-				        			
-				        			newSliceIt.remove();
-				        		}
-				        		
-				        	}
-				        }
-						if(updated == false){
-							logger.debug("Slice "
-									+p.getSlicer().getSliceName()+" was not found, removing");
-							p.disconnect();
-							controllerConnector.removeProxy(sw.getId(), p);
+				List <Proxy> proxies = Collections.synchronizedList( controllerConnector.getSwitchProxies(sw.getId()) );
+				
+				synchronized(proxies){
+					if(proxies != null){	
+						Iterator <Proxy> proxyIt = proxies.iterator();
+						while(proxyIt.hasNext()){
+							Proxy p = proxyIt.next();
+							//we now know the proxy and the switch (so we know the slice name and the switch)
+							//now we need to find the slice in the newSlices variable and set the proxy to it
+							boolean updated = false;
+							Iterator <HashMap<Long,Slicer>> newSliceIt = newSlices.iterator();
+							while(newSliceIt.hasNext()){
+								HashMap<Long,Slicer> slice = newSliceIt.next();
+							//for(HashMap<Long, Slicer> slice: newSlices){
+					        	//loop through all switches in the slice
+					        	if(slice.containsKey(sw.getId()) && slice.get(sw.getId()).getSliceName().equals(p.getSlicer().getSliceName())){
+					        		p.setSlicer(slice.get(sw.getId()));
+					        		slice.remove(sw.getId());
+					        		updated = true;
+					        		if(slice.isEmpty()){
+					        			
+					        			newSliceIt.remove();
+					        		}
+					        		
+					        	}
+					        }
+							if(updated == false){
+								logger.debug("Slice "
+										+p.getSlicer().getSliceName()+" was not found, removing");
+								p.disconnect();
+								proxyIt.remove();
+								//controllerConnector.removeProxy(sw.getId(), p);
+								
+							}
 						}
-					}
 				}
+			}
 			}
 			//so now we have updated all the ones connected and removed all the ones that are no longer there
 			//we still need to connect up new ones
