@@ -82,7 +82,7 @@ public class FlowStatCacher extends TimerTask{
 	 * @param sw
 	 */
 	
-	public void addSwitch(IOFSwitch sw){
+	public synchronized void addSwitch(IOFSwitch sw){
 		mySwitches.add(sw);
 	}
 	
@@ -91,7 +91,7 @@ public class FlowStatCacher extends TimerTask{
 	 * @param sw
 	 */
 	
-	public void removeSwitch(IOFSwitch sw){
+	public synchronized void removeSwitch(IOFSwitch sw){
 		mySwitches.remove(sw);
 	}
 	

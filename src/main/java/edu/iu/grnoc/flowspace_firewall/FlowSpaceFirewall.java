@@ -60,7 +60,7 @@ import edu.iu.grnoc.flowspace_firewall.FlowStatCacher;
 public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener, IOFSwitchListener, IFlowSpaceFirewallService{
 
 	protected static Logger logger;
-    //private HashMap <Long, Proxy> proxies;
+    
     protected IFloodlightProviderService floodlightProvider;
 
     private Timer statsTimer;
@@ -131,6 +131,38 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 		return controllerConnector.getSwitchProxies(switchId);
 	}
 	
+	public synchronized void setSlice(long dpid, String name, Slicer slice){
+		for(HashMap<Long, Slicer> hash : this.slices){
+			if(hash.containsKey(dpid)){
+				if(hash.get(dpid).getSliceName().equals(name)){
+					hash.put(dpid, slice);
+					return;
+				}
+			}
+		}
+		HashMap<Long, Slicer> tmp = new HashMap<Long,Slicer>();
+		tmp.put(dpid, slice);
+		this.slices.add(tmp);
+	}
+	
+	public synchronized void removeSlice(long dpid, String name){
+		for(HashMap<Long, Slicer> hash : this.slices){
+			if(hash.containsKey(dpid)){
+				if(hash.get(dpid).getSliceName().equals(name)){
+					hash.remove(dpid);
+					return;
+				}
+			}
+		}
+		
+		for(int i=0;i< this.slices.size(); i++){
+			HashMap<Long, Slicer> tmp = this.slices.get(i);
+			if(tmp.isEmpty()){
+				this.slices.remove(i);
+			}
+		}
+	}
+	
 	@Override
 	public void switchRemoved(long switchId) {
 		// TODO Auto-generated method stub
@@ -149,25 +181,25 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 				
 	}
 	
-	public HashMap<Long, Slicer> getSlice(String name){
+	public synchronized HashMap<Long, Slicer> getSlice(String name){
 		List<HashMap<Long,Slicer>> mySlices = Collections.synchronizedList(this.slices);
-		synchronized (mySlices){
-			Iterator <HashMap<Long,Slicer>> it = mySlices.iterator();
-			while(it.hasNext()){
-				HashMap<Long,Slicer> slice = it.next();
-				Iterator <Long> dpidIt = slice.keySet().iterator();
-				if(dpidIt.hasNext()){
-					Long dpid = dpidIt.next();
-					if(slice.get(dpid).getSliceName().equals(name)){
-						return slice;
-					}
+		
+		Iterator <HashMap<Long,Slicer>> it = mySlices.iterator();
+		while(it.hasNext()){
+			HashMap<Long,Slicer> slice = it.next();
+			Iterator <Long> dpidIt = slice.keySet().iterator();
+			if(dpidIt.hasNext()){
+				Long dpid = dpidIt.next();
+				if(slice.get(dpid).getSliceName().equals(name)){
+					return slice;
 				}
 			}
 		}
+		
 		return null;
 	}
 	
-	public List<HashMap<Long,Slicer>> getSlices(){
+	public synchronized List<HashMap<Long,Slicer>> getSlices(){
 		List<HashMap<Long,Slicer>> slices = Collections.synchronizedList(this.slices);
 	
 		synchronized(slices){
@@ -202,89 +234,54 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 	 * this is only called via the web-service
 	 */
 	
-	@SuppressWarnings("unchecked")
 	public boolean reloadConfig(){
 		ArrayList<HashMap<Long, Slicer>> newSlices;
-		ArrayList<IOFSwitch> newSwitches;
+		ArrayList<Proxy> toBeRemoved = new ArrayList<Proxy>();
 		//have our new configuration
 		//need to put it in place
-
 		try {
-		
-			List<HashMap<Long,Slicer>> mySlices = Collections.synchronizedList(this.slices);	
 			newSlices = ConfigParser.parseConfig("/etc/fsfw/fsfw.xml");
-			synchronized (mySlices){
-						
-				if(newSlices.size() == 0){
-					logger.error("Unable to reload config due to a problem in the configuration!");
-					return false;
-				}
-				else{
-					mySlices.clear();
-					mySlices.addAll(newSlices);
+
+			//push this into our this.slices variable
+			for(HashMap<Long,Slicer> slice : newSlices){
+				for(Long dpid : slice.keySet()){
+					this.setSlice(dpid, slice.get(dpid).getSliceName(), slice.get(dpid));
 				}
 			}
-			//newSlices is a clone so we can modify it without modifying slices
-			//we will use this to figure out which ones we have updated and which
-			//slices need to be created and connected to a currently active switch		
-			//newSlices = (ArrayList<HashMap<Long, Slicer>>) this.slices.clone();
 			
-			//added newSwitches clone so other processes can modify this.switches while reload is happening.
-			newSwitches = (ArrayList<IOFSwitch>) this.switches.clone();
-			logger.error("Number of switches currently configured: "+newSwitches.size());
-			Iterator <IOFSwitch> it = newSwitches.iterator();
-			
-			while(it.hasNext()){
-				IOFSwitch sw = it.next();
-				//logger.error("number of proxies:"+controllerConnector.getSwitchProxies(sw.getId()).size());
-				List <Proxy> proxies = controllerConnector.getSwitchProxies(sw.getId());
+			for(IOFSwitch sw : this.switches){
+
+				logger.error("number of proxies:"+ controllerConnector.getSwitchProxies(sw.getId()).size());
+				List<Proxy> proxies =  controllerConnector.getSwitchProxies(sw.getId());
 				if (proxies == null){
 					logger.error("no proxies");
+					continue;
 				}
-				if (proxies != null){
-					//if (!controllerConnector.getSwitchProxies(sw.getId()).isEmpty() ){
-				
-					List <Proxy> myProxies = Collections.synchronizedList( controllerConnector.getSwitchProxies(sw.getId()) );
-				
-					synchronized(myProxies){
-										
-					if(myProxies != null){	
-						logger.warn("number of proxies "+myProxies.size() );
-						Iterator <Proxy> proxyIt = myProxies.iterator();
-						while(proxyIt.hasNext()){
-							Proxy p = proxyIt.next();
-							//we now know the proxy and the switch (so we know the slice name and the switch)
-							//now we need to find the slice in the newSlices variable and set the proxy to it
-							boolean updated = false;
-							//Iterator <HashMap<Long,Slicer>> newSliceIt = newSlices.iterator();
-							//while(newSliceIt.hasNext()){
-							//	HashMap<Long,Slicer> slice = newSliceIt.next();
-							for(HashMap<Long, Slicer> slice: newSlices){
-								logger.error("number of switches in newslice:"+slice.keySet().size());
-					        	//loop through all switches in the slice
-					        	if(slice.containsKey(sw.getId()) && slice.get(sw.getId()).getSliceName().equals(p.getSlicer().getSliceName())){
-					        		p.setSlicer(slice.get(sw.getId()));
-					        		logger.warn("Slice "+p.getSlicer().getSliceName()+" was found, setting updated to true");
-					        		slice.remove(sw.getId());
-					        		updated = true;
-					        		//if(slice.isEmpty()){
-					        		//	newSlices.remove(slice);
-					        	//	}
-					        		
-					        	}
-					        }
-							if(updated == false){
-								logger.warn("Slice "
-										+p.getSlicer().getSliceName()+" was not found, removing");
-								p.disconnect();
-								proxyIt.remove();
-								
-								
-							}
+			
+				logger.warn("number of proxies "+proxies.size() );
+				for(Proxy p : proxies){
+					//we now know the proxy and the switch (so we know the slice name and the switch)
+					//now we need to find the slice in the newSlices variable and set the proxy to it
+					boolean updated = false;
+
+					for(HashMap<Long, Slicer> slice: newSlices){
+						logger.error("number of switches in newslice:"+slice.keySet().size());
+						
+						if(slice.containsKey(sw.getId()) && slice.get(sw.getId()).getSliceName().equals(p.getSlicer().getSliceName())){
+					   		p.setSlicer(slice.get(sw.getId()));
+					        logger.warn("Slice " + p.getSlicer().getSliceName() + " was found, setting updated to true");
+						    updated = true;			        		
+						    slice.remove(sw.getId());
 						}
+					}
+					if(!updated){
+						logger.warn("Slice "
+								+p.getSlicer().getSliceName()+":" + sw.getStringId() +" was not found, removing");
+						p.disconnect();
+						toBeRemoved.add(p);
+					}
 				}
-			}
-				}
+				
 			}
 		
 			//so now we have updated all the ones connected and removed all the ones that are no longer there
@@ -300,7 +297,7 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 				}
 				else{	
 					for(Long dpid: slice.keySet()){
-						if(newSwitches.contains(dpid)){
+						if(this.switches.contains(dpid)){
 							//connect it up
 							IOFSwitch sw = floodlightProvider.getSwitch(dpid);
 							Slicer vlanSlicer = slice.get(dpid);
@@ -310,7 +307,11 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 				}
 			}
 			
-		
+			//remove any proxies that are to be removed
+			for(Proxy p: toBeRemoved){
+				this.removeProxy(p.getSwitch().getId(), p);
+				this.removeSlice(p.getSwitch().getId(), p.getSlicer().getSliceName());
+			}
 			
 		} catch (IOException e) {
 			e.printStackTrace();

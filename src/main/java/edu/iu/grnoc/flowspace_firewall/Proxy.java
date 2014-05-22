@@ -185,7 +185,7 @@ public class Proxy {
 	 * @param newSlicer
 	 */
 	public void setSlicer(Slicer newSlicer){
-		if(newSlicer.getControllerAddress().equals(this.mySlicer.getControllerAddress())){
+		if(!newSlicer.getControllerAddress().equals(this.mySlicer.getControllerAddress())){
 			this.disconnect();
 			//the controller connector will connect this to the proper address next time it runs
 		}
@@ -199,8 +199,10 @@ public class Proxy {
 	 * disconnect from the controller
 	 */
 	public void disconnect(){
-		myController.disconnect();
-		myController.close();
+		if(myController.isConnected()){
+			myController.disconnect();
+			myController.close();
+		}
 	}
 	
 	private void mapXids(List <OFMessage> msg){
