@@ -172,6 +172,11 @@ public class Proxy {
 		if(myController == null){
 			return false;
 		}
+		ofcch =(OFControllerChannelHandler)myController.getPipeline()
+				.getContext("handler").getHandler();
+		if(!ofcch.isHandshakeComplete()){
+			return false;
+		}
 		return myController.isConnected();
 	}
 	
