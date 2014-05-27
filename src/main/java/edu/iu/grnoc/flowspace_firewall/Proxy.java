@@ -637,12 +637,16 @@ public class Proxy {
 	
 	public boolean valid_header(OFMessage msg){
 		//verify the length is what it claims
+		ChannelBuffer buf = ChannelBuffers.buffer(msg.getLength());
 		try{
-			ChannelBuffer buf = ChannelBuffers.buffer(msg.getLength());
 			msg.writeTo(buf);
 		}catch(Exception e){
 			return false;
 		}
+		int size = buf.readableBytes();
+		if(size != msg.getLength())
+			return false;
+		
 		return true;
 	}
 	
