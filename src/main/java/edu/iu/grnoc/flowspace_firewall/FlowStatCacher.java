@@ -55,9 +55,9 @@ public class FlowStatCacher extends TimerTask{
 	 * stats from the switch and caches them
 	 */
 	
-	public FlowStatCacher(){
+	public FlowStatCacher(FlowSpaceFirewall parent){
 		mySwitches = new CopyOnWriteArrayList<IOFSwitch>();
-		statsCache = new FlowStatCache();
+		statsCache = new FlowStatCache(parent);
 	}
 	/**
 	 * the TimerTask run method called by the Timer
@@ -82,7 +82,7 @@ public class FlowStatCacher extends TimerTask{
 	 * @param sw
 	 */
 	
-	public void addSwitch(IOFSwitch sw){
+	public synchronized void addSwitch(IOFSwitch sw){
 		mySwitches.add(sw);
 	}
 	
@@ -91,8 +91,18 @@ public class FlowStatCacher extends TimerTask{
 	 * @param sw
 	 */
 	
-	public void removeSwitch(IOFSwitch sw){
+	public synchronized void removeSwitch(IOFSwitch sw){
 		mySwitches.remove(sw);
+	}
+	
+	
+	/**
+	 * 
+	 * 
+	 */
+	
+	public List<OFStatistics> getSlicedFlowStats(Long switchId, String sliceName){
+		return statsCache.getSlicedFlowStats(switchId, sliceName);
 	}
 	
 	/**
