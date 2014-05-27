@@ -40,25 +40,25 @@ public class FlowSpaceFirewallSlices extends ServerResource{
 		
 		synchronized(slices){
 			HashMap<String, List<String>> newSlices = new HashMap<String,List<String>>();
-		//log.debug("Number of slices: "+slices.size());
-		for(HashMap<Long,Slicer> slice : slices){
-			logger.error("Size of slice keyset: "+ slice.keySet().size() );
-			for(Long dpid : slice.keySet()){
-				if(newSlices.containsKey(slice.get(dpid).getSliceName())){
-					logger.error("newSlices already has "+slice.get(dpid).getSliceName()+"adding "+dpid+"to curSlices");
-					List<String> curSlices = newSlices.get(slice.get(dpid).getSliceName());
-					curSlices.add(HexString.toHexString(dpid));
-				}else{
-					logger.error("newSlices doesn't have "+slice.get(dpid).getSliceName()+"adding to newSlices and "+dpid+"to curSlices");
-					List<String> curSlices = new ArrayList<String>();
-					curSlices.add(HexString.toHexString(dpid));
-					newSlices.put(slice.get(dpid).getSliceName(), curSlices);
+			//log.debug("Number of slices: "+slices.size());
+			for(HashMap<Long,Slicer> slice : slices){
+				logger.error("Size of slice keyset: "+ slice.keySet().size() );
+				for(Long dpid : slice.keySet()){
+					if(newSlices.containsKey(slice.get(dpid).getSliceName())){
+						logger.error("newSlices already has "+slice.get(dpid).getSliceName()+"adding "+dpid+"to curSlices");
+						List<String> curSlices = newSlices.get(slice.get(dpid).getSliceName());
+						curSlices.add(HexString.toHexString(dpid));
+					}else{
+						logger.error("newSlices doesn't have "+slice.get(dpid).getSliceName()+"adding to newSlices and "+dpid+"to curSlices");
+						List<String> curSlices = new ArrayList<String>();
+						curSlices.add(HexString.toHexString(dpid));
+						newSlices.put(slice.get(dpid).getSliceName(), curSlices);
+					}
 				}
 			}
-		}
-	
 		
-		return newSlices;
+			
+			return newSlices;
 		}
 	}
 

@@ -20,11 +20,11 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map.Entry;
-
 import java.util.Iterator;
-
 import java.util.List;
 
+import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.socket.*;
 import org.openflow.protocol.OFError;
 import org.openflow.protocol.OFFlowMod;
@@ -484,13 +484,7 @@ public class Proxy {
 	private void handleFlowStatsRequest(OFMessage msg){
 		//we have the stats cached so slice n' dice and return
 		log.debug("Working on stats for switch: " + mySwitch.getStringId() + " for slice this slice");
-		List<OFStatistics> stats = this.parent.getStats(mySwitch.getId());
-		List<OFStatistics> results = null;
-		try{
-			results = FlowStatSlicer.SliceStats(mySlicer, stats);
-		}catch(IllegalArgumentException e){
-			
-		}
+		List<OFStatistics> results = this.parent.getSlicedFlowStats(mySwitch.getId(),this.mySlicer.getSliceName());
 		
 		if(results == null){
 			log.debug("Slicing failed!");
@@ -616,6 +610,14 @@ public class Proxy {
 
 		
 		mapXids(msg);
+
+		if(!this.valid_header(msg)){
+			//invalid packet don't send it back so we cant send an error
+			//just log and drop it
+			log.error("Slice " + this.getSlicer().getSliceName() + " to switch " + this.mySwitch.getStringId() + "  Invalid Header Rejecting!");
+			return;
+		}
+		
 		try {
 			mySwitch.write(msg, cntx);
 		} catch (IOException e) {
@@ -623,6 +625,25 @@ public class Proxy {
 		}
 		mySwitch.flush();
 		
+	}
+	
+	/**
+	 * 
+	 */
+	
+	public boolean valid_header(OFMessage msg){
+		//verify the length is what it claims
+		ChannelBuffer buf = ChannelBuffers.buffer(msg.getLength());
+		try{
+			msg.writeTo(buf);
+		}catch(Exception e){
+			return false;
+		}
+		int size = buf.readableBytes();
+		if(size != msg.getLength())
+			return false;
+		
+		return true;
 	}
 	
 	/**
