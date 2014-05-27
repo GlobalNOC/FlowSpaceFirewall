@@ -482,13 +482,7 @@ public class Proxy {
 	private void handleFlowStatsRequest(OFMessage msg){
 		//we have the stats cached so slice n' dice and return
 		log.debug("Working on stats for switch: " + mySwitch.getStringId() + " for slice this slice");
-		List<OFStatistics> stats = this.parent.getStats(mySwitch.getId());
-		List<OFStatistics> results = null;
-		try{
-			results = FlowStatSlicer.SliceStats(mySlicer, stats);
-		}catch(IllegalArgumentException e){
-			
-		}
+		List<OFStatistics> results = this.parent.getSlicedFlowStats(mySwitch.getId(),this.mySlicer.getSliceName());
 		
 		if(results == null){
 			log.debug("Slicing failed!");
