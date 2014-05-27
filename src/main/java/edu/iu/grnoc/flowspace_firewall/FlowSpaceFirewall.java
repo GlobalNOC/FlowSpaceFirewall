@@ -123,6 +123,10 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 		return statsCacher.getPortStats(switchId, portId);
 	}
 	
+	public List<OFStatistics> getSlicedFlowStats(long switchId, String sliceName){
+		return statsCacher.getSlicedFlowStats(switchId, sliceName);
+	}
+	
 	public List<OFStatistics> getStats(long switchId){
 		return statsCacher.getSwitchStats(switchId);
 	}
@@ -422,7 +426,7 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 		switches = new ArrayList<IOFSwitch>();
 		//start up the stats collector timer
 		statsTimer = new Timer("StatsTimer");
-		statsCacher = new FlowStatCacher();
+		statsCacher = new FlowStatCacher(this);
 		statsTimer.scheduleAtFixedRate(statsCacher, 0, 10 * 1000);
 		
 		//start up the controller connector timer

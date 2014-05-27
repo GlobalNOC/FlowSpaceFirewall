@@ -38,10 +38,14 @@ public class FlowStatCache {
 	//the cache
 	private HashMap<Long, List<OFStatistics>> cache;
 	private HashMap<Long, HashMap<Short, OFStatistics>> portStatsCache;
+	private HashMap<Long, HashMap<String, List<OFStatistics>>> slicedCache;
+	private FlowSpaceFirewall parent;
 	
-	public FlowStatCache(){
+	public FlowStatCache(FlowSpaceFirewall parent){
 		cache = new HashMap<Long, List<OFStatistics>>();
 		portStatsCache = new HashMap<Long, HashMap<Short, OFStatistics>>();
+		slicedCache = new HashMap<Long, HashMap<String, List<OFStatistics>>>();
+		this.parent = parent;
 	}
 
 	
@@ -52,6 +56,25 @@ public class FlowStatCache {
 	 */
 	public synchronized void setFlowCache(Long switchId, List <OFStatistics> stats){
 		cache.put(switchId, stats);
+		
+		//slice the stats and set the cache
+		List<HashMap<Long, Slicer>> slices = parent.getSlices();
+
+		for(HashMap<Long,Slicer> tmpSlices : slices){
+			if(!tmpSlices.containsKey(switchId)){
+				//switch not part of this slice
+				continue;
+			}
+			if(!slicedCache.containsKey(switchId)){
+				HashMap<String, List<OFStatistics>> tmp = new HashMap<String, List<OFStatistics>>();
+				slicedCache.put(switchId, tmp);
+			}
+			Slicer slice = tmpSlices.get(switchId);
+			if(slicedCache.containsKey(switchId)){
+				HashMap<String, List<OFStatistics>> slicedStats = slicedCache.get(switchId);
+				slicedStats.put(slice.getSliceName(), FlowStatSlicer.SliceStats(slice,stats));
+			}
+		}
 	}
 	
 	
@@ -63,6 +86,18 @@ public class FlowStatCache {
 	public synchronized List <OFStatistics> getSwitchFlowStats(Long switchId){
 		log.debug("Looking for switch stats: " + switchId);
 		return cache.get(switchId);
+	}
+	
+	public synchronized List <OFStatistics> getSlicedFlowStats(Long switchId, String sliceName){
+		log.debug("Getting sliced stats for switch: " + switchId + " and slice " + sliceName);
+		if(slicedCache.containsKey(switchId)){
+			HashMap<String, List<OFStatistics>> tmpStats = slicedCache.get(switchId);
+			if(tmpStats.containsKey(sliceName)){
+				return tmpStats.get(sliceName);
+			}
+			return null;
+		}
+		return null;
 	}
 	
 	public synchronized void setPortCache(Long switchId, HashMap<Short, OFStatistics> stats){
