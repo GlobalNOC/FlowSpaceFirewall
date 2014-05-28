@@ -119,13 +119,6 @@ public class ControllerConnector extends TimerTask {
 	 */
 	public synchronized List <Proxy> getSwitchProxies(Long switchId){
 		log.debug("Looking for switchID: " + switchId);
-		Set<Long> keys = proxies.keySet();
-		Iterator <Long> it = keys.iterator();
-		while(it.hasNext()){
-			Long key = it.next();
-			log.debug("Switch: " + key);
-		}
-		
 		return proxies.get(switchId);
 	}
 	
