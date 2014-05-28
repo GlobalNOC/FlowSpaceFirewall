@@ -3,11 +3,14 @@ package edu.iu.grnoc.flowspace_firewall;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.xpath.XPathExpressionException;
+
+import net.floodlightcontroller.core.IOFSwitch;
 
 import org.junit.Before;
 import org.junit.Rule;
@@ -15,10 +18,11 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.xml.sax.SAXException;
 
+import static org.easymock.EasyMock.createMock;
 import static org.junit.Assert.*;
 
 public class ConfigParserTest {
-	
+
 	@Rule
 	public ExpectedException thrown = ExpectedException.none();
 	
@@ -67,6 +71,7 @@ public class ConfigParserTest {
 	@Test
 	public void testOverlappingFlowSpace() throws IOException, SAXException, XPathExpressionException, ParserConfigurationException{
 		ArrayList<HashMap<Long, Slicer>> slices = ConfigParser.parseConfig("src/test/resources/overlapping_flowspace.xml");
+		
 		assertTrue("config has overlapping flowspace, slice should be empty was " + slices.size(), slices.size() == 0);
 	}
 	
