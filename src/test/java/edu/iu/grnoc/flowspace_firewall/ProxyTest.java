@@ -59,7 +59,7 @@ public class ProxyTest {
 	private VLANSlicer slicer;
 	private FlowSpaceFirewall fsfw;
 	private SocketChannel channel;
-	OFControllerChannelHandler handler;
+	private OFControllerChannelHandler handler;
 	FloodlightContext cntx;
 	
 	private List<OFMessage> messagesSentToController;
@@ -70,7 +70,7 @@ public class ProxyTest {
 		ChannelFuture future = createMock(org.jboss.netty.channel.ChannelFuture.class);
 		ChannelPipeline pipeline = createMock(org.jboss.netty.channel.ChannelPipeline.class);
 		ChannelHandlerContext context = createMock(org.jboss.netty.channel.ChannelHandlerContext.class);
-		handler = EasyMock.createMock(edu.iu.grnoc.flowspace_firewall.OFControllerChannelHandler.class);
+		handler = EasyMock.createNiceMock(edu.iu.grnoc.flowspace_firewall.OFControllerChannelHandler.class);
 		channel = EasyMock.createNiceMock(org.jboss.netty.channel.socket.SocketChannel.class);
 		
 		ChannelFuture otherFuture = createMock(org.jboss.netty.channel.ChannelFuture.class);
@@ -96,10 +96,11 @@ public class ProxyTest {
 		    }
 		}).anyTimes();
 		
+		
 		EasyMock.replay(future);
 		EasyMock.replay(pipeline);
 		EasyMock.replay(context);
-		EasyMock.replay(handler);
+		//EasyMock.replay(handler);
 		EasyMock.replay(otherFuture);
 	}
 	
@@ -282,7 +283,12 @@ public class ProxyTest {
 	public void testConnect(){
 		expect(channel.isConnected()).andReturn(true).once().andReturn(false).once();
 		EasyMock.replay(channel);
+		//log.error(handler.toString());
+		expect(handler.isHandshakeComplete() ).andReturn(true).once().andReturn(false).once();		
+		
+		EasyMock.replay(handler);
 		Proxy proxy = new Proxy(sw, slicer, fsfw);
+		
 		assertNotNull("Proxy was created",proxy);
 		assertFalse("Proxy is not connected as expected", proxy.connected());
 		proxy.connect(channel);
@@ -297,6 +303,8 @@ public class ProxyTest {
 		messagesSentToController.clear();
 		Proxy proxy = new Proxy(sw, slicer, fsfw);
 		expect(channel.isConnected()).andReturn(true).anyTimes();
+		expect(handler.isHandshakeComplete()).andReturn(true).anyTimes();
+		EasyMock.replay(handler);
 		EasyMock.replay(channel);
 		assertNotNull("Proxy was created",proxy);
 		assertFalse("Proxy is not connected as expected", proxy.connected());
@@ -332,6 +340,8 @@ public class ProxyTest {
 		messagesSentToController.clear();
 		Proxy proxy = new Proxy(sw, slicer, fsfw);
 		expect(channel.isConnected()).andReturn(true).anyTimes();
+		expect(handler.isHandshakeComplete()).andReturn(true).anyTimes();
+		EasyMock.replay(handler);
 		EasyMock.replay(channel);
 		assertNotNull("Proxy was created",proxy);
 		assertFalse("Proxy is not connected as expected", proxy.connected());
@@ -376,6 +386,8 @@ public class ProxyTest {
 		slicer.setMaxFlows(4);
 		Proxy proxy = new Proxy(sw, slicer, fsfw);
 		expect(channel.isConnected()).andReturn(true).anyTimes();
+		expect(handler.isHandshakeComplete()).andReturn(true).anyTimes();
+		EasyMock.replay(handler);
 		EasyMock.replay(channel);
 		assertNotNull("Proxy was created",proxy);
 		assertFalse("Proxy is not connected as expected", proxy.connected());
@@ -425,7 +437,8 @@ public class ProxyTest {
 		messagesSentToController.clear();
 		Proxy proxy = new Proxy(sw, slicer, fsfw);
 		expect(channel.isConnected()).andReturn(true).anyTimes();
-		
+		expect(handler.isHandshakeComplete()).andReturn(true).anyTimes();
+		EasyMock.replay(handler);
 		EasyMock.replay(channel);
 		assertNotNull("Proxy was created",proxy);
 		assertFalse("Proxy is not connected as expected", proxy.connected());
@@ -467,6 +480,8 @@ public class ProxyTest {
 		messagesSentToController.clear();
 		Proxy proxy = new Proxy(sw, slicer, fsfw);
 		expect(channel.isConnected()).andReturn(true).anyTimes();
+		expect(handler.isHandshakeComplete()).andReturn(true).anyTimes();
+		EasyMock.replay(handler);
 		EasyMock.replay(channel);
 		assertNotNull("Proxy was created",proxy);
 		assertFalse("Proxy is not connected as expected", proxy.connected());
@@ -505,6 +520,8 @@ public class ProxyTest {
 		messagesSentToController.clear();
 		Proxy proxy = new Proxy(sw, slicer, fsfw);
 		expect(channel.isConnected()).andReturn(true).anyTimes();
+		expect(handler.isHandshakeComplete()).andReturn(true).anyTimes();
+		EasyMock.replay(handler);
 		EasyMock.replay(channel);
 		assertNotNull("Proxy was created",proxy);
 		assertFalse("Proxy is not connected as expected", proxy.connected());
@@ -550,6 +567,8 @@ public class ProxyTest {
 		messagesSentToController.clear();
 		Proxy proxy = new Proxy(sw, slicer, fsfw);
 		expect(channel.isConnected()).andReturn(true).anyTimes();
+		expect(handler.isHandshakeComplete()).andReturn(true).anyTimes();
+		EasyMock.replay(handler);
 		EasyMock.replay(channel);
 		assertNotNull("Proxy was created",proxy);
 		assertFalse("Proxy is not connected as expected", proxy.connected());
@@ -578,6 +597,8 @@ public class ProxyTest {
 		messagesSentToController.clear();
 		Proxy proxy = new Proxy(sw, slicer, fsfw);
 		expect(channel.isConnected()).andReturn(true).anyTimes();
+		expect(handler.isHandshakeComplete()).andReturn(true).anyTimes();
+		EasyMock.replay(handler);
 		EasyMock.replay(channel);
 		assertNotNull("Proxy was created",proxy);
 		assertFalse("Proxy is not connected as expected", proxy.connected());
@@ -601,6 +622,8 @@ public class ProxyTest {
 		messagesSentToController.clear();
 		Proxy proxy = new Proxy(sw, slicer, fsfw);
 		expect(channel.isConnected()).andReturn(true).anyTimes();
+		expect(handler.isHandshakeComplete()).andReturn(true).anyTimes();
+		EasyMock.replay(handler);
 		EasyMock.replay(channel);
 		assertNotNull("Proxy was created",proxy);
 		assertFalse("Proxy is not connected as expected", proxy.connected());
@@ -646,6 +669,8 @@ public class ProxyTest {
 		messagesSentToController.clear();
 		Proxy proxy = new Proxy(sw, slicer, fsfw);
 		expect(channel.isConnected()).andReturn(true).anyTimes();
+		expect(handler.isHandshakeComplete()).andReturn(true).anyTimes();
+		EasyMock.replay(handler);
 		EasyMock.replay(channel);
 		assertNotNull("Proxy was created",proxy);
 		assertFalse("Proxy is not connected as expected", proxy.connected());
@@ -697,6 +722,8 @@ public class ProxyTest {
 		messagesSentToController.clear();
 		Proxy proxy = new Proxy(sw, slicer, fsfw);
 		expect(channel.isConnected()).andReturn(true).anyTimes();
+		expect(handler.isHandshakeComplete()).andReturn(true).anyTimes();
+		EasyMock.replay(handler);
 		EasyMock.replay(channel);
 		assertNotNull("Proxy was created",proxy);
 		assertFalse("Proxy is not connected as expected", proxy.connected());
@@ -746,6 +773,8 @@ public class ProxyTest {
 		messagesSentToController.clear();
 		Proxy proxy = new Proxy(sw, slicer, fsfw);
 		expect(channel.isConnected()).andReturn(true).anyTimes();
+		expect(handler.isHandshakeComplete()).andReturn(true).anyTimes();
+		EasyMock.replay(handler);
 		EasyMock.replay(channel);
 		assertNotNull("Proxy was created",proxy);
 		assertFalse("Proxy is not connected as expected", proxy.connected());
@@ -763,6 +792,8 @@ public class ProxyTest {
 		messagesSentToController.clear();
 		Proxy proxy = new Proxy(sw, slicer, fsfw);
 		expect(channel.isConnected()).andReturn(true).anyTimes();
+		expect(handler.isHandshakeComplete()).andReturn(true).anyTimes();
+		EasyMock.replay(handler);
 		EasyMock.replay(channel);
 		assertNotNull("Proxy was created",proxy);
 		assertFalse("Proxy is not connected as expected", proxy.connected());
@@ -779,6 +810,8 @@ public class ProxyTest {
 		messagesSentToController.clear();
 		Proxy proxy = new Proxy(sw, slicer, fsfw);
 		expect(channel.isConnected()).andReturn(true).anyTimes();
+		expect(handler.isHandshakeComplete()).andReturn(true).anyTimes();
+		EasyMock.replay(handler);
 		EasyMock.replay(channel);
 		assertNotNull("Proxy was created",proxy);
 		assertFalse("Proxy is not connected as expected", proxy.connected());
@@ -815,6 +848,8 @@ public class ProxyTest {
 		proxies.add(proxy);
 		
 		expect(channel.isConnected()).andReturn(true).once().andReturn(false).once();
+		expect(handler.isHandshakeComplete()).andReturn(true).anyTimes();
+		EasyMock.replay(handler);
 		EasyMock.replay(channel);
 		assertNotNull("Proxy was created",proxy);
 		assertFalse("Proxy is not connected as expected", proxy.connected());
@@ -853,6 +888,8 @@ public class ProxyTest {
 		messagesSentToController.clear();
 		Proxy proxy = new Proxy(sw, slicer, fsfw);
 		expect(channel.isConnected()).andReturn(true).anyTimes();
+		expect(handler.isHandshakeComplete()).andReturn(true).anyTimes();
+		EasyMock.replay(handler);
 		EasyMock.replay(channel);
 		assertNotNull("Proxy was created",proxy);
 		assertFalse("Proxy is not connected as expected", proxy.connected());
@@ -882,6 +919,8 @@ public class ProxyTest {
 		messagesSentToController.clear();
 		Proxy proxy = new Proxy(sw, slicer, fsfw);
 		expect(channel.isConnected()).andReturn(true).anyTimes();
+		expect(handler.isHandshakeComplete()).andReturn(true).anyTimes();
+		EasyMock.replay(handler);
 		EasyMock.replay(channel);
 		assertNotNull("Proxy was created",proxy);
 		assertFalse("Proxy is not connected as expected", proxy.connected());
@@ -909,6 +948,8 @@ public class ProxyTest {
 		messagesSentToController.clear();
 		Proxy proxy = new Proxy(sw, slicer, fsfw);
 		expect(channel.isConnected()).andReturn(true).anyTimes();
+		expect(handler.isHandshakeComplete()).andReturn(true).anyTimes();
+		EasyMock.replay(handler);
 		EasyMock.replay(channel);
 		assertNotNull("Proxy was created",proxy);
 		assertFalse("Proxy is not connected as expected", proxy.connected());

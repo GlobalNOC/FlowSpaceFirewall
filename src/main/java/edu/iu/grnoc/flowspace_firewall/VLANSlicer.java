@@ -697,7 +697,7 @@ public class VLANSlicer implements Slicer{
 		for(String portName : this.portList.keySet()){
 			if(otherSlicer.isPortPartOfSlice(portName)){
 				if(this.getPortConfig(portName).getVlanRange().rangeOverlap(otherSlicer.getPortConfig(portName).getVlanRange())){
-					log.warn(""+this.name+" "+this.sw.getInetAddress().toString()+"port range: "+this.getPortConfig(portName).getVlanRange().toString()+ "overlaps with slice: "+otherSlicer.getSliceName()+" port-range: "+otherSlicer.getPortConfig(portName).getVlanRange().toString());
+					log.error(""+this.name+" "+this.getSliceName()+"port range: "+this.getPortConfig(portName).getVlanRange().toString()+ "overlaps with slice: "+otherSlicer.getSliceName()+" port-range: "+otherSlicer.getPortConfig(portName).getVlanRange().toString());
 					return true;
 				}
 			}
