@@ -101,5 +101,16 @@ public class FlowSpaceFirewallTest extends FloodlightTestCase{
         replay(sw1, sw2);
     }
     
+    @Test
+    public void basicTest(){
+    	assertTrue(true);
+    	assertNull(null);
+    }
+    
+    @Test
+	public void testConnect(){
+    	assertTrue(true);
+    	assertNull(null);
+    }
         
 }
