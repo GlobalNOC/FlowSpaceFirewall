@@ -341,10 +341,11 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 		if(sw == null || !sw.isActive()){
 			return Command.CONTINUE;
 		}
-		
+		logger.debug("Received: " + msg.toString() + " from switch: " + sw.getStringId());
 		List <Proxy> proxies = controllerConnector.getSwitchProxies(sw.getId());
 		
 		if(proxies == null){
+			logger.error("No proxies for switch: " + sw.getStringId());
 			return Command.CONTINUE;
 		}
 
