@@ -255,7 +255,6 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 			
 			for(IOFSwitch sw : this.switches){
 
-				logger.error("number of proxies:"+ controllerConnector.getSwitchProxies(sw.getId()).size());
 				List<Proxy> proxies =  controllerConnector.getSwitchProxies(sw.getId());
 				if (proxies == null){
 					logger.error("no proxies");
