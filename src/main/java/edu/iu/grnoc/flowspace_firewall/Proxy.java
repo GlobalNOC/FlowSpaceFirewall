@@ -69,6 +69,7 @@ public class Proxy {
 	private FlowSpaceFirewall parent;
 	private XidMap xidMap;
 	
+	
 	private static final Logger log = LoggerFactory.getLogger(Proxy.class);
 	private Integer flowCount;
 	private Boolean adminStatus;
@@ -83,6 +84,7 @@ public class Proxy {
 		xidMap = new XidMap();
 		adminStatus = true;
 		packetInRate = new RateTracker(100,slicer.getPacketInRate());
+
 	}
 	
 	public void setAdminStatus(Boolean status){
@@ -682,6 +684,8 @@ public class Proxy {
 			}
 			
 			if(this.packetInRate.okToProcess()){
+				//add the packet buffer id to our buffer id list
+				this.mySlicer.addBufferId(pcktIn.getBufferId(), pcktIn.getPacketData());
 				break;
 			}else{
 				log.error("Packet in Rate for Slice: " +
