@@ -671,6 +671,7 @@ public class Proxy {
 			OFPacketIn pcktIn = (OFPacketIn) msg;
 			OFMatch match = new OFMatch();
 			if(pcktIn.getPacketData().length <= 0){
+				log.debug("No Packet data not slicing");
 				//no packet not slicing...
 				return;
 			}

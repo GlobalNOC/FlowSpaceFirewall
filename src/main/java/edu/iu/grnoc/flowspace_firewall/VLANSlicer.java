@@ -346,19 +346,21 @@ public class VLANSlicer implements Slicer{
 		if(outPacket.getPacketData().length == 0 && outPacket.getBufferId() != 0){
 			//look at the buffer id and see if it matches one we have in our 
 			//buffer cache
-			if(this.bufferIds.containsKey(outPacket.getBufferId())){
-				match.loadFromPacket(this.bufferIds.get(outPacket.getBufferId()), (short)0);
+			int bufferId = outPacket.getBufferId();
+			if(this.bufferIds.containsKey(bufferId)){
+				outPacket.setBufferId(OFPacketOut.BUFFER_ID_NONE);
+				outPacket.setPacketData(this.bufferIds.get(bufferId));
+				outPacket.setLengthU(outPacket.getLengthU() + this.bufferIds.get(bufferId).length);
 			}
-		}else{
-		
-			try{
-				match.loadFromPacket(outPacket.getPacketData(),(short)0);
-			}
-			catch(Exception e){
-				log.error("Loading Match from packet failed: " + e.getMessage());
-				packets.clear();
-				return packets;
-			}
+		}
+	
+		try{
+			match.loadFromPacket(outPacket.getPacketData(),(short)0);
+		}
+		catch(Exception e){
+			log.error("Loading Match from packet failed: " + e.getMessage());
+			packets.clear();
+			return packets;
 		}
 		//start our current vlan
 		short curVlan = match.getDataLayerVirtualLan();
