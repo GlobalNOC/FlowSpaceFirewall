@@ -49,5 +49,6 @@ public interface Slicer {
 	int getPacketInRate();
 	void setPacketInRate(int rate);
 	IOFSwitch getSwitch();
+	void addBufferId(int bufferId, byte[] packetData);
 	
 }

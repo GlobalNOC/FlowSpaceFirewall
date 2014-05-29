@@ -101,12 +101,5 @@ public class FlowSpaceFirewallTest extends FloodlightTestCase{
         replay(sw1, sw2);
     }
     
-    @Test
-    public void testNewSwitch() throws Exception {
-        FlowSpaceFirewall fsfw = getFSFW();
-        
-
-        
-    }
         
 }
