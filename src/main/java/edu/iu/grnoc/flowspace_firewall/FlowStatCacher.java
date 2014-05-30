@@ -92,7 +92,13 @@ public class FlowStatCacher extends TimerTask{
 	 */
 	
 	public synchronized void removeSwitch(IOFSwitch sw){
-		mySwitches.remove(sw);
+		Iterator <IOFSwitch> it = mySwitches.iterator();
+		while(it.hasNext()){
+			IOFSwitch tmpSwitch = it.next();
+			if(tmpSwitch.getId() == sw.getId()){
+				it.remove();
+			}
+		}
 	}
 	
 	

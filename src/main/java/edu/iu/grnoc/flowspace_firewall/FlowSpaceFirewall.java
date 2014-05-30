@@ -165,11 +165,13 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 				this.slices.remove(i);
 			}
 		}
+		
 	}
 	
 	@Override
 	public void switchRemoved(long switchId) {
 		// TODO Auto-generated method stub
+		logger.error("Switch removed!");
 		List <Proxy> proxies = controllerConnector.getSwitchProxies(switchId);
 		Iterator <Proxy> it = proxies.iterator();
 
@@ -180,8 +182,15 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 		}
 		
 		IOFSwitch sw = floodlightProvider.getSwitch(switchId);
-        this.switches.remove(sw);
-        this.statsCacher.removeSwitch(sw);
+		Iterator <IOFSwitch> switchIt = this.switches.iterator();
+		while(switchIt.hasNext()){
+			IOFSwitch tmpSwitch = switchIt.next();
+			if(tmpSwitch.getId() == switchId){
+				logger.error("REMOVED!!!!");
+				switchIt.remove();
+			}
+		}
+		this.statsCacher.removeSwitch(sw);
 				
 	}
 	
@@ -214,7 +223,7 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 
 	@Override
 	public void switchActivated(long switchId) {
-
+		logger.error("Switch Activated");
 	}
 	
 	public void removeProxy(Long switchId, Proxy p){
@@ -230,6 +239,7 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 	@Override
 	public void switchChanged(long switchId) {
 		//we don't do anything here
+		logger.error("Switch changed!");
 	}
 	
 	/**
@@ -436,7 +446,6 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 		controllerConnectTimer.scheduleAtFixedRate(controllerConnector, 0, 10 * 1000);
 		
 		restApi.addRestletRoutable(new FlowSpaceFirewallWebRoutable());
-		
 		
 	}
 
