@@ -28,7 +28,6 @@ import java.util.Timer;
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.xpath.XPathExpressionException;
 
-
 import net.floodlightcontroller.core.FloodlightContext;
 import net.floodlightcontroller.core.IFloodlightProviderService;
 import net.floodlightcontroller.core.IOFMessageListener;
@@ -49,6 +48,8 @@ import org.openflow.protocol.statistics.OFStatistics;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.xml.sax.SAXException;
+
+
 
 
 
@@ -143,6 +144,7 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 				}
 			}
 		}
+		//if we made it here then there was no slicer...
 		HashMap<Long, Slicer> tmp = new HashMap<Long,Slicer>();
 		tmp.put(dpid, slice);
 		this.slices.add(tmp);
@@ -153,7 +155,6 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 			if(hash.containsKey(dpid)){
 				if(hash.get(dpid).getSliceName().equals(name)){
 					hash.remove(dpid);
-					return;
 				}
 			}
 		}
@@ -211,11 +212,8 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 	
 	public synchronized List<HashMap<Long,Slicer>> getSlices(){
 		List<HashMap<Long,Slicer>> slices = Collections.synchronizedList(this.slices);
-	
-		synchronized(slices){
 		logger.error("slices size: "+slices.size());
-			return slices;
-		}
+		return slices;
 	}
 
 	@Override
@@ -253,6 +251,14 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 		try {
 			newSlices = ConfigParser.parseConfig("/etc/fsfw/fsfw.xml");
 
+			//remove the existing slices
+			Iterator <HashMap<Long,Slicer>> sliceIt = this.slices.iterator();
+			while(sliceIt.hasNext()){
+				@SuppressWarnings("unused")
+				HashMap<Long,Slicer> tmp = sliceIt.next();
+				sliceIt.remove();
+			}
+			
 			//push this into our this.slices variable
 			for(HashMap<Long,Slicer> slice : newSlices){
 				for(Long dpid : slice.keySet()){
@@ -296,11 +302,11 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 		
 			//so now we have updated all the ones connected and removed all the ones that are no longer there
 			//we still need to connect up new ones
-			Iterator <HashMap<Long,Slicer>> sliceIt = newSlices.iterator();
+			Iterator <HashMap<Long,Slicer>> sliceIt2 = newSlices.iterator();
 			logger.warn("Number of items left in newSlices: " + newSlices.size());
-			while(sliceIt.hasNext()){
+			while(sliceIt2.hasNext()){
 				//iterate over the slices
-				HashMap<Long,Slicer> slice = sliceIt.next();
+				HashMap<Long,Slicer> slice = sliceIt2.next();
 				//for each slice iterator over any switches configured
 				if(slice.isEmpty()){
 					

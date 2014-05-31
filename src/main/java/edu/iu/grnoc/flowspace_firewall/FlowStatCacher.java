@@ -23,7 +23,6 @@ import java.util.List;
 import java.util.TimerTask;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.CopyOnWriteArrayList;
 
 import net.floodlightcontroller.core.IOFSwitch;
 
