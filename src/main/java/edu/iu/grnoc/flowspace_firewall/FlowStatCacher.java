@@ -46,7 +46,6 @@ import org.slf4j.LoggerFactory;
 
 public class FlowStatCacher extends TimerTask{
 
-	CopyOnWriteArrayList <IOFSwitch> mySwitches;
 	FlowStatCache statsCache;
 	private static final Logger log = LoggerFactory.getLogger(FlowStatCacher.class);
 	
@@ -56,7 +55,6 @@ public class FlowStatCacher extends TimerTask{
 	 */
 	
 	public FlowStatCacher(FlowSpaceFirewall parent){
-		mySwitches = new CopyOnWriteArrayList<IOFSwitch>();
 		statsCache = new FlowStatCache(parent);
 	}
 	/**
@@ -66,7 +64,7 @@ public class FlowStatCacher extends TimerTask{
 	 */
 	public void run(){
 		
-		List<IOFSwitch> switches = Collections.synchronizedList(this.mySwitches);
+		List<IOFSwitch> switches = Collections.synchronizedList(this.statsCache.getSwitches());
 		Iterator <IOFSwitch> it = switches.iterator();
 		
 		while(it.hasNext()){
@@ -79,31 +77,6 @@ public class FlowStatCacher extends TimerTask{
 		}
 		
 	}
-	
-	/**
-	 * Adds a switch to the list of Switches
-	 * @param sw
-	 */
-	
-	public synchronized void addSwitch(IOFSwitch sw){
-		mySwitches.add(sw);
-	}
-	
-	/**
-	 * Removes a switch from the list of switches
-	 * @param sw
-	 */
-	
-	public synchronized void removeSwitch(IOFSwitch sw){
-		Iterator <IOFSwitch> it = mySwitches.iterator();
-		while(it.hasNext()){
-			IOFSwitch tmpSwitch = it.next();
-			if(tmpSwitch.getId() == sw.getId()){
-				it.remove();
-			}
-		}
-	}
-	
 	
 	/**
 	 * 

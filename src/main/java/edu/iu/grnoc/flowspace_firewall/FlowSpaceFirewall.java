@@ -99,7 +99,6 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
         IOFSwitch sw = floodlightProvider.getSwitch(switchId);
         
         this.switches.add(sw);
-        this.statsCacher.addSwitch(sw);
         //loop through all slices
         for(HashMap<Long, Slicer> slice: slices){
         	//loop through all switches in the slice
@@ -181,7 +180,6 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 			it.remove();
 		}
 		
-		IOFSwitch sw = floodlightProvider.getSwitch(switchId);
 		Iterator <IOFSwitch> switchIt = this.switches.iterator();
 		while(switchIt.hasNext()){
 			IOFSwitch tmpSwitch = switchIt.next();
@@ -190,7 +188,6 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 				switchIt.remove();
 			}
 		}
-		this.statsCacher.removeSwitch(sw);
 				
 	}
 	
