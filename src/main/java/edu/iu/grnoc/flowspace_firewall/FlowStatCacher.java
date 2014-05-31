@@ -65,8 +65,10 @@ public class FlowStatCacher extends TimerTask{
 	 * stores the stats in the statsCache object
 	 */
 	public void run(){
-		//log.debug("Switches:" + this.mySwitches.toString());
-		Iterator <IOFSwitch> it = this.mySwitches.iterator();
+		
+		List<IOFSwitch> switches = Collections.synchronizedList(this.mySwitches);
+		Iterator <IOFSwitch> it = switches.iterator();
+		
 		while(it.hasNext()){
 			IOFSwitch sw = it.next();
 			log.debug("Getting stats for switch: " + sw.getId());
@@ -75,6 +77,7 @@ public class FlowStatCacher extends TimerTask{
 			HashMap<Short, OFStatistics> portStatsReply = getPortStatsForSwitch(sw);
 			statsCache.setPortCache(sw.getId(), portStatsReply);
 		}
+		
 	}
 	
 	/**
