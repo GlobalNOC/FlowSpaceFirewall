@@ -208,7 +208,6 @@ public class Proxy {
 	public void disconnect(){
 		if(myController.isConnected()){
 			myController.disconnect();
-			myController.close();
 		}
 	}
 	

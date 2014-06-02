@@ -23,7 +23,6 @@ import java.util.List;
 import java.util.TimerTask;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.CopyOnWriteArrayList;
 
 import net.floodlightcontroller.core.IOFSwitch;
 
@@ -46,7 +45,6 @@ import org.slf4j.LoggerFactory;
 
 public class FlowStatCacher extends TimerTask{
 
-	CopyOnWriteArrayList <IOFSwitch> mySwitches;
 	FlowStatCache statsCache;
 	private static final Logger log = LoggerFactory.getLogger(FlowStatCacher.class);
 	
@@ -56,7 +54,6 @@ public class FlowStatCacher extends TimerTask{
 	 */
 	
 	public FlowStatCacher(FlowSpaceFirewall parent){
-		mySwitches = new CopyOnWriteArrayList<IOFSwitch>();
 		statsCache = new FlowStatCache(parent);
 	}
 	/**
@@ -65,8 +62,10 @@ public class FlowStatCacher extends TimerTask{
 	 * stores the stats in the statsCache object
 	 */
 	public void run(){
-		//log.debug("Switches:" + this.mySwitches.toString());
-		Iterator <IOFSwitch> it = this.mySwitches.iterator();
+		
+		List<IOFSwitch> switches = Collections.synchronizedList(this.statsCache.getSwitches());
+		Iterator <IOFSwitch> it = switches.iterator();
+		
 		while(it.hasNext()){
 			IOFSwitch sw = it.next();
 			log.debug("Getting stats for switch: " + sw.getId());
@@ -75,26 +74,8 @@ public class FlowStatCacher extends TimerTask{
 			HashMap<Short, OFStatistics> portStatsReply = getPortStatsForSwitch(sw);
 			statsCache.setPortCache(sw.getId(), portStatsReply);
 		}
+		
 	}
-	
-	/**
-	 * Adds a switch to the list of Switches
-	 * @param sw
-	 */
-	
-	public synchronized void addSwitch(IOFSwitch sw){
-		mySwitches.add(sw);
-	}
-	
-	/**
-	 * Removes a switch from the list of switches
-	 * @param sw
-	 */
-	
-	public synchronized void removeSwitch(IOFSwitch sw){
-		mySwitches.remove(sw);
-	}
-	
 	
 	/**
 	 * 
