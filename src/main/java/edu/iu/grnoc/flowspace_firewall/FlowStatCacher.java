@@ -45,7 +45,6 @@ import org.slf4j.LoggerFactory;
 
 public class FlowStatCacher extends TimerTask{
 
-	List <IOFSwitch> mySwitches;
 	FlowStatCache statsCache;
 	private static final Logger log = LoggerFactory.getLogger(FlowStatCacher.class);
 	
@@ -54,9 +53,8 @@ public class FlowStatCacher extends TimerTask{
 	 * stats from the switch and caches them
 	 */
 	
-	public FlowStatCacher(){
-		mySwitches = new ArrayList<IOFSwitch>();
-		statsCache = new FlowStatCache();
+	public FlowStatCacher(FlowSpaceFirewall parent){
+		statsCache = new FlowStatCache(parent);
 	}
 	/**
 	 * the TimerTask run method called by the Timer
@@ -64,8 +62,10 @@ public class FlowStatCacher extends TimerTask{
 	 * stores the stats in the statsCache object
 	 */
 	public void run(){
-		log.debug("Switches:" + this.mySwitches.toString());
-		Iterator <IOFSwitch> it = this.mySwitches.iterator();
+		
+		List<IOFSwitch> switches = Collections.synchronizedList(this.statsCache.getSwitches());
+		Iterator <IOFSwitch> it = switches.iterator();
+		
 		while(it.hasNext()){
 			IOFSwitch sw = it.next();
 			log.debug("Getting stats for switch: " + sw.getId());
@@ -74,24 +74,16 @@ public class FlowStatCacher extends TimerTask{
 			HashMap<Short, OFStatistics> portStatsReply = getPortStatsForSwitch(sw);
 			statsCache.setPortCache(sw.getId(), portStatsReply);
 		}
+		
 	}
 	
 	/**
-	 * Adds a switch to the list of Switches
-	 * @param sw
+	 * 
+	 * 
 	 */
 	
-	public void addSwitch(IOFSwitch sw){
-		mySwitches.add(sw);
-	}
-	
-	/**
-	 * Removes a switch from the list of switches
-	 * @param sw
-	 */
-	
-	public void removeSwitch(IOFSwitch sw){
-		mySwitches.remove(sw);
+	public List<OFStatistics> getSlicedFlowStats(Long switchId, String sliceName){
+		return statsCache.getSlicedFlowStats(switchId, sliceName);
 	}
 	
 	/**

@@ -21,7 +21,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Set;
 import java.util.TimerTask;
 import java.util.concurrent.Executors;
 
@@ -119,13 +118,6 @@ public class ControllerConnector extends TimerTask {
 	 */
 	public synchronized List <Proxy> getSwitchProxies(Long switchId){
 		log.debug("Looking for switchID: " + switchId);
-		Set<Long> keys = proxies.keySet();
-		Iterator <Long> it = keys.iterator();
-		while(it.hasNext()){
-			Long key = it.next();
-			log.debug("Switch: " + key);
-		}
-		
 		return proxies.get(switchId);
 	}
 	
@@ -156,5 +148,16 @@ public class ControllerConnector extends TimerTask {
 			List <Proxy> proxyList = proxies.get(switchId);
 			proxyList.remove(p);
 		}
+	}
+	
+	/**
+	 * 
+	 */
+	public synchronized List<Proxy> getAllProxies(){
+		List <Proxy> allProxies = new ArrayList<Proxy>();
+		for(Long dpid : proxies.keySet()){
+			allProxies.addAll(proxies.get(dpid));
+		}
+		return allProxies;
 	}
 }

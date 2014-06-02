@@ -413,8 +413,6 @@ show switches
 
      Returns details of each switch connected to FSFW:
 
-     [dpid] parameter is optional and will filter to just dpid of switch you are interested in.
-
 show status [slice] [dpid]
 
      returns status of the slice with parameters:

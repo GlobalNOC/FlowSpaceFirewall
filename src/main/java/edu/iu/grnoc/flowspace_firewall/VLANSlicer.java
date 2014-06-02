@@ -17,8 +17,10 @@ package edu.iu.grnoc.flowspace_firewall;
 
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -56,7 +58,8 @@ public class VLANSlicer implements Slicer{
 	private int maxFlows;
 	private String name;
 	private int packetInRate;
-
+	private Map<Integer, byte[]> bufferIds;
+	
 	private static final Logger log = LoggerFactory.getLogger(VLANSlicer.class);
 	
 	public VLANSlicer(HashMap <String, PortConfig> ports, 
@@ -70,6 +73,21 @@ public class VLANSlicer implements Slicer{
 		}
 		
 		this.controllerAddress = controllerAddress;
+		this.bufferIds = Collections.synchronizedMap(
+				new LinkedHashMap<Integer,byte[]>(){
+					/**
+					 * 
+					 */
+					private static final long serialVersionUID = 1L;
+
+					@Override
+					public boolean removeEldestEntry(Map.Entry<Integer, byte[]> eldest)  
+					{
+						//when to remove the eldest entry
+						return size() >= 1000 ;   //size exceeded the max allowed
+					}
+				}
+				);
 	}
 	
 	
@@ -78,6 +96,21 @@ public class VLANSlicer implements Slicer{
 		packetInRate = 10;
 		portList = new HashMap<String,PortConfig>();
 		name = "";
+		this.bufferIds = Collections.synchronizedMap(
+				new LinkedHashMap<Integer,byte[]>(){
+					/**
+					 * 
+					 */
+					private static final long serialVersionUID = 1L;
+
+					@Override
+					public boolean removeEldestEntry(Map.Entry<Integer, byte[]> eldest)  
+					{
+						//when to remove the eldest entry
+						return size() >= 1000 ;   //size exceeded the max allowed
+					}
+				}
+				);
 	}
 	
 	public void setPacketInRate(int rate){
@@ -310,6 +343,17 @@ public class VLANSlicer implements Slicer{
 		List <OFMessage> packets = new ArrayList<OFMessage>();
 		Iterator <OFAction> it = actions.iterator();
 		OFMatch match = new OFMatch();
+		if(outPacket.getPacketData().length == 0 && outPacket.getBufferId() != 0){
+			//look at the buffer id and see if it matches one we have in our 
+			//buffer cache
+			int bufferId = outPacket.getBufferId();
+			if(this.bufferIds.containsKey(bufferId)){
+				outPacket.setBufferId(OFPacketOut.BUFFER_ID_NONE);
+				outPacket.setPacketData(this.bufferIds.get(bufferId));
+				outPacket.setLengthU(outPacket.getLengthU() + this.bufferIds.get(bufferId).length);
+			}
+		}
+	
 		try{
 			match.loadFromPacket(outPacket.getPacketData(),(short)0);
 		}
@@ -697,6 +741,7 @@ public class VLANSlicer implements Slicer{
 		for(String portName : this.portList.keySet()){
 			if(otherSlicer.isPortPartOfSlice(portName)){
 				if(this.getPortConfig(portName).getVlanRange().rangeOverlap(otherSlicer.getPortConfig(portName).getVlanRange())){
+					log.error(""+this.name+" "+this.getSliceName()+"port range: "+this.getPortConfig(portName).getVlanRange().toString()+ "overlaps with slice: "+otherSlicer.getSliceName()+" port-range: "+otherSlicer.getPortConfig(portName).getVlanRange().toString());
 					return true;
 				}
 			}
@@ -711,5 +756,9 @@ public class VLANSlicer implements Slicer{
 	@Override
 	public int getPacketInRate() {
 		return this.packetInRate;
+	}
+	
+	public void addBufferId(int bufferId, byte[] packetData){
+		this.bufferIds.put(bufferId, packetData);
 	}
 }

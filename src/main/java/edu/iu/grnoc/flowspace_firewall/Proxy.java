@@ -20,11 +20,11 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map.Entry;
-
 import java.util.Iterator;
-
 import java.util.List;
 
+import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.socket.*;
 import org.openflow.protocol.OFError;
 import org.openflow.protocol.OFFlowMod;
@@ -69,6 +69,7 @@ public class Proxy {
 	private FlowSpaceFirewall parent;
 	private XidMap xidMap;
 	
+	
 	private static final Logger log = LoggerFactory.getLogger(Proxy.class);
 	private Integer flowCount;
 	private Boolean adminStatus;
@@ -83,14 +84,15 @@ public class Proxy {
 		xidMap = new XidMap();
 		adminStatus = true;
 		packetInRate = new RateTracker(100,slicer.getPacketInRate());
+
 	}
 	
 	public void setAdminStatus(Boolean status){
 		adminStatus = status;
 		if(status){
-			log.warn("Slice is re-enabled");
+			log.warn("Slice: "+ this.mySlicer.getSliceName() +" is re-enabled");
 		}else{
-			log.error("Disabling Slice!");
+			log.error("Disabling Slice:"+this.mySlicer.getSliceName() );
 			this.removeFlows();
 			this.disconnect();
 			this.parent.removeProxy(this.getSwitch().getId(), this);
@@ -172,6 +174,11 @@ public class Proxy {
 		if(myController == null){
 			return false;
 		}
+		ofcch =(OFControllerChannelHandler)myController.getPipeline()
+				.getContext("handler").getHandler();
+		if(!ofcch.isHandshakeComplete()){
+			return false;
+		}
 		return myController.isConnected();
 	}
 	
@@ -185,7 +192,7 @@ public class Proxy {
 	 * @param newSlicer
 	 */
 	public void setSlicer(Slicer newSlicer){
-		if(newSlicer.getControllerAddress().equals(this.mySlicer.getControllerAddress())){
+		if(!newSlicer.getControllerAddress().equals(this.mySlicer.getControllerAddress())){
 			this.disconnect();
 			//the controller connector will connect this to the proper address next time it runs
 		}
@@ -199,8 +206,9 @@ public class Proxy {
 	 * disconnect from the controller
 	 */
 	public void disconnect(){
-		myController.disconnect();
-		myController.close();
+		if(myController.isConnected()){
+			myController.disconnect();
+		}
 	}
 	
 	private void mapXids(List <OFMessage> msg){
@@ -268,7 +276,7 @@ public class Proxy {
 			switch(flow.getCommand()){
 			case OFFlowMod.OFPFC_ADD:
 				if( this.mySlicer.isGreaterThanMaxFlows(this.flowCount + 1) ) {
-					log.warn("Flow count is already at threshold. Skipping flow mod");
+					log.warn("Switch: "+this.mySwitch.getStringId()+" Slice: "+this.mySlicer.getSliceName()+" Flow count is already at threshold. Skipping flow mod");
 					this.sendError((OFMessage)msg);
 					return;
 				}
@@ -276,7 +284,7 @@ public class Proxy {
 				break;
 			case OFFlowMod.OFPFF_CHECK_OVERLAP:
 				if( this.mySlicer.isGreaterThanMaxFlows(this.flowCount + 1) ) {
-					log.warn("Flow count is already at threshold. Skipping flow mod");
+					log.warn("Switch: "+this.mySwitch.getStringId()+" Slice: "+this.mySlicer.getSliceName()+"Flow count is already at threshold. Skipping flow mod");
 					this.sendError((OFMessage)msg);
 					return;
 				}
@@ -481,14 +489,8 @@ public class Proxy {
 	
 	private void handleFlowStatsRequest(OFMessage msg){
 		//we have the stats cached so slice n' dice and return
-		log.debug("Working on stats for switch: " + mySwitch.getId() + " for slice this slice");
-		List<OFStatistics> stats = this.parent.getStats(mySwitch.getId());
-		List<OFStatistics> results = null;
-		try{
-			results = FlowStatSlicer.SliceStats(mySlicer, stats);
-		}catch(IllegalArgumentException e){
-			
-		}
+		log.debug("Working on stats for switch: " + mySwitch.getStringId() + " for slice this slice");
+		List<OFStatistics> results = this.parent.getSlicedFlowStats(mySwitch.getId(),this.mySlicer.getSliceName());
 		
 		if(results == null){
 			log.debug("Slicing failed!");
@@ -570,7 +572,7 @@ public class Proxy {
 		//first figure out what the message is
 		log.debug("Proxy Slicing request of type: " + msg.getType());
 		if(!this.mySlicer.isOkToProcessMessage()){
-			log.warn("Slice Rate limit exceeded");
+			log.warn("Switch: "+this.mySwitch.getStringId()+"Slice:"+this.mySlicer.getSliceName()+"Rate limit exceeded");
 			this.sendError((OFMessage)msg);
 			return;
 		}
@@ -614,6 +616,14 @@ public class Proxy {
 
 		
 		mapXids(msg);
+
+		if(!this.valid_header(msg)){
+			//invalid packet don't send it back so we cant send an error
+			//just log and drop it
+			log.error("Slice " + this.getSlicer().getSliceName() + " to switch " + this.mySwitch.getStringId() + "  Invalid Header Rejecting!");
+			return;
+		}
+		
 		try {
 			mySwitch.write(msg, cntx);
 		} catch (IOException e) {
@@ -621,6 +631,25 @@ public class Proxy {
 		}
 		mySwitch.flush();
 		
+	}
+	
+	/**
+	 * 
+	 */
+	
+	public boolean valid_header(OFMessage msg){
+		//verify the length is what it claims
+		ChannelBuffer buf = ChannelBuffers.buffer(msg.getLength());
+		try{
+			msg.writeTo(buf);
+		}catch(Exception e){
+			return false;
+		}
+		int size = buf.readableBytes();
+		if(size != msg.getLength())
+			return false;
+		
+		return true;
 	}
 	
 	/**
@@ -641,6 +670,7 @@ public class Proxy {
 			OFPacketIn pcktIn = (OFPacketIn) msg;
 			OFMatch match = new OFMatch();
 			if(pcktIn.getPacketData().length <= 0){
+				log.debug("No Packet data not slicing");
 				//no packet not slicing...
 				return;
 			}
@@ -649,11 +679,13 @@ public class Proxy {
 			flowMod.setMatch(match);
 			List <OFFlowMod> allowed = this.mySlicer.allowedFlows(flowMod);
 			if(allowed.size() == 0){
-				log.debug("Packet in Not allowed for this slice");
+				log.debug("Packet in Not allowed for slice: "+this.mySlicer.getSliceName());
 				return;
 			}
 			
 			if(this.packetInRate.okToProcess()){
+				//add the packet buffer id to our buffer id list
+				this.mySlicer.addBufferId(pcktIn.getBufferId(), pcktIn.getPacketData());
 				break;
 			}else{
 				log.error("Packet in Rate for Slice: " +
@@ -669,7 +701,7 @@ public class Proxy {
 			OFPortStatus portStatus = (OFPortStatus)msg;
 			OFPhysicalPort port = portStatus.getDesc();
 			if(!this.mySlicer.isPortPartOfSlice(port.getPortNumber())){
-				log.debug("Port status even for port " + port.getName() + " is not allowed for this slice");
+				log.debug("Port status even for switch"+this.mySwitch.getStringId()+" port " + port.getName() + " is not allowed for slice"+this.mySlicer.getSliceName());
 				return;
 			}
 			break;
