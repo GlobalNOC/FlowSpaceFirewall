@@ -266,38 +266,29 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 				}
 			}
 			
-			for(IOFSwitch sw : this.switches){
-
-				List<Proxy> proxies =  controllerConnector.getSwitchProxies(sw.getId());
-				if (proxies == null){
-					logger.error("no proxies");
-					continue;
-				}
-			
-				logger.warn("number of proxies "+proxies.size() );
-				for(Proxy p : proxies){
-					//we now know the proxy and the switch (so we know the slice name and the switch)
-					//now we need to find the slice in the newSlices variable and set the proxy to it
-					boolean updated = false;
-
-					for(HashMap<Long, Slicer> slice: newSlices){
-						logger.error("number of switches in newslice:"+slice.keySet().size());
-						
-						if(slice.containsKey(sw.getId()) && slice.get(sw.getId()).getSliceName().equals(p.getSlicer().getSliceName())){
-					   		p.setSlicer(slice.get(sw.getId()));
-					        logger.warn("Slice " + p.getSlicer().getSliceName() + " was found, setting updated to true");
-						    updated = true;			        		
-						    slice.remove(sw.getId());
-						}
-					}
-					if(!updated){
-						logger.warn("Slice "
-								+p.getSlicer().getSliceName()+":" + sw.getStringId() +" was not found, removing");
-						p.disconnect();
-						toBeRemoved.add(p);
+			List <Proxy> proxies = controllerConnector.getAllProxies();
+							
+			logger.warn("number of proxies " + proxies.size() );
+			for(Proxy p : proxies){
+				//we now know the proxy and the switch (so we know the slice name and the switch)
+				//now we need to find the slice in the newSlices variable and set the proxy to it
+				boolean updated = false;
+				for(HashMap<Long, Slicer> slice: newSlices){
+					logger.error("number of switches in newslice:"+slice.keySet().size());
+					if(slice.containsKey(p.getSwitch().getId()) && slice.get(p.getSwitch().getId()).getSliceName().equals(p.getSlicer().getSliceName())){
+				  		p.setSlicer(slice.get(p.getSwitch().getId()));
+				        logger.warn("Slice " + p.getSlicer().getSliceName() + " was found, setting updated to true");
+					    updated = true;			        		
+					    slice.remove(p.getSwitch().getId());
 					}
 				}
 				
+				if(!updated){
+					logger.warn("Slice "
+							+p.getSlicer().getSliceName()+":" + p.getSwitch().getStringId() +" was not found, removing");
+					p.disconnect();
+					toBeRemoved.add(p);
+				}
 			}
 		
 			//so now we have updated all the ones connected and removed all the ones that are no longer there
@@ -313,13 +304,11 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 				}
 				else{	
 					for(Long dpid: slice.keySet()){
-						if(this.switches.contains(dpid)){
-							//connect it up
-							IOFSwitch sw = floodlightProvider.getSwitch(dpid);
-							Slicer vlanSlicer = slice.get(dpid);
-			        		controllerConnector.addProxy(dpid, new Proxy(sw, vlanSlicer, this));
-						}
-					}
+						//connect it up
+						IOFSwitch sw = floodlightProvider.getSwitch(dpid);
+						Slicer vlanSlicer = slice.get(dpid);
+			    		controllerConnector.addProxy(dpid, new Proxy(sw, vlanSlicer, this));						
+					}	
 				}
 			}
 			

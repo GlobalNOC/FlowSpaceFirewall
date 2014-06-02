@@ -149,4 +149,15 @@ public class ControllerConnector extends TimerTask {
 			proxyList.remove(p);
 		}
 	}
+	
+	/**
+	 * 
+	 */
+	public synchronized List<Proxy> getAllProxies(){
+		List <Proxy> allProxies = new ArrayList<Proxy>();
+		for(Long dpid : proxies.keySet()){
+			allProxies.addAll(proxies.get(dpid));
+		}
+		return allProxies;
+	}
 }
