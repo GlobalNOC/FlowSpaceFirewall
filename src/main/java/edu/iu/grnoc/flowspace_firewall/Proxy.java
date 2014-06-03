@@ -95,7 +95,6 @@ public class Proxy {
 			log.error("Disabling Slice:"+this.mySlicer.getSliceName() );
 			this.removeFlows();
 			this.disconnect();
-			this.parent.removeProxy(this.getSwitch().getId(), this);
 		}
 	}
 	
