@@ -442,7 +442,7 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 		
 		List<Proxy> proxies = this.controllerConnector.getSwitchProxies(dpid);
 		for(Proxy p: proxies){
-			if(p.getSlicer().getSliceName() == sliceName){
+			if(p.getSlicer().getSliceName().equals(sliceName)){
 				p.setAdminStatus(state);
 				return true;
 			}
