@@ -136,7 +136,6 @@ public class Proxy {
 		try {
 			this.mySwitch.write(deletes, null);
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 		
@@ -212,7 +211,13 @@ public class Proxy {
 					portStatus.setDesc(this.mySwitch.getPort(port.getName()).toOFPhysicalPort());
 					//boo OFPortReason.OFPPR_ADD is not a byte and has no toByte method :(
 					portStatus.setReason((byte)0);
-					toController(portStatus,null);
+					
+					//can't call toController because it isn't part of this slice yet!!!
+					try {
+						ofcch.sendMessage(portStatus);
+					} catch (IOException e) {
+						e.printStackTrace();
+					}
 				}else if(ptCfg != null && ptCfg2 == null){
 					//port remove
 					OFPortStatus portStatus = new OFPortStatus();
