@@ -322,9 +322,9 @@ sub build_command_list {
     $base_url = 'http://localhost';
     $port     = '8080';
 
-    $self->{'possible_commands'} = [ 'show slices', 'show switches', 'help', '?', 'quit', 'exit' ];
+    $self->{'possible_commands'} = [ 'show slices', 'show switches','set slice status'. 'help', '?', 'quit', 'exit' ];
 
-    my @expandable_commands = ( 'show status', 'show flows' );
+    my @expandable_commands = ( 'show status', 'show flows', 'set slice status' );
 
     $ws->set_url("$base_url:$port/fsfw/admin/slices/json");
     my $slices_obj = $ws->foo();
@@ -417,6 +417,10 @@ show status [slice] [dpid]
 
      returns status of the slice with parameters:
 
+set slice status [slice] [dpid] [en|di]sable
+
+     sets the admin status of the slice
+
 show flows [slice] [dpid] 
 
      returns all flows for this dpid with metadata, match and actions for each. 
@@ -444,8 +448,8 @@ END
                 next;
             }
             my ($address) = $switch->{'inetAddress'} =~ /\/(\S+):\d+/;
+	    print "DPID:\t$switch->{'dpid'}\n";
             print "IP:\t$address\n";
-            print "DPID:\t$switch->{'dpid'}\n";
             print "Vendor:\t" . $switch->{'descriptionStatistics'}->{'manufacturerDescription'} . "\n";
             print "Device:\t" . $switch->{'descriptionStatistics'}->{'hardwareDescription'} . "\n";
             print "Software Version:\t" . $switch->{'descriptionStatistics'}->{'softwareDescription'} . "\n";
@@ -586,6 +590,25 @@ END
             print "$key\t$status_obj->{$key}\n";
 
         }
+    }elsif( $input =~ /^set slice status (\S+) (\S+) (\S+)/){
+	my $status = $3;
+	my $state;
+	if($status eq 'enable'){
+	    $state = 'true';
+	}elsif($status eq 'disable'){
+	    $state = 'false';
+	}
+
+	if(!defined($state)){
+	    print "Invalid state: " . $status . " must be enable/disable";
+	}else{
+	    $ws->set_url("$base_url:$port/fsfw/admin/set_state/$1/$2/$3/json");
+	    my $status_obj = $ws->foo();
+	    foreach my $key ( sort keys %$status_obj ) {
+		print "$key\t$status_obj->{$key}\n";
+	    }
+	}
+		
     }
 
     return;    #$insert_text;
