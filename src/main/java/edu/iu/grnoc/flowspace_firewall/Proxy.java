@@ -699,7 +699,7 @@ public class Proxy {
 			//for interfaces involved with this slice
 			OFPortStatus portStatus = (OFPortStatus)msg;
 			OFPhysicalPort port = portStatus.getDesc();
-			if(!this.mySlicer.isPortPartOfSlice(port.getPortNumber())){
+			if(!this.mySlicer.isPortPartOfSlice(port.getName())){
 				log.debug("Port status even for switch"+this.mySwitch.getStringId()+" port " + port.getName() + " is not allowed for slice"+this.mySlicer.getSliceName());
 				return;
 			}
