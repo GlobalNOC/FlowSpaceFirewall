@@ -103,6 +103,7 @@ public class VLANSlicerTest {
 		expect(sw.getPort((short)59590)).andReturn(p6).anyTimes();
 		expect(sw.getPort((short)-1)).andReturn(null).anyTimes();
         expect(sw.getPorts()).andReturn((Collection <ImmutablePort>) ports).anyTimes();
+        expect(sw.getStringId()).andReturn("FF:FF:FF:FF:FF:FF").anyTimes();
         EasyMock.replay(sw);
         
         assertNotNull("switch id is not null", sw.getId());
