@@ -59,6 +59,7 @@ public class VLANSlicer implements Slicer{
 	private String name;
 	private int packetInRate;
 	private Map<Integer, byte[]> bufferIds;
+	private boolean adminState;
 	
 	private static final Logger log = LoggerFactory.getLogger(VLANSlicer.class);
 	
@@ -67,6 +68,7 @@ public class VLANSlicer implements Slicer{
 		myRateTracker = new RateTracker(10,100);
 		portList = ports;
 		this.name = name;
+		this.adminState = true;
 		
 		if(controllerAddress == null){
 			//not allowed
@@ -90,12 +92,12 @@ public class VLANSlicer implements Slicer{
 				);
 	}
 	
-	
 	public VLANSlicer(){
 		myRateTracker = new RateTracker(10,100);
 		packetInRate = 10;
 		portList = new HashMap<String,PortConfig>();
 		name = "";
+		this.adminState = true;
 		this.bufferIds = Collections.synchronizedMap(
 				new LinkedHashMap<Integer,byte[]>(){
 					/**
@@ -113,8 +115,24 @@ public class VLANSlicer implements Slicer{
 				);
 	}
 	
+	public boolean getAdminState(){
+		return this.adminState;
+	}
+	
 	public void setPacketInRate(int rate){
 		this.packetInRate = rate;
+	}
+	
+	
+	public void setPortId(String portName, short portId){
+		
+		PortConfig ptCnfg = this.getPortConfig(portName);
+		if(ptCnfg != null){
+			ptCnfg.setPortId(portId);
+			log.debug("Set port: " + portName + " to port id: " + portId);
+		}else{
+			log.debug("NO configuration for port named: " + portName);
+		}
 	}
 	
 	/**
@@ -136,6 +154,10 @@ public class VLANSlicer implements Slicer{
 				log.debug("No configuration for port named: " + port.getName());
 			}
 		}
+	}
+	
+	public void setAdminState(boolean state){
+		this.adminState = state;
 	}
 	
 	/**
