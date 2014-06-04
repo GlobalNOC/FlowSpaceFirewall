@@ -36,6 +36,7 @@ import org.openflow.protocol.OFPacketOut;
 import org.openflow.protocol.OFPhysicalPort;
 import org.openflow.protocol.OFPort;
 import org.openflow.protocol.OFPortStatus;
+import org.openflow.protocol.OFPortStatus.OFPortReason;
 import org.openflow.protocol.OFStatisticsReply;
 import org.openflow.protocol.OFStatisticsRequest;
 import org.openflow.protocol.action.OFAction;
@@ -699,10 +700,24 @@ public class Proxy {
 			//for interfaces involved with this slice
 			OFPortStatus portStatus = (OFPortStatus)msg;
 			OFPhysicalPort port = portStatus.getDesc();
-			if(!this.mySlicer.isPortPartOfSlice(port.getPortNumber())){
+			if(!this.mySlicer.isPortPartOfSlice(port.getName())){
 				log.debug("Port status even for switch"+this.mySwitch.getStringId()+" port " + port.getName() + " is not allowed for slice"+this.mySlicer.getSliceName());
 				return;
 			}
+			
+			
+			switch(OFPortReason.fromReasonCode(portStatus.getReason())){
+			case OFPPR_ADD:
+				this.mySlicer.setPortId(port.getName(), port.getPortNumber());
+				break;
+			case OFPPR_MODIFY:
+				//nothing to do here
+				break;
+			case OFPPR_DELETE:
+				//nothing to do here
+				break;
+			}
+			
 			break;
 		case ERROR:
 			if(xidMap.containsKey(xid)){

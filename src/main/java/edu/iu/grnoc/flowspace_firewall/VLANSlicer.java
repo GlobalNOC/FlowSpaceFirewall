@@ -117,6 +117,18 @@ public class VLANSlicer implements Slicer{
 		this.packetInRate = rate;
 	}
 	
+	
+	public void setPortId(String portName, short portId){
+		
+		PortConfig ptCnfg = this.getPortConfig(portName);
+		if(ptCnfg != null){
+			ptCnfg.setPortId(portId);
+			log.debug("Set port: " + portName + " to port id: " + portId);
+		}else{
+			log.debug("NO configuration for port named: " + portName);
+		}
+	}
+	
 	/**
 	 * sets the switch object as our slicer
 	 * probably existed before the switch connected
