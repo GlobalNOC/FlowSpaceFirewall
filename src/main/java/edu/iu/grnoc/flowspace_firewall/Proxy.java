@@ -83,19 +83,23 @@ public class Proxy {
 		parent = fsf;
 		flowCount = 0;
 		xidMap = new XidMap();
-		adminStatus = true;
+		adminStatus = mySlicer.getAdminState();
 		packetInRate = new RateTracker(100,slicer.getPacketInRate());
 
 	}
 	
 	public void setAdminStatus(Boolean status){
-		adminStatus = status;
+		this.adminStatus = status;
+		this.mySlicer.setAdminState(status);
 		if(status){
 			log.warn("Slice: "+ this.mySlicer.getSliceName() +" is re-enabled");
 		}else{
+
 			log.error("Disabling Slice:"+this.mySlicer.getSliceName() );
-			this.removeFlows();
-			this.disconnect();
+			if(this.connected()){
+				this.removeFlows();
+				this.disconnect();
+			}
 		}
 	}
 	
@@ -108,13 +112,7 @@ public class Proxy {
 	}
 	
 	public void removeFlows(){
-		List<OFStatistics> stats = this.parent.getStats(mySwitch.getId());
-		List<OFStatistics> results = null;
-		try{
-			results = FlowStatSlicer.SliceStats(mySlicer, stats);
-		}catch(IllegalArgumentException e){
-			
-		}
+		List<OFStatistics> results = this.parent.getSlicedFlowStats(mySwitch.getId(), this.mySlicer.getSliceName());
 		
 		if(results == null){
 			log.debug("Slicing failed!");
@@ -128,11 +126,14 @@ public class Proxy {
 			OFFlowMod flow = new OFFlowMod();
 			flow.setMatch(flowStat.getMatch());
 			flow.setActions(flowStat.getActions());
-			flow.setLengthU( OFFlowMod.MAXIMUM_LENGTH );
+			int length = 0;
+			for(OFAction act: flow.getActions()){
+				length += act.getLength();
+			}
+			flow.setLengthU(OFFlowMod.MINIMUM_LENGTH + length);
 			flow.setCommand(OFFlowMod.OFPFC_DELETE);
 			deletes.add(flow);
 		}
-		
 		try {
 			this.mySwitch.write(deletes, null);
 		} catch (IOException e) {

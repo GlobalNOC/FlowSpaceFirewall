@@ -443,6 +443,7 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 		List<Proxy> proxies = this.controllerConnector.getSwitchProxies(dpid);
 		for(Proxy p: proxies){
 			if(p.getSlicer().getSliceName().equals(sliceName)){
+				logger.info("Setting Slice: " + sliceName + " admin state to " + state);
 				p.setAdminStatus(state);
 				return true;
 			}

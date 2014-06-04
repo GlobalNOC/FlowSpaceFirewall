@@ -51,4 +51,6 @@ public interface Slicer {
 	IOFSwitch getSwitch();
 	void addBufferId(int bufferId, byte[] packetData);
 	void setPortId(String portName, short portId);
+	void setAdminState(boolean state);
+	boolean getAdminState();
 }

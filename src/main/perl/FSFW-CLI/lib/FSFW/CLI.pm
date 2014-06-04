@@ -359,13 +359,14 @@ sub build_command_list {
     foreach my $expandable_command (@expandable_commands) {
         foreach my $slice (@slices) {
             foreach my $dpid ( @{ $dpid_per_slice->{$slice} } ) {
-                push( @{ $self->{'possible_commands'} }, "$expandable_command $slice $dpid" );
 
-                if ( $expandable_command eq 'show flows' ) {
-
-                    # push (@{$self->{'possible_commands'}}, "$expandable_command $slice $dpid vlan ".'(\d+)');
-                    # push (@{$self->{'possible_commands'}}, "$expandable_command $slice $dpid port ".'(\d+)');
-                }
+		if($expandable_command eq 'set slice status'){
+		    push (@{ $self->{'possible_commands'} }, "$expandable_command $slice $dpid enable");
+		    push (@{ $self->{'possible_commands'} }, "$expandable_command $slice $dpid disable");
+		}else{
+		
+		    push( @{ $self->{'possible_commands'} }, "$expandable_command $slice $dpid" );
+		}
             }
         }
     }
@@ -417,7 +418,7 @@ show status [slice] [dpid]
 
      returns status of the slice with parameters:
 
-set slice status [slice] [dpid] [en|di]sable
+set slice status [slice] [dpid] [status]
 
      sets the admin status of the slice
 
@@ -599,13 +600,17 @@ END
 	    $state = 'false';
 	}
 
+	#warn "State is set to " . $state . "\n";
+
 	if(!defined($state)){
-	    print "Invalid state: " . $status . " must be enable/disable";
+	    print "Invalid state: " . $status . " must be enable/disable\n\n";
 	}else{
-	    $ws->set_url("$base_url:$port/fsfw/admin/set_state/$1/$2/$3/json");
+	    $ws->set_url("$base_url:$port/fsfw/admin/set_state/$1/$2/$state/json");
 	    my $status_obj = $ws->foo();
-	    foreach my $key ( sort keys %$status_obj ) {
-		print "$key\t$status_obj->{$key}\n";
+	    if($status_obj == 1){
+		print "Slice $1 for DPID $2 was successfully set to " . $status . "\n\n";
+	    }else{
+		print "An error occured attempting to set Slice $1 for DPID $2 to " . $status . "\n\n";
 	    }
 	}
 		
