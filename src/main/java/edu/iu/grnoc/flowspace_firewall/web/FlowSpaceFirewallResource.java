@@ -28,5 +28,4 @@ public class FlowSpaceFirewallResource extends ServerResource{
 	}
 	
 	
-	
 }
