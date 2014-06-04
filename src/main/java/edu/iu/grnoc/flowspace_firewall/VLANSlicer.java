@@ -501,7 +501,7 @@ public class VLANSlicer implements Slicer{
 		//if you wildcarded the vlan then tough we are blowing up now
 		//we require an input vlan
 		if(match.getDataLayerVirtualLan() == 0){
-			log.error("VLAN is wildcarded here");
+			log.debug("Slice: " + this.getSliceName() + ":" + this.sw.getStringId() + " Flow rule VLAN wildcarded.  Denied: " + flowMod.toString());
 			return flowMods;
 		}
 		
