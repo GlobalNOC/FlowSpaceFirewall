@@ -297,11 +297,11 @@ public class Proxy {
 		List <OFFlowMod> flows = this.mySlicer.allowedFlows((OFFlowMod)msg);
 		if(flows.size() == 0){
 			//really we need to send a perm error
-			log.info("Flow is not allowed");
+			log.error("Slice: " + this.mySlicer.getSliceName() + ":" + this.mySwitch.getStringId() + " denied flow: " + ((OFFlowMod)msg).toString());
 			this.sendError((OFMessage)msg);
 			return;
 		}else{
-			log.info("Flow is allowed");
+			log.info("Slice: " + this.mySlicer.getSliceName() + ":" + this.mySwitch.getStringId() + " Sent Flow: " + ((OFFlowMod)msg).toString());
 		}
 		List <OFMessage> messages = new ArrayList<OFMessage>();
 		//count the total number of flowMods
