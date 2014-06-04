@@ -195,7 +195,37 @@ public class Proxy {
 		if(!newSlicer.getControllerAddress().equals(this.mySlicer.getControllerAddress())){
 			this.disconnect();
 			//the controller connector will connect this to the proper address next time it runs
+		}else{
+			//since we aren't disconnecting/reconnecting we need to diff
+			//the ports involved and synthetically generate port add/remove messages
+			//to the controller to notify of the "change"
+			Iterator <ImmutablePort> portIterator = this.mySwitch.getPorts().iterator();
+			while(portIterator.hasNext()){
+				ImmutablePort port = portIterator.next();
+				PortConfig ptCfg = this.mySlicer.getPortConfig(port.getName());
+				PortConfig ptCfg2 = newSlicer.getPortConfig(port.getName());
+				if(ptCfg != null && ptCfg2 != null){
+					//do nothing
+				}else if(ptCfg == null && ptCfg2 != null){
+					//port add!
+					OFPortStatus portStatus = new OFPortStatus();
+					portStatus.setDesc(this.mySwitch.getPort(port.getName()).toOFPhysicalPort());
+					//boo OFPortReason.OFPPR_ADD is not a byte and has no toByte method :(
+					portStatus.setReason((byte)0);
+					toController(portStatus,null);
+				}else if(ptCfg != null && ptCfg2 == null){
+					//port remove
+					OFPortStatus portStatus = new OFPortStatus();
+					portStatus.setDesc(this.mySwitch.getPort(port.getName()).toOFPhysicalPort());
+					//boo OFPortReason.OFPPR_DELETE is not a byte and has no toByte method :(
+					portStatus.setReason((byte)1);
+					toController(portStatus,null);
+				}else{
+					//do nothing again
+				}
+			}
 		}
+		
 		
 		this.mySlicer = newSlicer;
 		this.mySlicer.setSwitch(this.mySwitch);
