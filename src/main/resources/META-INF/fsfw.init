@@ -82,7 +82,7 @@ stop(){
 
 reload(){
     echo -n $"Reloading FSFW: "
-    curl -S http://localhost:8080/fsfw/admin/json
+    curl -S http://localhost:8080/fsfw/admin/reloadConfig/json
     RETVLAN=$?
     echo
 }
