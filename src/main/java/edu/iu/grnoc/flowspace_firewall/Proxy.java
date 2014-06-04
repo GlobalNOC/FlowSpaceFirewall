@@ -626,7 +626,7 @@ public class Proxy {
 					this.sendError((OFMessage)msg);
 					return;
 				}else{
-					log.info("PacketOut is allowed");
+					log.debug("PacketOut is allowed");
 					mapXids(allowed);
 					try {
 						mySwitch.write(allowed, cntx);
