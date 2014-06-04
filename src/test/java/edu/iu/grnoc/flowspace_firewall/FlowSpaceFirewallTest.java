@@ -102,11 +102,15 @@ public class FlowSpaceFirewallTest extends FloodlightTestCase{
     }
     
     @Test
-    public void testNewSwitch() throws Exception {
-        FlowSpaceFirewall fsfw = getFSFW();
-        
-
-        
+    public void basicTest(){
+    	assertTrue(true);
+    	assertNull(null);
+    }
+    
+    @Test
+	public void testConnect(){
+    	assertTrue(true);
+    	assertNull(null);
     }
         
 }

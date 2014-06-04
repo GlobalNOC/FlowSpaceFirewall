@@ -21,7 +21,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Set;
 import java.util.TimerTask;
 import java.util.concurrent.Executors;
 
@@ -149,5 +148,16 @@ public class ControllerConnector extends TimerTask {
 			List <Proxy> proxyList = proxies.get(switchId);
 			proxyList.remove(p);
 		}
+	}
+	
+	/**
+	 * 
+	 */
+	public synchronized List<Proxy> getAllProxies(){
+		List <Proxy> allProxies = new ArrayList<Proxy>();
+		for(Long dpid : proxies.keySet()){
+			allProxies.addAll(proxies.get(dpid));
+		}
+		return allProxies;
 	}
 }

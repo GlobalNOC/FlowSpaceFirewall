@@ -18,6 +18,8 @@ package edu.iu.grnoc.flowspace_firewall;
 import java.util.HashMap;
 import java.util.List;
 
+import net.floodlightcontroller.core.IOFSwitch;
+
 import org.openflow.protocol.statistics.OFStatistics;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -48,6 +50,10 @@ public class FlowStatCache {
 		this.parent = parent;
 	}
 
+	
+	public List <IOFSwitch> getSwitches(){
+		return this.parent.getSwitches();
+	}
 	
 	/**
 	 * sets the stats for the given switch
