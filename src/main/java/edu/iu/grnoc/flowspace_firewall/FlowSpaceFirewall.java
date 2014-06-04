@@ -41,7 +41,6 @@ import net.floodlightcontroller.core.module.IFloodlightModule;
 import net.floodlightcontroller.core.module.IFloodlightService;
 import net.floodlightcontroller.restserver.IRestApiService;
 
-import org.openflow.protocol.OFFlowMod;
 import org.openflow.protocol.OFMessage;
 import org.openflow.protocol.OFType;
 import org.openflow.protocol.statistics.OFStatistics;
@@ -170,8 +169,7 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 	
 	@Override
 	public void switchRemoved(long switchId) {
-		// TODO Auto-generated method stub
-		logger.debug("Switch removed!");
+		logger.error("Switch removed!");
 		List <Proxy> proxies = controllerConnector.getSwitchProxies(switchId);
 		Iterator <Proxy> it = proxies.iterator();
 
@@ -377,7 +375,6 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 
 	@Override
 	public Map<Class<? extends IFloodlightService>, IFloodlightService> getServiceImpls() {
-		// TODO Auto-generated method stub
 		Map<Class<? extends IFloodlightService>, IFloodlightService> m = new HashMap<Class<? extends IFloodlightService>, IFloodlightService>();
 	    m.put(IFlowSpaceFirewallService.class, this);
 		return m;
@@ -440,16 +437,30 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 		restApi.addRestletRoutable(new FlowSpaceFirewallWebRoutable());
 		
 	}
-
-	@Override
-	public ArrayList<OFFlowMod> getSliceFlows(String sliceName, Long dpid) {
-		// TODO Auto-generated method stub
-		return null;
+	
+	public boolean setSliceAdminState(Long dpid, String sliceName, boolean state){
+		
+		List<Proxy> proxies = this.controllerConnector.getSwitchProxies(dpid);
+		for(Proxy p: proxies){
+			if(p.getSlicer().getSliceName().equals(sliceName)){
+				logger.info("Setting Slice: " + sliceName + " admin state to " + state);
+				p.setAdminStatus(state);
+				return true;
+			}
+		}
+		
+		return false;
 	}
 
-	@Override
+/*	@Override
+	public List<OFStatistics> getSliceFlows(String sliceName, Long dpid) {
+		return this.statsCacher.getSlicedFlowStats(dpid, sliceName));
+	}
+*/
+/*	@Override
 	public HashMap<String, Object> getSliceStatus(String sliceName, Long dpid) {
 		// TODO Auto-generated method stub
 		return null;
 	}
+	*/
 }

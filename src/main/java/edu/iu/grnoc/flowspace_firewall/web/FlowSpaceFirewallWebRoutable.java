@@ -28,6 +28,7 @@ public class FlowSpaceFirewallWebRoutable implements RestletRoutable {
 	public Restlet getRestlet(Context context) {
 		Router router = new Router(context);
 		router.attach("/admin/reloadConfig/json",FlowSpaceFirewallResource.class);
+		router.attach("/admin/set_state/{slice}/{dpid}/{status}/json", FlowSpaceFirewallSetState.class);
 		router.attach("/status/{slice}/{dpid}/json",SlicerStatusResource.class);
 		router.attach("/flows/{slice}/{dpid}/json", SlicerFlowResource.class);
 		router.attach("/admin/switches/json",FlowSpaceFirewallSwitches.class);

@@ -15,11 +15,9 @@
 */
 package edu.iu.grnoc.flowspace_firewall.web;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
-import org.openflow.protocol.OFFlowMod;
 import org.openflow.protocol.statistics.OFStatistics;
 
 import edu.iu.grnoc.flowspace_firewall.Proxy;
@@ -31,12 +29,13 @@ import net.floodlightcontroller.core.module.IFloodlightService;
 public interface IFlowSpaceFirewallService extends IFloodlightService {
 	
 	public boolean reloadConfig();
-	public ArrayList<OFFlowMod> getSliceFlows(String sliceName, Long dpid);
-	public HashMap<String, Object> getSliceStatus(String sliceName, Long dpid);
+	//public List<OFFlowMod> getSliceFlows(String sliceName, Long dpid);
+	//public HashMap<String, Object> getSliceStatus(String sliceName, Long dpid);
 	public List<OFStatistics> getStats(long switchId);
 	public List<Proxy> getSwitchProxies(long switchId);
 	public List<HashMap<Long,Slicer>> getSlices();
 	public List<IOFSwitch> getSwitches();
 	public HashMap<Long,Slicer> getSlice(String name);
+	public boolean setSliceAdminState(Long dpid, String sliceName, boolean status);
 
 }
