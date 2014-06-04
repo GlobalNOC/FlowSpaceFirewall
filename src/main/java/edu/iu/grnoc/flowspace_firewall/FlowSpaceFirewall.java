@@ -437,6 +437,20 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 		restApi.addRestletRoutable(new FlowSpaceFirewallWebRoutable());
 		
 	}
+	
+	public boolean setSliceAdminState(Long dpid, String sliceName, boolean state){
+		
+		List<Proxy> proxies = this.controllerConnector.getSwitchProxies(dpid);
+		for(Proxy p: proxies){
+			if(p.getSlicer().getSliceName().equals(sliceName)){
+				logger.info("Setting Slice: " + sliceName + " admin state to " + state);
+				p.setAdminStatus(state);
+				return true;
+			}
+		}
+		
+		return false;
+	}
 
 /*	@Override
 	public List<OFStatistics> getSliceFlows(String sliceName, Long dpid) {

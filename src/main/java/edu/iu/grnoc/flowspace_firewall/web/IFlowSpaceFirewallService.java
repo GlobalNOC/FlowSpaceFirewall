@@ -36,5 +36,6 @@ public interface IFlowSpaceFirewallService extends IFloodlightService {
 	public List<HashMap<Long,Slicer>> getSlices();
 	public List<IOFSwitch> getSwitches();
 	public HashMap<Long,Slicer> getSlice(String name);
+	public boolean setSliceAdminState(Long dpid, String sliceName, boolean status);
 
 }
