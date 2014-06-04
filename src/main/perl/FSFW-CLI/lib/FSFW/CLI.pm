@@ -608,7 +608,7 @@ END
 	    $ws->set_url("$base_url:$port/fsfw/admin/set_state/$1/$2/$state/json");
 	    my $status_obj = $ws->foo();
 	    if($status_obj == 1){
-		print "Slice $1 for DPID $2 was successfully set to " . $status . "\n\n";
+		print "Slice $1 for DPID $2 was successfully " . $status . "d\n\n";
 	    }else{
 		print "An error occured attempting to set Slice $1 for DPID $2 to " . $status . "\n\n";
 	    }
