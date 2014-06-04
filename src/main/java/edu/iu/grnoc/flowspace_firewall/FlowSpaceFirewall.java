@@ -41,7 +41,6 @@ import net.floodlightcontroller.core.module.IFloodlightModule;
 import net.floodlightcontroller.core.module.IFloodlightService;
 import net.floodlightcontroller.restserver.IRestApiService;
 
-import org.openflow.protocol.OFFlowMod;
 import org.openflow.protocol.OFMessage;
 import org.openflow.protocol.OFType;
 import org.openflow.protocol.statistics.OFStatistics;
@@ -170,7 +169,6 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 	
 	@Override
 	public void switchRemoved(long switchId) {
-		// TODO Auto-generated method stub
 		logger.error("Switch removed!");
 		List <Proxy> proxies = controllerConnector.getSwitchProxies(switchId);
 		Iterator <Proxy> it = proxies.iterator();
@@ -185,7 +183,7 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 		while(switchIt.hasNext()){
 			IOFSwitch tmpSwitch = switchIt.next();
 			if(tmpSwitch.getId() == switchId){
-				logger.error("REMOVED!!!!");
+				logger.debug("REMOVED!!!!");
 				switchIt.remove();
 			}
 		}
@@ -212,13 +210,13 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 	
 	public synchronized List<HashMap<Long,Slicer>> getSlices(){
 		List<HashMap<Long,Slicer>> slices = Collections.synchronizedList(this.slices);
-		logger.error("slices size: "+slices.size());
+		logger.debug("slices size: "+slices.size());
 		return slices;
 	}
 
 	@Override
 	public void switchActivated(long switchId) {
-		logger.error("Switch Activated");
+		logger.debug("Switch Activated");
 	}
 	
 	public void removeProxy(Long switchId, Proxy p){
@@ -234,7 +232,7 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 	@Override
 	public void switchChanged(long switchId) {
 		//we don't do anything here
-		logger.error("Switch changed!");
+		logger.debug("Switch changed!");
 	}
 	
 	/**
@@ -274,7 +272,7 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 				//now we need to find the slice in the newSlices variable and set the proxy to it
 				boolean updated = false;
 				for(HashMap<Long, Slicer> slice: newSlices){
-					logger.error("number of switches in newslice:"+slice.keySet().size());
+					logger.debug("number of switches in newslice:"+slice.keySet().size());
 					if(slice.containsKey(p.getSwitch().getId()) && slice.get(p.getSwitch().getId()).getSliceName().equals(p.getSlicer().getSliceName())){
 				  		p.setSlicer(slice.get(p.getSwitch().getId()));
 				        logger.warn("Slice " + p.getSlicer().getSliceName() + " was found, setting updated to true");
@@ -331,7 +329,7 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 			logger.error(e.getMessage());
 			return false;
 		}
-        logger.error("Number of slices after reload: "+this.slices.size());
+        logger.debug("Number of slices after reload: "+this.slices.size());
 		return true;
 	}
 
@@ -346,7 +344,7 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 		List <Proxy> proxies = controllerConnector.getSwitchProxies(sw.getId());
 		
 		if(proxies == null){
-			logger.error("No proxies for switch: " + sw.getStringId());
+			logger.warn("No proxies for switch: " + sw.getStringId());
 			return Command.CONTINUE;
 		}
 
@@ -377,7 +375,6 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 
 	@Override
 	public Map<Class<? extends IFloodlightService>, IFloodlightService> getServiceImpls() {
-		// TODO Auto-generated method stub
 		Map<Class<? extends IFloodlightService>, IFloodlightService> m = new HashMap<Class<? extends IFloodlightService>, IFloodlightService>();
 	    m.put(IFlowSpaceFirewallService.class, this);
 		return m;
@@ -440,16 +437,30 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 		restApi.addRestletRoutable(new FlowSpaceFirewallWebRoutable());
 		
 	}
-
-	@Override
-	public ArrayList<OFFlowMod> getSliceFlows(String sliceName, Long dpid) {
-		// TODO Auto-generated method stub
-		return null;
+	
+	public boolean setSliceAdminState(Long dpid, String sliceName, boolean state){
+		
+		List<Proxy> proxies = this.controllerConnector.getSwitchProxies(dpid);
+		for(Proxy p: proxies){
+			if(p.getSlicer().getSliceName().equals(sliceName)){
+				logger.info("Setting Slice: " + sliceName + " admin state to " + state);
+				p.setAdminStatus(state);
+				return true;
+			}
+		}
+		
+		return false;
 	}
 
-	@Override
+/*	@Override
+	public List<OFStatistics> getSliceFlows(String sliceName, Long dpid) {
+		return this.statsCacher.getSlicedFlowStats(dpid, sliceName));
+	}
+*/
+/*	@Override
 	public HashMap<String, Object> getSliceStatus(String sliceName, Long dpid) {
 		// TODO Auto-generated method stub
 		return null;
 	}
+	*/
 }

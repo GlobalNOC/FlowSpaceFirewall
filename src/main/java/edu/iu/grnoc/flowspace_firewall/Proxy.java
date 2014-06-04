@@ -36,6 +36,7 @@ import org.openflow.protocol.OFPacketOut;
 import org.openflow.protocol.OFPhysicalPort;
 import org.openflow.protocol.OFPort;
 import org.openflow.protocol.OFPortStatus;
+import org.openflow.protocol.OFPortStatus.OFPortReason;
 import org.openflow.protocol.OFStatisticsReply;
 import org.openflow.protocol.OFStatisticsRequest;
 import org.openflow.protocol.action.OFAction;
@@ -82,20 +83,23 @@ public class Proxy {
 		parent = fsf;
 		flowCount = 0;
 		xidMap = new XidMap();
-		adminStatus = true;
+		adminStatus = mySlicer.getAdminState();
 		packetInRate = new RateTracker(100,slicer.getPacketInRate());
 
 	}
 	
 	public void setAdminStatus(Boolean status){
-		adminStatus = status;
+		this.adminStatus = status;
+		this.mySlicer.setAdminState(status);
 		if(status){
 			log.warn("Slice: "+ this.mySlicer.getSliceName() +" is re-enabled");
 		}else{
+
 			log.error("Disabling Slice:"+this.mySlicer.getSliceName() );
-			this.removeFlows();
-			this.disconnect();
-			this.parent.removeProxy(this.getSwitch().getId(), this);
+			if(this.connected()){
+				this.removeFlows();
+				this.disconnect();
+			}
 		}
 	}
 	
@@ -108,13 +112,7 @@ public class Proxy {
 	}
 	
 	public void removeFlows(){
-		List<OFStatistics> stats = this.parent.getStats(mySwitch.getId());
-		List<OFStatistics> results = null;
-		try{
-			results = FlowStatSlicer.SliceStats(mySlicer, stats);
-		}catch(IllegalArgumentException e){
-			
-		}
+		List<OFStatistics> results = this.parent.getSlicedFlowStats(mySwitch.getId(), this.mySlicer.getSliceName());
 		
 		if(results == null){
 			log.debug("Slicing failed!");
@@ -128,15 +126,17 @@ public class Proxy {
 			OFFlowMod flow = new OFFlowMod();
 			flow.setMatch(flowStat.getMatch());
 			flow.setActions(flowStat.getActions());
-			flow.setLengthU( OFFlowMod.MAXIMUM_LENGTH );
+			int length = 0;
+			for(OFAction act: flow.getActions()){
+				length += act.getLength();
+			}
+			flow.setLengthU(OFFlowMod.MINIMUM_LENGTH + length);
 			flow.setCommand(OFFlowMod.OFPFC_DELETE);
 			deletes.add(flow);
 		}
-		
 		try {
 			this.mySwitch.write(deletes, null);
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 		
@@ -195,7 +195,43 @@ public class Proxy {
 		if(!newSlicer.getControllerAddress().equals(this.mySlicer.getControllerAddress())){
 			this.disconnect();
 			//the controller connector will connect this to the proper address next time it runs
+		}else{
+			//since we aren't disconnecting/reconnecting we need to diff
+			//the ports involved and synthetically generate port add/remove messages
+			//to the controller to notify of the "change"
+			Iterator <ImmutablePort> portIterator = this.mySwitch.getPorts().iterator();
+			while(portIterator.hasNext()){
+				ImmutablePort port = portIterator.next();
+				PortConfig ptCfg = this.mySlicer.getPortConfig(port.getName());
+				PortConfig ptCfg2 = newSlicer.getPortConfig(port.getName());
+				if(ptCfg != null && ptCfg2 != null){
+					//do nothing
+				}else if(ptCfg == null && ptCfg2 != null){
+					//port add!
+					OFPortStatus portStatus = new OFPortStatus();
+					portStatus.setDesc(this.mySwitch.getPort(port.getName()).toOFPhysicalPort());
+					//boo OFPortReason.OFPPR_ADD is not a byte and has no toByte method :(
+					portStatus.setReason((byte)0);
+					
+					//can't call toController because it isn't part of this slice yet!!!
+					try {
+						ofcch.sendMessage(portStatus);
+					} catch (IOException e) {
+						e.printStackTrace();
+					}
+				}else if(ptCfg != null && ptCfg2 == null){
+					//port remove
+					OFPortStatus portStatus = new OFPortStatus();
+					portStatus.setDesc(this.mySwitch.getPort(port.getName()).toOFPhysicalPort());
+					//boo OFPortReason.OFPPR_DELETE is not a byte and has no toByte method :(
+					portStatus.setReason((byte)1);
+					toController(portStatus,null);
+				}else{
+					//do nothing again
+				}
+			}
 		}
+		
 		
 		this.mySlicer = newSlicer;
 		this.mySlicer.setSwitch(this.mySwitch);
@@ -261,11 +297,11 @@ public class Proxy {
 		List <OFFlowMod> flows = this.mySlicer.allowedFlows((OFFlowMod)msg);
 		if(flows.size() == 0){
 			//really we need to send a perm error
-			log.info("Flow is not allowed");
+			log.error("Slice: " + this.mySlicer.getSliceName() + ":" + this.mySwitch.getStringId() + " denied flow: " + ((OFFlowMod)msg).toString());
 			this.sendError((OFMessage)msg);
 			return;
 		}else{
-			log.info("Flow is allowed");
+			log.info("Slice: " + this.mySlicer.getSliceName() + ":" + this.mySwitch.getStringId() + " Sent Flow: " + ((OFFlowMod)msg).toString());
 		}
 		List <OFMessage> messages = new ArrayList<OFMessage>();
 		//count the total number of flowMods
@@ -520,7 +556,6 @@ public class Proxy {
 			}
 			return;
 		}
-		log.info("About to turn flowstats into reply");
 		short length = 0;
 		int counter = 0;
 		Iterator <OFStatistics> it2 = results.iterator();				
@@ -590,7 +625,7 @@ public class Proxy {
 					this.sendError((OFMessage)msg);
 					return;
 				}else{
-					log.info("PacketOut is allowed");
+					log.debug("PacketOut is allowed");
 					mapXids(allowed);
 					try {
 						mySwitch.write(allowed, cntx);
@@ -700,10 +735,24 @@ public class Proxy {
 			//for interfaces involved with this slice
 			OFPortStatus portStatus = (OFPortStatus)msg;
 			OFPhysicalPort port = portStatus.getDesc();
-			if(!this.mySlicer.isPortPartOfSlice(port.getPortNumber())){
+			if(!this.mySlicer.isPortPartOfSlice(port.getName())){
 				log.debug("Port status even for switch"+this.mySwitch.getStringId()+" port " + port.getName() + " is not allowed for slice"+this.mySlicer.getSliceName());
 				return;
 			}
+			
+			
+			switch(OFPortReason.fromReasonCode(portStatus.getReason())){
+			case OFPPR_ADD:
+				this.mySlicer.setPortId(port.getName(), port.getPortNumber());
+				break;
+			case OFPPR_MODIFY:
+				//nothing to do here
+				break;
+			case OFPPR_DELETE:
+				//nothing to do here
+				break;
+			}
+			
 			break;
 		case ERROR:
 			if(xidMap.containsKey(xid)){
