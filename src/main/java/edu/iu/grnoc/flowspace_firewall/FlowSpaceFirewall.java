@@ -210,7 +210,6 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 	
 	public synchronized List<HashMap<Long,Slicer>> getSlices(){
 		List<HashMap<Long,Slicer>> slices = Collections.synchronizedList(this.slices);
-		logger.error("slices size: "+slices.size());
 		return slices;
 	}
 

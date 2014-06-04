@@ -556,7 +556,6 @@ public class Proxy {
 			}
 			return;
 		}
-		log.info("About to turn flowstats into reply");
 		short length = 0;
 		int counter = 0;
 		Iterator <OFStatistics> it2 = results.iterator();				
