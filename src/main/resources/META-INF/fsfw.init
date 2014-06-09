@@ -39,13 +39,16 @@ pid_status() {
         done < "${PIDFILE}"
 
         if [ -n "$pid" ]; then
-
-            return 0
+            kill -s 0 "$pid"
+            if [ $? ]; then
+              echo "FSFW is running"
+              return 0
+	    fi
         fi
-
-        return 1 # "Program is dead and /var/run pid file exists"
+	echo "FSFW is dead but PID file exists"
+        return 3 # "Program is dead and /var/run pid file exists"
     fi
-
+    echo "FSFW is not running"
     return 3 # "Program is not running"
 }
 
@@ -108,7 +111,9 @@ do
         start
         ;;
         status)
-            status -p ${PIDFILE} FSF
+            #status -p ${PIDFILE} FSF
+	    pid_status
+	    exit $?
         ;;
     reload)
 	reload
