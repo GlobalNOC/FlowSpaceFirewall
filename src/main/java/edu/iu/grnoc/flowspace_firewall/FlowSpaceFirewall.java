@@ -179,11 +179,12 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 			it.remove();
 		}
 		
+		this.statsCacher.clearCache(switchId);
+		
 		Iterator <IOFSwitch> switchIt = this.switches.iterator();
 		while(switchIt.hasNext()){
 			IOFSwitch tmpSwitch = switchIt.next();
 			if(tmpSwitch.getId() == switchId){
-				logger.error("REMOVED!!!!");
 				switchIt.remove();
 			}
 		}

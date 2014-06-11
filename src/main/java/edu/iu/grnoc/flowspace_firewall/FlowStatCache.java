@@ -55,6 +55,13 @@ public class FlowStatCache {
 		return this.parent.getSwitches();
 	}
 	
+	public synchronized void clearFlowCache(Long switchId){
+		
+		cache.remove(switchId);
+		slicedCache.remove(switchId);
+		
+	}
+	
 	/**
 	 * sets the stats for the given switch
 	 * @param switchId
