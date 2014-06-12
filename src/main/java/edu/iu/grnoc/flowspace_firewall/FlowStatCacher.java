@@ -86,6 +86,10 @@ public class FlowStatCacher extends TimerTask{
 		return statsCache.getSlicedFlowStats(switchId, sliceName);
 	}
 	
+	public void clearCache(Long switchId){
+		statsCache.clearFlowCache(switchId);
+	}
+	
 	/**
 	 * returns the last cached stats for the switch
 	 * @param switchId
