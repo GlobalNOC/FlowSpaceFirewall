@@ -179,11 +179,12 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 			it.remove();
 		}
 		
+		this.statsCacher.clearCache(switchId);
+		
 		Iterator <IOFSwitch> switchIt = this.switches.iterator();
 		while(switchIt.hasNext()){
 			IOFSwitch tmpSwitch = switchIt.next();
 			if(tmpSwitch.getId() == switchId){
-				logger.debug("REMOVED!!!!");
 				switchIt.remove();
 			}
 		}
@@ -304,9 +305,13 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 					for(Long dpid: slice.keySet()){
 						//connect it up
 						IOFSwitch sw = floodlightProvider.getSwitch(dpid);
-						Slicer vlanSlicer = slice.get(dpid);
-			    		controllerConnector.addProxy(dpid, new Proxy(sw, vlanSlicer, this));						
-					}	
+						if(sw == null){
+							logger.debug("Switch was not connected... can't add the proxy");
+						}else{
+							Slicer vlanSlicer = slice.get(dpid);
+							controllerConnector.addProxy(dpid, new Proxy(sw, vlanSlicer, this));						
+						}
+					}
 				}
 			}
 			
