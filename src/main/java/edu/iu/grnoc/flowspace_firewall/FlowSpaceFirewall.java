@@ -211,12 +211,13 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 	
 	public synchronized List<HashMap<Long,Slicer>> getSlices(){
 		List<HashMap<Long,Slicer>> slices = Collections.synchronizedList(this.slices);
+		logger.debug("slices size: "+slices.size());
 		return slices;
 	}
 
 	@Override
 	public void switchActivated(long switchId) {
-		logger.error("Switch Activated");
+		logger.debug("Switch Activated");
 	}
 	
 	public void removeProxy(Long switchId, Proxy p){
@@ -232,7 +233,7 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 	@Override
 	public void switchChanged(long switchId) {
 		//we don't do anything here
-		logger.error("Switch changed!");
+		logger.debug("Switch changed!");
 	}
 	
 	/**
@@ -272,7 +273,7 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 				//now we need to find the slice in the newSlices variable and set the proxy to it
 				boolean updated = false;
 				for(HashMap<Long, Slicer> slice: newSlices){
-					logger.error("number of switches in newslice:"+slice.keySet().size());
+					logger.debug("number of switches in newslice:"+slice.keySet().size());
 					if(slice.containsKey(p.getSwitch().getId()) && slice.get(p.getSwitch().getId()).getSliceName().equals(p.getSlicer().getSliceName())){
 				  		p.setSlicer(slice.get(p.getSwitch().getId()));
 				        logger.warn("Slice " + p.getSlicer().getSliceName() + " was found, setting updated to true");
@@ -333,7 +334,7 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 			logger.error(e.getMessage());
 			return false;
 		}
-        logger.error("Number of slices after reload: "+this.slices.size());
+        logger.debug("Number of slices after reload: "+this.slices.size());
 		return true;
 	}
 
@@ -348,7 +349,7 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 		List <Proxy> proxies = controllerConnector.getSwitchProxies(sw.getId());
 		
 		if(proxies == null){
-			logger.error("No proxies for switch: " + sw.getStringId());
+			logger.warn("No proxies for switch: " + sw.getStringId());
 			return Command.CONTINUE;
 		}
 
