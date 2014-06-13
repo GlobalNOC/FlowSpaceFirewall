@@ -1,6 +1,6 @@
 Name: flowspace-firewall
 Version: 1.0.2
-Release: 2%{?dist}
+Release: 3%{?dist}
 Summary: Flowspace Firewall
 License: CHECK(Distributable)
 Group: SDN
@@ -22,7 +22,7 @@ Flowspace firewall application
 /usr/bin/getent passwd fsfw || /usr/sbin/useradd -r -d /var/lib/fsfw -s /bin/false fsfw
 
 %postun
-/usr/sbin/userdel fsfw
+
 
 %build
 
