@@ -457,6 +457,16 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 		return false;
 	}
 
+	public Proxy getProxy(Long dpid, String sliceName){
+		List<Proxy> proxies = this.controllerConnector.getSwitchProxies(dpid);
+		for(Proxy p: proxies){
+			if(p.getSlicer().getSliceName().equals(sliceName)){
+				return p;
+			}
+		}
+		return null;
+	}
+	
 /*	@Override
 	public List<OFStatistics> getSliceFlows(String sliceName, Long dpid) {
 		return this.statsCacher.getSlicedFlowStats(dpid, sliceName));
