@@ -42,6 +42,7 @@ import org.openflow.protocol.OFStatisticsRequest;
 import org.openflow.protocol.action.OFAction;
 import org.openflow.protocol.action.OFActionOutput;
 import org.openflow.protocol.action.OFActionType;
+import org.openflow.protocol.factory.MessageParseException;
 import org.openflow.protocol.statistics.OFAggregateStatisticsReply;
 import org.openflow.protocol.statistics.OFAggregateStatisticsRequest;
 import org.openflow.protocol.statistics.OFDescriptionStatistics;
@@ -133,6 +134,7 @@ public class Proxy {
 			flow.setLengthU(OFFlowMod.MINIMUM_LENGTH + length);
 			flow.setCommand(OFFlowMod.OFPFC_DELETE);
 			deletes.add(flow);
+			this.flowCount = this.flowCount - 1;
 		}
 		try {
 			this.mySwitch.write(deletes, null);
@@ -162,6 +164,7 @@ public class Proxy {
 				.getContext("handler").getHandler();
 		ofcch.setSwitch(mySwitch);
 		ofcch.setProxy(this);
+
 		myController.connect(mySlicer.getControllerAddress());
 	}
 
@@ -271,6 +274,11 @@ public class Proxy {
 	
 	public int getFlowCount(){
 		return this.flowCount;
+	}
+	
+	public void setFlowCount(int totalFlows){
+		log.error("set flow count to: " + totalFlows + " for slice " + this.getSlicer().getSliceName() + " " + this.getSwitch().getStringId());
+		this.flowCount = totalFlows;
 	}
 	
 	/**
@@ -758,6 +766,39 @@ public class Proxy {
 			if(xidMap.containsKey(xid)){
 				msg.setXid(xidMap.get(xid));
 				xidMap.remove(xid);
+				OFError error = (OFError) msg;
+				OFMessage error_msg = null;
+				try{
+					error_msg = error.getOffendingMsg();
+				} catch (MessageParseException e) {
+					// TODO Auto-generated catch block
+					log.error("Unable to parse error's offending message");
+					break;
+				}
+				if(error_msg == null){
+					break;
+				}
+				switch(error_msg.getType()){
+					case FLOW_MOD:
+						OFFlowMod mod = (OFFlowMod) error_msg;
+						switch(mod.getCommand()){
+						case OFFlowMod.OFPFC_ADD:
+							this.flowCount--;
+							break;
+						case OFFlowMod.OFPFC_DELETE:
+							this.flowCount++;
+							break;
+						case OFFlowMod.OFPFC_DELETE_STRICT:
+							this.flowCount++;
+							break;
+						default:
+							break;
+						}
+						break;
+					default:
+						break;
+					}
+
 			}else{
 				return;
 			}
@@ -770,6 +811,7 @@ public class Proxy {
 			if(flows.size() == 0){
 				return;
 			}
+			this.flowCount--;
 			break;
 		case BARRIER_REPLY:
 			if(xidMap.containsKey(xid)){	
