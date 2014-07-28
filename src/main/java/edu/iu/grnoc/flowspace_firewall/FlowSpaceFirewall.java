@@ -359,6 +359,7 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 				logger.debug("slice disabled... skipping");
 			}else{
 				try{
+					logger.debug("attempting to send " + msg.toString() + " to slice: " + p.getSlicer().getSliceName() + " from switch: " + sw.getStringId());
 					p.toController(msg,cntx);
 				}catch (Exception e){
 					//don't die please... just keep going and error the stack trace
