@@ -499,9 +499,32 @@ public class VLANSlicer implements Slicer{
 		if(match.getDataLayerVirtualLan() == 0 || match.getDataLayerVirtualLan() == -1){
 			//untagged or no tag...
 			if(match.getInputPort() == 0){
-				//need to expand it out
+				//needs to expand it out unless has access to all ports
+				Iterator<Entry<String, PortConfig>> it = this.portList.entrySet().iterator();
+				while(it.hasNext()){
+					Map.Entry<String, PortConfig> port = (Entry<String, PortConfig>) it.next();
+					if(port.getValue().getPortId() != 0){
+						try{
+							//why might this not be cloneable?  ahh... might not be clonable if there is no action!!
+							OFFlowMod newFlow = flowMod.clone();
+							newFlow.getMatch().setInputPort(port.getValue().getPortId());
+							newFlow.getMatch().setDataLayerVirtualLan(port.getValue().getVlanRange().getAvailableTags()[0]);
+							List<OFFlowMod> newFlows = this.managedActions(newFlow);
+							for( OFFlowMod flow : newFlows){
+								flows.add(flow);
+							}
+						}catch (CloneNotSupportedException e){
+							log.error("This can't happen in the real world");
+						}catch (Exception e){
+							log.error("WTF");
+						}
+					}
+				}
 			}else{
 				match.setDataLayerVirtualLan((short)this.getPortConfig(match.getInputPort()).getVlanRange().getAvailableTags()[0]);
+				flowMod.setMatch(match);
+				//process the actions and add setVlanVid actions if necessary
+				flows = this.managedActions(flowMod);
 			}
 		}else{
 			log.debug("denied Flow: " + flowMod.toString());
@@ -509,6 +532,12 @@ public class VLANSlicer implements Slicer{
 		}
 		
 		return flows;
+	}
+	
+	public List<OFFlowMod> managedActions(OFFlowMod flow){
+		List<OFFlowMod> newFlows = new ArrayList<OFFlowMod>();
+		
+		return newFlows;
 	}
 	
 	/**
