@@ -373,6 +373,8 @@ public class VLANSlicer implements Slicer{
 				outPacket.setBufferId(OFPacketOut.BUFFER_ID_NONE);
 				outPacket.setPacketData(this.bufferIds.get(bufferId));
 				outPacket.setLengthU(outPacket.getLengthU() + this.bufferIds.get(bufferId).length);
+			}else{
+				return packets;
 			}
 		}
 	

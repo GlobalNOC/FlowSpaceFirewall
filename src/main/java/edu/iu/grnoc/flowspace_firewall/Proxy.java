@@ -732,8 +732,8 @@ public class Proxy {
 				break;
 			}else{
 				log.error("Packet in Rate for Slice: " +
-			this.getSlicer().getSliceName() + ":" + this.getSwitch().getStringId() +
-			" has passed the packet in rate limit Disabling slice!!!!");
+							this.getSlicer().getSliceName() + ":" + this.getSwitch().getStringId() +
+							" has passed the packet in rate limit Disabling slice!!!!");
 				this.setAdminStatus(false);
 				return;
 			}
