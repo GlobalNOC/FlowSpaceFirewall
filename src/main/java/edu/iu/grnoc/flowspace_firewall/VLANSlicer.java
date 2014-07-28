@@ -60,16 +60,19 @@ public class VLANSlicer implements Slicer{
 	private int packetInRate;
 	private Map<Integer, byte[]> bufferIds;
 	private boolean adminState;
+	private boolean flushOnConnect;
+	private boolean tagMgmt;
 	
 	private static final Logger log = LoggerFactory.getLogger(VLANSlicer.class);
 	
 	public VLANSlicer(HashMap <String, PortConfig> ports, 
-			InetSocketAddress controllerAddress, int rate, String name){
+			InetSocketAddress controllerAddress, int rate, String name, boolean flushOnConnect, boolean tagMgmt){
 		myRateTracker = new RateTracker(10,100);
 		portList = ports;
 		this.name = name;
 		this.adminState = true;
-		
+		this.flushOnConnect = flushOnConnect;
+		this.tagMgmt = tagMgmt;
 		if(controllerAddress == null){
 			//not allowed
 		}
@@ -98,6 +101,8 @@ public class VLANSlicer implements Slicer{
 		portList = new HashMap<String,PortConfig>();
 		name = "";
 		this.adminState = true;
+		this.flushOnConnect = false;
+		this.tagMgmt = false;
 		this.bufferIds = Collections.synchronizedMap(
 				new LinkedHashMap<Integer,byte[]>(){
 					/**
@@ -299,7 +304,6 @@ public class VLANSlicer implements Slicer{
 							try {
 								newAct = (OFActionOutput) action.clone();
 							} catch (CloneNotSupportedException e) {
-								// TODO Auto-generated catch block
 								//log.error(e.printStackTrace());
 								log.error("Unable to clone the output action");
 								log.error(e.getMessage());
@@ -327,7 +331,6 @@ public class VLANSlicer implements Slicer{
 		try {
 			newFlow = flowMod.clone();
 		} catch (CloneNotSupportedException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 			return null;
 		}
@@ -482,6 +485,30 @@ public class VLANSlicer implements Slicer{
 		}
 		log.debug("OutPackets: " + packets.toString());
 		return packets;
+	}
+	
+	public List <OFFlowMod> managedFlows(OFFlowMod flowMod){
+		log.debug("Attempting to put flow: " + flowMod.toString() + " into flowspace");
+		List<OFFlowMod> flows = new ArrayList<OFFlowMod>();
+		OFMatch match = flowMod.getMatch();
+		
+		if(match == null){
+			return flows;
+		}
+		
+		if(match.getDataLayerVirtualLan() == 0 || match.getDataLayerVirtualLan() == -1){
+			//untagged or no tag...
+			if(match.getInputPort() == 0){
+				//need to expand it out
+			}else{
+				match.setDataLayerVirtualLan((short)this.getPortConfig(match.getInputPort()).getVlanRange().getAvailableTags()[0]);
+			}
+		}else{
+			log.debug("denied Flow: " + flowMod.toString());
+			return flows;
+		}
+		
+		return flows;
 	}
 	
 	/**
@@ -785,4 +812,21 @@ public class VLANSlicer implements Slicer{
 	public void addBufferId(int bufferId, byte[] packetData){
 		this.bufferIds.put(bufferId, packetData);
 	}
+	
+	public void setFlushRulesOnConnect(boolean flush_on_connect){
+		this.flushOnConnect = flush_on_connect;
+	}
+
+	public boolean getFlushRulesOnConnect(){
+		return this.flushOnConnect;
+	}
+	
+	public void setTagManagement(boolean tagMgmt){
+		this.tagMgmt = tagMgmt;
+	}
+	
+	public boolean getTagManagement(){
+		return this.tagMgmt;
+	}
 }
+

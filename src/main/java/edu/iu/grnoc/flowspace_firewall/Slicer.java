@@ -27,6 +27,7 @@ import org.openflow.protocol.OFPacketOut;
 public interface Slicer {
 
 	List <OFFlowMod> allowedFlows(OFFlowMod flow);
+	List <OFFlowMod> managedFlows(OFFlowMod flow);
 	List<OFMessage> allowedPacketOut(OFPacketOut output);
 	void setController(InetSocketAddress addr);
 	InetSocketAddress getControllerAddress();
@@ -53,4 +54,8 @@ public interface Slicer {
 	void setPortId(String portName, short portId);
 	void setAdminState(boolean state);
 	boolean getAdminState();
+	void setTagManagement(boolean tagMgmt);
+	void setFlushRulesOnConnect(boolean fluhsRulesOnConnect);
+	boolean getFlushRulesOnConnect();
+	boolean getTagManagement();
 }

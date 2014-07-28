@@ -15,7 +15,9 @@
 */
 package edu.iu.grnoc.flowspace_firewall;
 
+import java.util.ArrayList;
 import java.util.Hashtable;
+import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,7 +30,7 @@ public class VLANRange {
 	public static final short UNTAGGED = -1;
 	
 	private static final Logger log = LoggerFactory.getLogger(VLANRange.class);
-	
+	private List<Short> available;
 	//these prevent us from having to loop through
 	//and determine if the port allows a wildcard
 	private boolean wildcard = false;
@@ -49,11 +51,17 @@ public class VLANRange {
 		//for each of them
 		for(short i=MIN_VLAN; i<=MAX_VLAN; i++){
 			this.vlans.put(i,!status);
+			if(!status){
+				this.available.add(vlans[i]);
+			}
 		}
 		this.vlans.put(UNTAGGED, false);
 		
 		for(int i=0; i< vlans.length; i++){
 			this.setVlanAvail(vlans[i], status);
+			if(status){
+				this.available.add(vlans[i]);
+			}
 		}
 		
 		this.wildcard = this.allowVlanWildcard();
@@ -69,6 +77,13 @@ public class VLANRange {
 			throw new IllegalArgumentException("VLAN ID " + vlanId + " is out of range for valid vlan tags");
 		}
 		vlans.put(vlanId, status);
+		if(status){
+			this.available.add(vlanId);
+		}else{
+			if(this.available.contains(vlanId)){
+				this.available.remove(vlanId);
+			}
+		}
 		this.wildcard = this.allowVlanWildcard();
 	}
 	
@@ -92,6 +107,10 @@ public class VLANRange {
 			return false;
 		}
 		return true;
+	}
+	
+	public Short[] getAvailableTags(){
+		return (Short[]) this.available.toArray();
 	}
 	
 	public boolean getVlanAvail(short vlanId) throws IllegalArgumentException{

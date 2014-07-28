@@ -6,23 +6,30 @@
     <switch name="foo3" dpid="4" flush_rules_on_connect="false" />
    <slice name="Slice1">
       
-      <switch name="foo3" max_flows="10" flow_rate="1" packet_in_rate="100" flush_rules_on_connect="false">
+      <switch name="foo3" max_flows="10" flow_rate="1" packet_in_rate="100" flush_rules_on_connect="false" tag_management="false">
 	<port name="s3-eth1">
 	  <range start="1" end="2000" />
 	</port>
-
 	<port name="s3-eth2">
 	  <range start="1" end="2000" />
 	</port>
-
 	<port name="s3-eth3">
 	  <range start="1" end="2000" />
 	</port>
-
+	
       </switch>
       
-      <controller ip_address="140.182.45.44" ssl="false" port="6633" />
-      
-    </slice>
+      <switch name="foo1" max_flows="10" flow_rate="1" packet_in_rate="100" flush_rules_on_connect="false" tag_management="true">
+	<port name="s1-eth1">
+	  <range start="1" end="1" />
+	</port>
+	<port name="s1-eth2">
+          <range start="2" end="2" />
+        </port>
+      </switch>
 
+      <controller ip_address="140.182.45.44" ssl="false" port="6633" />
+   
+   </slice>
+   
 </flowspace_firewall>

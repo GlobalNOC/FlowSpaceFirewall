@@ -302,14 +302,26 @@ public class Proxy {
 	}
 	
 	private void processFlowMod(OFMessage msg, FloodlightContext cntx){
-		List <OFFlowMod> flows = this.mySlicer.allowedFlows((OFFlowMod)msg);
-		if(flows.size() == 0){
-			//really we need to send a perm error
-			log.error("Slice: " + this.mySlicer.getSliceName() + ":" + this.mySwitch.getStringId() + " denied flow: " + ((OFFlowMod)msg).toString());
-			this.sendError((OFMessage)msg);
-			return;
+		List <OFFlowMod> flows;
+		if(this.mySlicer.getTagManagement()){
+			flows = this.mySlicer.managedFlows((OFFlowMod)msg);
+			if(flows.size() ==0){
+				log.error("Slice: " + this.mySlicer.getSliceName() + ":" + this.mySwitch.getStringId() + " denied flow: " + ((OFFlowMod)msg).toString());
+				this.sendError((OFMessage)msg);
+				return;
+			}else{
+				log.info("Slice: " + this.mySlicer.getSliceName() + ":" + this.mySwitch.getStringId() + " Sent Flow: " + ((OFFlowMod)msg).toString());
+			}
 		}else{
-			log.info("Slice: " + this.mySlicer.getSliceName() + ":" + this.mySwitch.getStringId() + " Sent Flow: " + ((OFFlowMod)msg).toString());
+			flows = this.mySlicer.allowedFlows((OFFlowMod)msg);
+			if(flows.size() == 0){
+				//really we need to send a perm error
+				log.error("Slice: " + this.mySlicer.getSliceName() + ":" + this.mySwitch.getStringId() + " denied flow: " + ((OFFlowMod)msg).toString());
+				this.sendError((OFMessage)msg);
+				return;
+			}else{
+				log.info("Slice: " + this.mySlicer.getSliceName() + ":" + this.mySwitch.getStringId() + " Sent Flow: " + ((OFFlowMod)msg).toString());
+			}
 		}
 		List <OFMessage> messages = new ArrayList<OFMessage>();
 		//count the total number of flowMods

@@ -7,3 +7,7 @@
 
 .classpath
 /bin
+
+*.xsd~
+
+*.xml~
