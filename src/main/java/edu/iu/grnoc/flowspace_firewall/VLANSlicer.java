@@ -356,6 +356,126 @@ public class VLANSlicer implements Slicer{
 		return this.myRateTracker.getMaxRate();
 	}
 	
+	
+	public List<OFMessage> managedPacketOut(OFPacketOut outPacket){
+		List <OFAction> newActions = new ArrayList<OFAction>();
+		List <OFAction> actions = outPacket.getActions();
+		List <OFMessage> packets = new ArrayList<OFMessage>();
+		Iterator <OFAction> it = actions.iterator();
+		OFMatch match = new OFMatch();
+		if(outPacket.getPacketData().length == 0 && outPacket.getBufferId() != 0){
+			//look at the buffer id and see if it matches one we have in our 
+			//buffer cache
+			int bufferId = outPacket.getBufferId();
+			if(this.bufferIds.containsKey(bufferId)){
+				outPacket.setBufferId(OFPacketOut.BUFFER_ID_NONE);
+				outPacket.setPacketData(this.bufferIds.get(bufferId));
+				outPacket.setLengthU(outPacket.getLengthU() + this.bufferIds.get(bufferId).length);
+			}else{
+				return packets;
+			}
+		}
+		try{
+			match.loadFromPacket(outPacket.getPacketData(),(short)0);
+		}
+		catch(Exception e){
+			log.error("Loading Match from packet failed: " + e.getMessage());
+			packets.clear();
+			return packets;
+		}
+		log.error("VLAN ID: " + match.getDataLayerVirtualLan());
+		if(match.getDataLayerVirtualLan() != -1){
+			log.error("Packet has VID Set");
+			packets.clear();
+			return packets;
+		}
+		while(it.hasNext()){
+			OFAction action = it.next();
+			//loop through the actions
+			switch(action.getType()){
+				case SET_VLAN_ID:
+					//denied!
+					packets.clear();
+					return packets;
+				case OUTPUT:
+					//if its an output, verify that the 
+					OFActionOutput output = (OFActionOutput)action;
+					if(output.getPort() == OFPort.OFPP_ALL.getValue()){
+						log.info("output to ALL expanding");
+						
+						for(Map.Entry<String, PortConfig> port : this.portList.entrySet()){
+							PortConfig myPortCfg = this.getPortConfig(port.getValue().getPortId());
+							if(myPortCfg == null){
+								log.info("output packet disallowed to port:" + port.getValue().getPortId());
+								packets.clear();
+								return packets;
+							}
+							List<OFAction> actualActions = new ArrayList<OFAction>();
+							actualActions.addAll(newActions);
+							OFPacketOut newOut = this.clonePacketOut(outPacket);
+							OFActionOutput newOutput = new OFActionOutput();
+							newOutput.setMaxLength(Short.MAX_VALUE);
+							newOutput.setType(OFActionType.OUTPUT);
+							newOutput.setLength((short)OFActionOutput.MINIMUM_LENGTH);
+							newOutput.setPort(port.getValue().getPortId());
+							OFActionVirtualLanIdentifier set_vlan_vid = new OFActionVirtualLanIdentifier();
+							set_vlan_vid.setVirtualLanIdentifier(myPortCfg.getVlanRange().getAvailableTags()[0]);
+							actualActions.add(set_vlan_vid);
+							actualActions.add(newOutput);
+							newOut.setActions(actualActions);
+							int size = 0;
+							for(OFAction act : actualActions){
+								size = size + act.getLengthU();
+							}
+							newOut.setActionsLength((short)size);
+							packets.add(newOut);
+						}
+						
+					}else if(output.getPort() == OFPort.OFPP_FLOOD.getValue()){
+						log.info("output to flood not supported");
+						packets.clear();
+						return packets;
+					}else{
+						PortConfig myPortCfg = this.getPortConfig(output.getPort());
+						if(myPortCfg == null){
+							log.info("output packet disallowed to port:" + output.getPort());
+							packets.clear();
+							return packets;
+						}
+						
+						//find the vlantag it should be and put the vlan tag on						
+						log.error("Simple case, single output and it was allowed");
+						List<OFAction> actualActions = new ArrayList<OFAction>();
+						actualActions.addAll(newActions);
+						OFPacketOut newOut = this.clonePacketOut(outPacket);
+						OFActionVirtualLanIdentifier set_vlan_vid = new OFActionVirtualLanIdentifier();
+						set_vlan_vid.setVirtualLanIdentifier(myPortCfg.getVlanRange().getAvailableTags()[0]);
+						actualActions.add(set_vlan_vid);
+						actualActions.add(output);
+						newOut.setActions(actualActions);
+						int size = 0;
+						for(OFAction act : actualActions){
+							size = size + act.getLengthU();
+						}
+						newOut.setActionsLength((short)size);
+						
+						packets.add(newOut);
+					}
+					break;
+				case STRIP_VLAN:
+					//denied
+					packets.clear();
+					return packets;
+				default:
+					newActions.add(action);
+					break;
+			}
+		}
+		log.debug("OutPackets: " + packets.toString());
+		return packets;
+		
+	}
+	
 	/**
 	 * process an OFPacketOut message to verify that it fits
 	 * in this slice properly.  We don't want one slice to

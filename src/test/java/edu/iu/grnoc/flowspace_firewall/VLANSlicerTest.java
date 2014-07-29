@@ -754,7 +754,89 @@ public class VLANSlicerTest {
 		assertTrue(managedFlows.size() == 0);
 	}
 	
+	/**
+	 * tests packetOut event slicing
+	 */
+	@Test
+	public void testAllowedPacketOutManagedMode(){
+		
+		OFPacketOut out = new OFPacketOut();
+		List<OFAction> actions = new ArrayList<OFAction>();
+		OFActionOutput output = new OFActionOutput();
+		output.setType(OFActionType.OUTPUT);
+		output.setPort((short)1);
+		actions.add(output);
+		out.setActions(actions);
+		
+		Ethernet pkt = new Ethernet();
+		pkt.setDestinationMACAddress("aa:bb:cc:dd:ee:ff");
+		pkt.setSourceMACAddress("ff:ee:dd:cc:bb:aa");
+		pkt.setEtherType((short)35020);
+		out.setPacketData(pkt.serialize());
+		slicer.setTagManagement(true);
+		pConfig = new PortConfig();
+		pConfig.setPortName("foo");
+		VLANRange range = new VLANRange();
+		range.setVlanAvail((short)101,true);
+		pConfig.setVLANRange(range);
+		slicer.setPortConfig("foo", pConfig);
+		
+		List<OFMessage> outPackets = slicer.managedPacketOut(out);
+		assertTrue("OutPacket size is correct, expected 1 got " + outPackets.size(), outPackets.size() == 1);
+		OFPacketOut managedPacket = (OFPacketOut) outPackets.get(0);
+		List<OFAction> acts = managedPacket.getActions();
+		assertTrue("Action list size is 2!!",acts.size() == 2);
+		assertTrue("first action is set vlan id",acts.get(0).getType() == OFActionType.SET_VLAN_ID);
+		OFActionVirtualLanIdentifier set_vlan_vid = (OFActionVirtualLanIdentifier) acts.get(0);
+		assertTrue("VLAN Tag set is correct",set_vlan_vid.getVirtualLanIdentifier() == 101);
+		assertTrue("Second action type is OUTPUT", acts.get(1).getType() == OFActionType.OUTPUT);
+		OFActionOutput outPort = (OFActionOutput) acts.get(1);
+		assertTrue("output port is 1", outPort.getPort() == 1);
+		
+		pkt.setVlanID((short)2000);
+		out.setPacketData(pkt.serialize());
+		outPackets = slicer.managedPacketOut(out);
+		assertTrue("Packet out was denied", outPackets.size() == 0);
+	}
 	
+	/**
+	 * tests packetOut event slicing
+	 */
+	@Test
+	public void testAllowedPacketOutALLManaged(){
+		
+		OFPacketOut out = new OFPacketOut();
+		List<OFAction> actions = new ArrayList<OFAction>();
+		OFActionOutput output = new OFActionOutput();
+		output.setType(OFActionType.OUTPUT);
+		output.setPort(OFPort.OFPP_ALL.getValue());
+		actions.add(output);
+		out.setActions(actions);
+		
+		Ethernet pkt = new Ethernet();
+		pkt.setDestinationMACAddress("aa:bb:cc:dd:ee:ff");
+		pkt.setSourceMACAddress("ff:ee:dd:cc:bb:aa");
+		pkt.setEtherType((short)35020);
+		out.setPacketData(pkt.serialize());
+		
+		slicer.setTagManagement(true);
+		pConfig = new PortConfig();
+		pConfig.setPortName("foo");
+		VLANRange range = new VLANRange();
+		range.setVlanAvail((short)101,true);
+		pConfig.setVLANRange(range);
+		slicer.setPortConfig("foo", pConfig);
+		
+		List<OFMessage> outPackets = slicer.managedPacketOut(out);
+		assertTrue("OutPacket size is correct, expected 5 got " + outPackets.size(), outPackets.size() == 5);
+		//TODO: need to verify the packet outs are what we want		
+		
+		pkt.setVlanID((short)2000);
+		out.setPacketData(pkt.serialize());
+		outPackets = slicer.managedPacketOut(out);
+		assertTrue("Packet out was denied", outPackets.size() == 0);
+		
+	}
 	
 	
 }
