@@ -59,9 +59,6 @@ public class VLANRange {
 		
 		for(int i=0; i< vlans.length; i++){
 			this.setVlanAvail(vlans[i], status);
-			if(status){
-				this.available.add(vlans[i]);
-			}
 		}
 		
 		this.wildcard = this.allowVlanWildcard();
@@ -110,7 +107,9 @@ public class VLANRange {
 	}
 	
 	public Short[] getAvailableTags(){
-		return (Short[]) this.available.toArray();
+		Short[] avail = new Short[this.available.size()];
+		this.available.toArray(avail);
+		return avail;
 	}
 	
 	public boolean getVlanAvail(short vlanId) throws IllegalArgumentException{

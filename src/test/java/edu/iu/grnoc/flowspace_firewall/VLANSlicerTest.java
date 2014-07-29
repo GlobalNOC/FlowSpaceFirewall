@@ -553,4 +553,208 @@ public class VLANSlicerTest {
 		assertTrue(slicer.hasOverlap(otherSlicer));
 	}
 	
+	/*
+	 * tests managed tag mode for flow mods
+	 */
+	@Test
+	public void testManagedFlowMod(){
+		VLANSlicer otherSlicer = new VLANSlicer();
+		otherSlicer.setTagManagement(true);
+		pConfig = new PortConfig();
+		pConfig.setPortName("foo");
+		VLANRange range = new VLANRange();
+		range.setVlanAvail((short)101,true);
+		pConfig.setVLANRange(range);
+		otherSlicer.setPortConfig("foo", pConfig);
+		
+		pConfig2 = new PortConfig();
+		pConfig2.setPortName("foo2");
+		range = new VLANRange();
+		range.setVlanAvail((short)103,true);
+		pConfig2.setVLANRange(range);
+		otherSlicer.setPortConfig("foo2", pConfig2);
+
+		pConfig3 = new PortConfig();
+		pConfig3.setPortName("foo3");
+		range = new VLANRange();
+		range.setVlanAvail((short)104,true);
+		pConfig3.setVLANRange(range);
+		otherSlicer.setPortConfig("foo3", pConfig3);
+		
+		pConfig5 = new PortConfig();
+		pConfig5.setPortName("foo5");
+		range = new VLANRange();
+		range.setVlanAvail((short)106,true);
+		pConfig5.setVLANRange(range);
+		otherSlicer.setPortConfig("foo5", pConfig5);
+		
+		pConfig6 = new PortConfig();
+		pConfig6.setPortName("foo6");
+		range = new VLANRange();
+		range.setVlanAvail((short)107,true);
+		pConfig6.setVLANRange(range);
+		otherSlicer.setPortConfig("foo6", pConfig6);
+		
+		otherSlicer.setSwitch(sw);
+		
+		OFFlowMod flowMod = new OFFlowMod();
+		OFMatch match = new OFMatch();
+		match.setInputPort((short)3);
+		flowMod.setMatch(match);
+		List<OFAction> actions = new ArrayList<OFAction>();
+		OFActionOutput out = new OFActionOutput();
+		out.setPort((short)1);
+		actions.add(out);
+		flowMod.setActions(actions);
+		flowMod.setLength((short)(OFFlowMod.MINIMUM_LENGTH + OFActionOutput.MINIMUM_LENGTH));
+		List<OFFlowMod> managedFlows = otherSlicer.managedFlows(flowMod);
+		assertTrue(managedFlows.size() == 1);
+		OFFlowMod processedFlow = managedFlows.get(0);
+		assertTrue(processedFlow.getMatch().getDataLayerVirtualLan() == 104);
+		List<OFAction> processedActions = processedFlow.getActions();
+		assertTrue(processedActions.size() == 2);
+		assertTrue(processedActions.get(0).getType() == OFActionType.SET_VLAN_ID);
+		OFActionVirtualLanIdentifier set_vlan_vid = (OFActionVirtualLanIdentifier)processedActions.get(0);
+		assertTrue(set_vlan_vid.getVirtualLanIdentifier() == 101);
+	}
+	
+	/*
+	 * tests managed tag mode for flow mods
+	 */
+	@Test
+	public void testManagedFlowModWithTag(){
+		VLANSlicer otherSlicer = new VLANSlicer();
+		otherSlicer.setTagManagement(true);
+		pConfig = new PortConfig();
+		pConfig.setPortName("foo");
+		VLANRange range = new VLANRange();
+		range.setVlanAvail((short)101,true);
+		pConfig.setVLANRange(range);
+		otherSlicer.setPortConfig("foo", pConfig);
+		
+		pConfig2 = new PortConfig();
+		pConfig2.setPortName("foo2");
+		range = new VLANRange();
+		range.setVlanAvail((short)103,true);
+		pConfig2.setVLANRange(range);
+		otherSlicer.setPortConfig("foo2", pConfig2);
+
+		pConfig3 = new PortConfig();
+		pConfig3.setPortName("foo3");
+		range = new VLANRange();
+		range.setVlanAvail((short)104,true);
+		pConfig3.setVLANRange(range);
+		otherSlicer.setPortConfig("foo3", pConfig3);
+		
+		pConfig5 = new PortConfig();
+		pConfig5.setPortName("foo5");
+		range = new VLANRange();
+		range.setVlanAvail((short)106,true);
+		pConfig5.setVLANRange(range);
+		otherSlicer.setPortConfig("foo5", pConfig5);
+		
+		pConfig6 = new PortConfig();
+		pConfig6.setPortName("foo6");
+		range = new VLANRange();
+		range.setVlanAvail((short)107,true);
+		pConfig6.setVLANRange(range);
+		otherSlicer.setPortConfig("foo6", pConfig6);
+		
+		otherSlicer.setSwitch(sw);
+		
+		OFFlowMod flowMod = new OFFlowMod();
+		OFMatch match = new OFMatch();
+		match.setInputPort((short)3);
+		match.setDataLayerVirtualLan((short)200);
+		flowMod.setMatch(match);
+		List<OFAction> actions = new ArrayList<OFAction>();
+		OFActionOutput out = new OFActionOutput();
+		out.setPort((short)1);
+		actions.add(out);
+		flowMod.setActions(actions);
+		flowMod.setLength((short)(OFFlowMod.MINIMUM_LENGTH + OFActionOutput.MINIMUM_LENGTH));
+		List<OFFlowMod> managedFlows = otherSlicer.managedFlows(flowMod);
+		assertTrue(managedFlows.size() == 0);
+		
+		actions.clear();
+		OFActionVirtualLanIdentifier set_vlan_vid = new OFActionVirtualLanIdentifier();
+		set_vlan_vid.setVirtualLanIdentifier((short)100);
+		actions.add(set_vlan_vid);
+		actions.add(out);
+		flowMod.setActions(actions);
+		flowMod.getMatch().setDataLayerVirtualLan((short)0);
+		flowMod.setLength((short)(OFFlowMod.MINIMUM_LENGTH + OFActionOutput.MINIMUM_LENGTH + OFActionVirtualLanIdentifier.MINIMUM_LENGTH));
+		managedFlows = otherSlicer.managedFlows(flowMod);
+		assertTrue(managedFlows.size() == 0);
+	}
+	
+	/*
+	 * tests managed tag mode for flow mods
+	 */
+	@Test
+	public void testManagedFlowModWithNoPort(){
+		VLANSlicer otherSlicer = new VLANSlicer();
+		otherSlicer.setTagManagement(true);
+		pConfig = new PortConfig();
+		pConfig.setPortName("foo");
+		VLANRange range = new VLANRange();
+		range.setVlanAvail((short)101,true);
+		pConfig.setVLANRange(range);
+		otherSlicer.setPortConfig("foo", pConfig);
+		
+		pConfig2 = new PortConfig();
+		pConfig2.setPortName("foo2");
+		range = new VLANRange();
+		range.setVlanAvail((short)103,true);
+		pConfig2.setVLANRange(range);
+		otherSlicer.setPortConfig("foo2", pConfig2);
+
+		pConfig3 = new PortConfig();
+		pConfig3.setPortName("foo3");
+		range = new VLANRange();
+		range.setVlanAvail((short)104,true);
+		pConfig3.setVLANRange(range);
+		otherSlicer.setPortConfig("foo3", pConfig3);
+		
+		pConfig5 = new PortConfig();
+		pConfig5.setPortName("foo5");
+		range = new VLANRange();
+		range.setVlanAvail((short)106,true);
+		pConfig5.setVLANRange(range);
+		otherSlicer.setPortConfig("foo5", pConfig5);
+		
+		pConfig6 = new PortConfig();
+		pConfig6.setPortName("foo6");
+		range = new VLANRange();
+		range.setVlanAvail((short)107,true);
+		pConfig6.setVLANRange(range);
+		otherSlicer.setPortConfig("foo6", pConfig6);
+		
+		otherSlicer.setSwitch(sw);
+		
+		OFFlowMod flowMod = new OFFlowMod();
+		OFMatch match = new OFMatch();
+		match.setInputPort((short)4);
+		flowMod.setMatch(match);
+		List<OFAction> actions = new ArrayList<OFAction>();
+		OFActionOutput out = new OFActionOutput();
+		out.setPort((short)1);
+		actions.add(out);
+		flowMod.setActions(actions);
+		flowMod.setLength((short)(OFFlowMod.MINIMUM_LENGTH + OFActionOutput.MINIMUM_LENGTH));
+		List<OFFlowMod> managedFlows = otherSlicer.managedFlows(flowMod);
+		assertTrue(managedFlows.size() == 0);
+		
+		flowMod.getMatch().setInputPort((short)3);
+		out.setPort((short)4);
+		actions.clear();
+		actions.add(out);
+		flowMod.setActions(actions);
+		managedFlows = otherSlicer.managedFlows(flowMod);
+		assertTrue(managedFlows.size() == 0);
+	}
+	
+	
+	
+	
 }

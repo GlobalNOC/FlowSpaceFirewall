@@ -524,7 +524,15 @@ public class VLANSlicer implements Slicer{
 					}
 				}
 			}else{
-				match.setDataLayerVirtualLan((short)this.getPortConfig(match.getInputPort()).getVlanRange().getAvailableTags()[0]);
+				short vlanId;
+				PortConfig pConfig = this.getPortConfig(match.getInputPort());
+				if(pConfig == null){
+					flows.clear();
+					return flows;
+				}else{
+					vlanId = (short)pConfig.getVlanRange().getAvailableTags()[0];
+				}
+				match.setDataLayerVirtualLan(vlanId);
 				flowMod.setMatch(match);
 				//process the actions and add setVlanVid actions if necessary
 				flows = this.managedFlowActions(flowMod);
@@ -546,8 +554,14 @@ public class VLANSlicer implements Slicer{
 			switch(act.getType()){
 				case OUTPUT:
 					OFActionOutput out = (OFActionOutput)act;
-					//probably need to do some vlan tag manipulation first					
-					short vlanTag = (short)this.getPortConfig(out.getPort()).getVlanRange().getAvailableTags()[0];
+					//probably need to do some vlan tag manipulation first			
+					short vlanTag;
+					PortConfig pConfig = this.getPortConfig(out.getPort());
+					if(pConfig == null){
+						return newFlows;
+					}else{
+						vlanTag = (short)pConfig.getVlanRange().getAvailableTags()[0];
+					}
 					if(vlanTag == -1){
 						//do a strip vlan tag
 						OFActionStripVirtualLan strip_vlan_vid = new OFActionStripVirtualLan();

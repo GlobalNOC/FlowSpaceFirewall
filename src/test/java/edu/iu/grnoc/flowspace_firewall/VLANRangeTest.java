@@ -22,6 +22,8 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
+import ch.qos.logback.core.ConsoleAppender;
+
 public class VLANRangeTest {
 	
 	@Rule
@@ -75,6 +77,13 @@ public class VLANRangeTest {
 		assertTrue("allowed vlan 150", range.getVlanAvail((short)150));
 		assertTrue("allowed vlan -1", range.getVlanAvail((short)-1));
 		
+		Short[] avail = range.getAvailableTags();
+		
+		assertTrue(avail.length == 10);
+		assertTrue(avail[0] == 1);
+		assertTrue(avail[1] == 150);
+		assertTrue(avail[2] == 2);
+		assertTrue(avail[3] == 4);
 	}
 	
 	/**
@@ -108,6 +117,13 @@ public class VLANRangeTest {
 		assertFalse("not allowed vlan 150", range.getVlanAvail((short)150));
 		assertFalse("not allowed vlan -1", range.getVlanAvail((short)-1));
 		
+		Short[] avail = range.getAvailableTags();
+		assertTrue(avail.length == 4086);
+		assertTrue(avail[0] == 3);
+		assertTrue(avail[1] == 6);
+		assertTrue(avail[2] == 7);
+		assertTrue(avail[3] == 8);
+		
 	}
 	
 	/**
@@ -133,6 +149,16 @@ public class VLANRangeTest {
 		assertTrue("allowed vlan 100", range.getVlanAvail((short)100));
 		assertTrue("allowed vlan 4000", range.getVlanAvail((short)4000));
 		assertTrue("allowed vlan -1", range.getVlanAvail((short)-1));
+		
+		Short[] avail = range.getAvailableTags();
+		assertTrue(avail.length == 7);
+		assertTrue(avail[0] == 1);
+		assertTrue(avail[1] == 2);
+		assertTrue(avail[2] == 4);
+		assertTrue(avail[3] == 5);
+		assertTrue(avail[4] == 100);
+		assertTrue(avail[5] == 4000);
+		assertTrue(avail[6] == -1);
 	}
 	
 	/**
