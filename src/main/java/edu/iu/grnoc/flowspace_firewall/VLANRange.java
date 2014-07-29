@@ -30,7 +30,7 @@ public class VLANRange {
 	public static final short UNTAGGED = -1;
 	
 	private static final Logger log = LoggerFactory.getLogger(VLANRange.class);
-	private List<Short> available;
+	private List<Short> available = new ArrayList<Short>();
 	//these prevent us from having to loop through
 	//and determine if the port allows a wildcard
 	private boolean wildcard = false;
@@ -52,7 +52,7 @@ public class VLANRange {
 		for(short i=MIN_VLAN; i<=MAX_VLAN; i++){
 			this.vlans.put(i,!status);
 			if(!status){
-				this.available.add(vlans[i]);
+				this.available.add(i);
 			}
 		}
 		this.vlans.put(UNTAGGED, false);
@@ -81,7 +81,7 @@ public class VLANRange {
 			this.available.add(vlanId);
 		}else{
 			if(this.available.contains(vlanId)){
-				this.available.remove(vlanId);
+				this.available.remove(this.available.indexOf(vlanId));
 			}
 		}
 		this.wildcard = this.allowVlanWildcard();
