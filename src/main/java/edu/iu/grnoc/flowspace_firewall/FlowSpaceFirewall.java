@@ -359,6 +359,7 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 				logger.debug("slice disabled... skipping");
 			}else{
 				try{
+					logger.debug("attempting to send " + msg.toString() + " to slice: " + p.getSlicer().getSliceName() + " from switch: " + sw.getStringId());
 					p.toController(msg,cntx);
 				}catch (Exception e){
 					//don't die please... just keep going and error the stack trace
@@ -457,6 +458,16 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 		return false;
 	}
 
+	public Proxy getProxy(Long dpid, String sliceName){
+		List<Proxy> proxies = this.controllerConnector.getSwitchProxies(dpid);
+		for(Proxy p: proxies){
+			if(p.getSlicer().getSliceName().equals(sliceName)){
+				return p;
+			}
+		}
+		return null;
+	}
+	
 /*	@Override
 	public List<OFStatistics> getSliceFlows(String sliceName, Long dpid) {
 		return this.statsCacher.getSlicedFlowStats(dpid, sliceName));

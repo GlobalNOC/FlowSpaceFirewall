@@ -42,6 +42,7 @@ import org.openflow.protocol.OFStatisticsRequest;
 import org.openflow.protocol.action.OFAction;
 import org.openflow.protocol.action.OFActionOutput;
 import org.openflow.protocol.action.OFActionType;
+import org.openflow.protocol.factory.MessageParseException;
 import org.openflow.protocol.statistics.OFAggregateStatisticsReply;
 import org.openflow.protocol.statistics.OFAggregateStatisticsRequest;
 import org.openflow.protocol.statistics.OFDescriptionStatistics;
@@ -133,6 +134,7 @@ public class Proxy {
 			flow.setLengthU(OFFlowMod.MINIMUM_LENGTH + length);
 			flow.setCommand(OFFlowMod.OFPFC_DELETE);
 			deletes.add(flow);
+			this.flowCount = this.flowCount - 1;
 		}
 		try {
 			this.mySwitch.write(deletes, null);
@@ -162,6 +164,7 @@ public class Proxy {
 				.getContext("handler").getHandler();
 		ofcch.setSwitch(mySwitch);
 		ofcch.setProxy(this);
+
 		myController.connect(mySlicer.getControllerAddress());
 	}
 
@@ -273,6 +276,11 @@ public class Proxy {
 		return this.flowCount;
 	}
 	
+	public void setFlowCount(int totalFlows){
+		log.error("set flow count to: " + totalFlows + " for slice " + this.getSlicer().getSliceName() + " " + this.getSwitch().getStringId());
+		this.flowCount = totalFlows;
+	}
+	
 	/**
 	 * send an error back with a matching Xid to the controller
 	 * @param msg
@@ -294,14 +302,26 @@ public class Proxy {
 	}
 	
 	private void processFlowMod(OFMessage msg, FloodlightContext cntx){
-		List <OFFlowMod> flows = this.mySlicer.allowedFlows((OFFlowMod)msg);
-		if(flows.size() == 0){
-			//really we need to send a perm error
-			log.error("Slice: " + this.mySlicer.getSliceName() + ":" + this.mySwitch.getStringId() + " denied flow: " + ((OFFlowMod)msg).toString());
-			this.sendError((OFMessage)msg);
-			return;
+		List <OFFlowMod> flows;
+		if(this.mySlicer.getTagManagement()){
+			flows = this.mySlicer.managedFlows((OFFlowMod)msg);
+			if(flows.size() ==0){
+				log.error("Slice: " + this.mySlicer.getSliceName() + ":" + this.mySwitch.getStringId() + " denied flow: " + ((OFFlowMod)msg).toString());
+				this.sendError((OFMessage)msg);
+				return;
+			}else{
+				log.info("Slice: " + this.mySlicer.getSliceName() + ":" + this.mySwitch.getStringId() + " Sent Flow: " + ((OFFlowMod)msg).toString());
+			}
 		}else{
-			log.info("Slice: " + this.mySlicer.getSliceName() + ":" + this.mySwitch.getStringId() + " Sent Flow: " + ((OFFlowMod)msg).toString());
+			flows = this.mySlicer.allowedFlows((OFFlowMod)msg);
+			if(flows.size() == 0){
+				//really we need to send a perm error
+				log.error("Slice: " + this.mySlicer.getSliceName() + ":" + this.mySwitch.getStringId() + " denied flow: " + ((OFFlowMod)msg).toString());
+				this.sendError((OFMessage)msg);
+				return;
+			}else{
+				log.info("Slice: " + this.mySlicer.getSliceName() + ":" + this.mySwitch.getStringId() + " Sent Flow: " + ((OFFlowMod)msg).toString());
+			}
 		}
 		List <OFMessage> messages = new ArrayList<OFMessage>();
 		//count the total number of flowMods
@@ -724,8 +744,8 @@ public class Proxy {
 				break;
 			}else{
 				log.error("Packet in Rate for Slice: " +
-			this.getSlicer().getSliceName() + ":" + this.getSwitch().getStringId() +
-			" has passed the packet in rate limit Disabling slice!!!!");
+							this.getSlicer().getSliceName() + ":" + this.getSwitch().getStringId() +
+							" has passed the packet in rate limit Disabling slice!!!!");
 				this.setAdminStatus(false);
 				return;
 			}
@@ -758,6 +778,39 @@ public class Proxy {
 			if(xidMap.containsKey(xid)){
 				msg.setXid(xidMap.get(xid));
 				xidMap.remove(xid);
+				OFError error = (OFError) msg;
+				OFMessage error_msg = null;
+				try{
+					error_msg = error.getOffendingMsg();
+				} catch (MessageParseException e) {
+					// TODO Auto-generated catch block
+					log.error("Unable to parse error's offending message");
+					break;
+				}
+				if(error_msg == null){
+					break;
+				}
+				switch(error_msg.getType()){
+					case FLOW_MOD:
+						OFFlowMod mod = (OFFlowMod) error_msg;
+						switch(mod.getCommand()){
+						case OFFlowMod.OFPFC_ADD:
+							this.flowCount--;
+							break;
+						case OFFlowMod.OFPFC_DELETE:
+							this.flowCount++;
+							break;
+						case OFFlowMod.OFPFC_DELETE_STRICT:
+							this.flowCount++;
+							break;
+						default:
+							break;
+						}
+						break;
+					default:
+						break;
+					}
+
 			}else{
 				return;
 			}
@@ -770,6 +823,7 @@ public class Proxy {
 			if(flows.size() == 0){
 				return;
 			}
+			this.flowCount--;
 			break;
 		case BARRIER_REPLY:
 			if(xidMap.containsKey(xid)){	

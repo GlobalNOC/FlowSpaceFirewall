@@ -86,6 +86,7 @@ public class FlowStatCache {
 			if(slicedCache.containsKey(switchId)){
 				HashMap<String, List<OFStatistics>> slicedStats = slicedCache.get(switchId);
 				slicedStats.put(slice.getSliceName(), FlowStatSlicer.SliceStats(slice,stats));
+				this.parent.getProxy(switchId, slice.getSliceName()).setFlowCount(slicedStats.get(slice.getSliceName()).size());
 			}
 		}
 	}
