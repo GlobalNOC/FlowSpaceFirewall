@@ -54,6 +54,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import net.floodlightcontroller.core.*;
+import net.floodlightcontroller.packet.Ethernet;
 
 /**
  * Proxies all requests to and from the
@@ -741,6 +742,17 @@ public class Proxy {
 			if(this.packetInRate.okToProcess()){
 				//add the packet buffer id to our buffer id list
 				this.mySlicer.addBufferId(pcktIn.getBufferId(), pcktIn.getPacketData());
+				//we add the packet with the vlan id on it but send a modified packet in to the controller
+				//without the vlan tag
+				if(this.mySlicer.getTagManagement()){
+					log.debug("Processing Packet in for Managed Tag mode");
+					Ethernet newPkt = new Ethernet();
+					byte[] pktData = pcktIn.getPacketData();
+					newPkt.deserialize(pktData,0,pktData.length);
+					newPkt.setEtherType(newPkt.getEtherType());
+					newPkt.setVlanID(Ethernet.VLAN_UNTAGGED);
+					pcktIn.setPacketData(newPkt.serialize());
+				}
 				break;
 			}else{
 				log.error("Packet in Rate for Slice: " +
