@@ -587,7 +587,9 @@ public class Proxy {
 			OFFlowStatisticsReply stat = (OFFlowStatisticsReply) it2.next();
 			length += stat.getLength();
 			counter++;
-			
+			if(this.mySlicer.getTagManagement()){
+				stat.getMatch().setDataLayerVirtualLan((short)-1);
+			}
 			limitedResults.add(stat);
 			
 			if(counter >= 10 || it2.hasNext() == false){
