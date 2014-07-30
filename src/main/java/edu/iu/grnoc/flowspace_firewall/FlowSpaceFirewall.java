@@ -359,6 +359,7 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 				logger.debug("slice disabled... skipping");
 			}else{
 				try{
+					logger.debug("attempting to send " + msg.toString() + " to slice: " + p.getSlicer().getSliceName() + " from switch: " + sw.getStringId());
 					p.toController(msg,cntx);
 				}catch (Exception e){
 					//don't die please... just keep going and error the stack trace
@@ -398,12 +399,18 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
         logger = LoggerFactory.getLogger(FlowSpaceFirewall.class);
         restApi = context.getServiceImpl(IRestApiService.class);
 		//parses the config
+        String configFile = "/etc/fsfw/fsfw.xml";
+        Map<String,String> config = context.getConfigParams(this);
+        if(config.containsKey("configFile")){
+        	configFile = config.get("configFile");
+        }
+        
 		try{
-			this.slices = ConfigParser.parseConfig("/etc/fsfw/fsfw.xml");
+			this.slices = ConfigParser.parseConfig(configFile);
 		}catch (SAXException e){
-			logger.error("Problems parsing /etc/fsfw/fsfw.xml: " + e.getMessage());
+			logger.error("Problems parsing " + configFile + ": " + e.getMessage());
 		}catch (IOException e){
-			logger.error("Problems parsing /etc/fsfw/fsfw.xml: " + e.getMessage());
+			logger.error("Problems parsing " + configFile + ": " + e.getMessage());
 		} catch(ParserConfigurationException e){
 			logger.error(e.getMessage());
 		} catch(XPathExpressionException e){
@@ -457,6 +464,16 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 		return false;
 	}
 
+	public Proxy getProxy(Long dpid, String sliceName){
+		List<Proxy> proxies = this.controllerConnector.getSwitchProxies(dpid);
+		for(Proxy p: proxies){
+			if(p.getSlicer().getSliceName().equals(sliceName)){
+				return p;
+			}
+		}
+		return null;
+	}
+	
 /*	@Override
 	public List<OFStatistics> getSliceFlows(String sliceName, Long dpid) {
 		return this.statsCacher.getSlicedFlowStats(dpid, sliceName));

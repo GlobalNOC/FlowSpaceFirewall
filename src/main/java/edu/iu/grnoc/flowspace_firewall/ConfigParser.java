@@ -148,6 +148,14 @@ public final class ConfigParser {
 	        				log.debug("Processing Slice for Switch: " + switchConfig.getAttributes().getNamedItem("name"));
 	        				Slicer slicer = new VLANSlicer();
 	        				slicer.setSliceName(sliceName);
+	        				boolean flush_on_connect = Boolean.parseBoolean(switchConfig.getAttributes().getNamedItem("flush_rules_on_connect").getTextContent());
+	        				Node tag_mgmt = switchConfig.getAttributes().getNamedItem("tag_management");
+	        				boolean tag_management = false;
+	        				if(tag_mgmt != null){
+	        					tag_management = Boolean.parseBoolean(switchConfig.getAttributes().getNamedItem("tag_management").getTextContent());
+	        				}
+	        				slicer.setTagManagement(tag_management);
+	        				slicer.setFlushRulesOnConnect(flush_on_connect);
 	        				int numberOfFlows = Integer.parseInt(switchConfig.getAttributes().getNamedItem("max_flows").getTextContent());
 	        				slicer.setMaxFlows(numberOfFlows);      				
 	        				int flowRate = Integer.parseInt(switchConfig.getAttributes().getNamedItem("flow_rate").getTextContent());
@@ -168,10 +176,21 @@ public final class ConfigParser {
 		        				NodeList ranges = port.getChildNodes();
 		        				VLANRange myRange = new VLANRange();
 		        				//for every range element add to our vlan range
+		        				if(tag_management == true && ranges.getLength() > 1){
+		        					log.error("Tag Management can only be used on a single VLAN, please fix config and try again");
+		        					newSlices.clear();
+		        					return newSlices;
+		        				}
+		        				
 		        				for(int l=0; l < ranges.getLength(); l++){
 		        					Node range = ranges.item(l);
 		        					if(!range.getNodeName().equals("range")){
 		        						continue;
+		        					}
+		        					if(tag_management && Short.parseShort(range.getAttributes().getNamedItem("start").getTextContent()) != Short.parseShort(range.getAttributes().getNamedItem("end").getTextContent())){
+		        						log.error("Tag Mangement can only be used on a single VLAN, please fix config and try again");
+		        						newSlices.clear();
+		        						return newSlices;
 		        					}
 		        					for(short m = Short.parseShort(range.getAttributes().getNamedItem("start").getTextContent()); 
 		        							m <= Short.parseShort(range.getAttributes().getNamedItem("end").getTextContent()); m++){
