@@ -399,12 +399,18 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
         logger = LoggerFactory.getLogger(FlowSpaceFirewall.class);
         restApi = context.getServiceImpl(IRestApiService.class);
 		//parses the config
+        String configFile = "/etc/fsfw/fsfw.xml";
+        Map<String,String> config = context.getConfigParams(this);
+        if(config.containsKey("configFile")){
+        	configFile = config.get("configFile");
+        }
+        
 		try{
-			this.slices = ConfigParser.parseConfig("/etc/fsfw/fsfw.xml");
+			this.slices = ConfigParser.parseConfig(configFile);
 		}catch (SAXException e){
-			logger.error("Problems parsing /etc/fsfw/fsfw.xml: " + e.getMessage());
+			logger.error("Problems parsing " + configFile + ": " + e.getMessage());
 		}catch (IOException e){
-			logger.error("Problems parsing /etc/fsfw/fsfw.xml: " + e.getMessage());
+			logger.error("Problems parsing " + configFile + ": " + e.getMessage());
 		} catch(ParserConfigurationException e){
 			logger.error(e.getMessage());
 		} catch(XPathExpressionException e){

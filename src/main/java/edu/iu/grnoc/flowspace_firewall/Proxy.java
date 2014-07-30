@@ -54,6 +54,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import net.floodlightcontroller.core.*;
+import net.floodlightcontroller.packet.Ethernet;
 
 /**
  * Proxies all requests to and from the
@@ -302,14 +303,26 @@ public class Proxy {
 	}
 	
 	private void processFlowMod(OFMessage msg, FloodlightContext cntx){
-		List <OFFlowMod> flows = this.mySlicer.allowedFlows((OFFlowMod)msg);
-		if(flows.size() == 0){
-			//really we need to send a perm error
-			log.error("Slice: " + this.mySlicer.getSliceName() + ":" + this.mySwitch.getStringId() + " denied flow: " + ((OFFlowMod)msg).toString());
-			this.sendError((OFMessage)msg);
-			return;
+		List <OFFlowMod> flows;
+		if(this.mySlicer.getTagManagement()){
+			flows = this.mySlicer.managedFlows((OFFlowMod)msg);
+			if(flows.size() ==0){
+				log.error("Slice: " + this.mySlicer.getSliceName() + ":" + this.mySwitch.getStringId() + " denied flow: " + ((OFFlowMod)msg).toString());
+				this.sendError((OFMessage)msg);
+				return;
+			}else{
+				log.info("Slice: " + this.mySlicer.getSliceName() + ":" + this.mySwitch.getStringId() + " Sent Flow: " + ((OFFlowMod)msg).toString());
+			}
 		}else{
-			log.info("Slice: " + this.mySlicer.getSliceName() + ":" + this.mySwitch.getStringId() + " Sent Flow: " + ((OFFlowMod)msg).toString());
+			flows = this.mySlicer.allowedFlows((OFFlowMod)msg);
+			if(flows.size() == 0){
+				//really we need to send a perm error
+				log.error("Slice: " + this.mySlicer.getSliceName() + ":" + this.mySwitch.getStringId() + " denied flow: " + ((OFFlowMod)msg).toString());
+				this.sendError((OFMessage)msg);
+				return;
+			}else{
+				log.info("Slice: " + this.mySlicer.getSliceName() + ":" + this.mySwitch.getStringId() + " Sent Flow: " + ((OFFlowMod)msg).toString());
+			}
 		}
 		List <OFMessage> messages = new ArrayList<OFMessage>();
 		//count the total number of flowMods
@@ -574,7 +587,9 @@ public class Proxy {
 			OFFlowStatisticsReply stat = (OFFlowStatisticsReply) it2.next();
 			length += stat.getLength();
 			counter++;
-			
+			if(this.mySlicer.getTagManagement()){
+				stat.getMatch().setDataLayerVirtualLan((short)-1);
+			}
 			limitedResults.add(stat);
 			
 			if(counter >= 10 || it2.hasNext() == false){
@@ -729,6 +744,17 @@ public class Proxy {
 			if(this.packetInRate.okToProcess()){
 				//add the packet buffer id to our buffer id list
 				this.mySlicer.addBufferId(pcktIn.getBufferId(), pcktIn.getPacketData());
+				//we add the packet with the vlan id on it but send a modified packet in to the controller
+				//without the vlan tag
+				if(this.mySlicer.getTagManagement()){
+					log.debug("Processing Packet in for Managed Tag mode");
+					Ethernet newPkt = new Ethernet();
+					byte[] pktData = pcktIn.getPacketData();
+					newPkt.deserialize(pktData,0,pktData.length);
+					newPkt.setEtherType(newPkt.getEtherType());
+					newPkt.setVlanID(Ethernet.VLAN_UNTAGGED);
+					pcktIn.setPacketData(newPkt.serialize());
+				}
 				break;
 			}else{
 				log.error("Packet in Rate for Slice: " +

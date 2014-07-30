@@ -38,6 +38,7 @@ import org.openflow.protocol.action.OFAction;
 import org.openflow.protocol.action.OFActionOutput;
 import org.openflow.protocol.action.OFActionType;
 import org.openflow.protocol.action.OFActionVirtualLanIdentifier;
+import org.openflow.protocol.action.OFActionStripVirtualLan;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -60,16 +61,19 @@ public class VLANSlicer implements Slicer{
 	private int packetInRate;
 	private Map<Integer, byte[]> bufferIds;
 	private boolean adminState;
+	private boolean flushOnConnect;
+	private boolean tagMgmt;
 	
 	private static final Logger log = LoggerFactory.getLogger(VLANSlicer.class);
 	
 	public VLANSlicer(HashMap <String, PortConfig> ports, 
-			InetSocketAddress controllerAddress, int rate, String name){
+			InetSocketAddress controllerAddress, int rate, String name, boolean flushOnConnect, boolean tagMgmt){
 		myRateTracker = new RateTracker(10,100);
 		portList = ports;
 		this.name = name;
 		this.adminState = true;
-		
+		this.flushOnConnect = flushOnConnect;
+		this.tagMgmt = tagMgmt;
 		if(controllerAddress == null){
 			//not allowed
 		}
@@ -98,6 +102,8 @@ public class VLANSlicer implements Slicer{
 		portList = new HashMap<String,PortConfig>();
 		name = "";
 		this.adminState = true;
+		this.flushOnConnect = false;
+		this.tagMgmt = false;
 		this.bufferIds = Collections.synchronizedMap(
 				new LinkedHashMap<Integer,byte[]>(){
 					/**
@@ -299,7 +305,6 @@ public class VLANSlicer implements Slicer{
 							try {
 								newAct = (OFActionOutput) action.clone();
 							} catch (CloneNotSupportedException e) {
-								// TODO Auto-generated catch block
 								//log.error(e.printStackTrace());
 								log.error("Unable to clone the output action");
 								log.error(e.getMessage());
@@ -327,7 +332,6 @@ public class VLANSlicer implements Slicer{
 		try {
 			newFlow = flowMod.clone();
 		} catch (CloneNotSupportedException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 			return null;
 		}
@@ -350,6 +354,126 @@ public class VLANSlicer implements Slicer{
 	
 	public int getMaxFlowRate(){
 		return this.myRateTracker.getMaxRate();
+	}
+	
+	
+	public List<OFMessage> managedPacketOut(OFPacketOut outPacket){
+		List <OFAction> newActions = new ArrayList<OFAction>();
+		List <OFAction> actions = outPacket.getActions();
+		List <OFMessage> packets = new ArrayList<OFMessage>();
+		Iterator <OFAction> it = actions.iterator();
+		OFMatch match = new OFMatch();
+		if(outPacket.getPacketData().length == 0 && outPacket.getBufferId() != 0){
+			//look at the buffer id and see if it matches one we have in our 
+			//buffer cache
+			int bufferId = outPacket.getBufferId();
+			if(this.bufferIds.containsKey(bufferId)){
+				outPacket.setBufferId(OFPacketOut.BUFFER_ID_NONE);
+				outPacket.setPacketData(this.bufferIds.get(bufferId));
+				outPacket.setLengthU(outPacket.getLengthU() + this.bufferIds.get(bufferId).length);
+			}else{
+				return packets;
+			}
+		}
+		try{
+			match.loadFromPacket(outPacket.getPacketData(),(short)0);
+		}
+		catch(Exception e){
+			log.error("Loading Match from packet failed: " + e.getMessage());
+			packets.clear();
+			return packets;
+		}
+		log.error("VLAN ID: " + match.getDataLayerVirtualLan());
+		if(match.getDataLayerVirtualLan() != -1){
+			log.error("Packet has VID Set");
+			packets.clear();
+			return packets;
+		}
+		while(it.hasNext()){
+			OFAction action = it.next();
+			//loop through the actions
+			switch(action.getType()){
+				case SET_VLAN_ID:
+					//denied!
+					packets.clear();
+					return packets;
+				case OUTPUT:
+					//if its an output, verify that the 
+					OFActionOutput output = (OFActionOutput)action;
+					if(output.getPort() == OFPort.OFPP_ALL.getValue()){
+						log.info("output to ALL expanding");
+						
+						for(Map.Entry<String, PortConfig> port : this.portList.entrySet()){
+							PortConfig myPortCfg = this.getPortConfig(port.getValue().getPortId());
+							if(myPortCfg == null){
+								log.info("output packet disallowed to port:" + port.getValue().getPortId());
+								packets.clear();
+								return packets;
+							}
+							List<OFAction> actualActions = new ArrayList<OFAction>();
+							actualActions.addAll(newActions);
+							OFPacketOut newOut = this.clonePacketOut(outPacket);
+							OFActionOutput newOutput = new OFActionOutput();
+							newOutput.setMaxLength(Short.MAX_VALUE);
+							newOutput.setType(OFActionType.OUTPUT);
+							newOutput.setLength((short)OFActionOutput.MINIMUM_LENGTH);
+							newOutput.setPort(port.getValue().getPortId());
+							OFActionVirtualLanIdentifier set_vlan_vid = new OFActionVirtualLanIdentifier();
+							set_vlan_vid.setVirtualLanIdentifier(myPortCfg.getVlanRange().getAvailableTags()[0]);
+							actualActions.add(set_vlan_vid);
+							actualActions.add(newOutput);
+							newOut.setActions(actualActions);
+							int size = 0;
+							for(OFAction act : actualActions){
+								size = size + act.getLengthU();
+							}
+							newOut.setActionsLength((short)size);
+							packets.add(newOut);
+						}
+						
+					}else if(output.getPort() == OFPort.OFPP_FLOOD.getValue()){
+						log.info("output to flood not supported");
+						packets.clear();
+						return packets;
+					}else{
+						PortConfig myPortCfg = this.getPortConfig(output.getPort());
+						if(myPortCfg == null){
+							log.info("output packet disallowed to port:" + output.getPort());
+							packets.clear();
+							return packets;
+						}
+						
+						//find the vlantag it should be and put the vlan tag on						
+						log.error("Simple case, single output and it was allowed");
+						List<OFAction> actualActions = new ArrayList<OFAction>();
+						actualActions.addAll(newActions);
+						OFPacketOut newOut = this.clonePacketOut(outPacket);
+						OFActionVirtualLanIdentifier set_vlan_vid = new OFActionVirtualLanIdentifier();
+						set_vlan_vid.setVirtualLanIdentifier(myPortCfg.getVlanRange().getAvailableTags()[0]);
+						actualActions.add(set_vlan_vid);
+						actualActions.add(output);
+						newOut.setActions(actualActions);
+						int size = 0;
+						for(OFAction act : actualActions){
+							size = size + act.getLengthU();
+						}
+						newOut.setActionsLength((short)size);
+						
+						packets.add(newOut);
+					}
+					break;
+				case STRIP_VLAN:
+					//denied
+					packets.clear();
+					return packets;
+				default:
+					newActions.add(action);
+					break;
+			}
+		}
+		log.debug("OutPackets: " + packets.toString());
+		return packets;
+		
 	}
 	
 	/**
@@ -482,6 +606,115 @@ public class VLANSlicer implements Slicer{
 		}
 		log.debug("OutPackets: " + packets.toString());
 		return packets;
+	}
+	
+	public List <OFFlowMod> managedFlows(OFFlowMod flowMod){
+		log.debug("Attempting to put flow: " + flowMod.toString() + " into flowspace");
+		List<OFFlowMod> flows = new ArrayList<OFFlowMod>();
+		OFMatch match = flowMod.getMatch();
+		
+		if(match == null){
+			return flows;
+		}
+		
+		if(match.getDataLayerVirtualLan() == 0 || match.getDataLayerVirtualLan() == -1){
+			//untagged or no tag...
+			if(match.getInputPort() == 0){
+				//needs to expand it out unless has access to all ports
+				Iterator<Entry<String, PortConfig>> it = this.portList.entrySet().iterator();
+				while(it.hasNext()){
+					Map.Entry<String, PortConfig> port = (Entry<String, PortConfig>) it.next();
+					if(port.getValue().getPortId() != 0){
+						try{
+							//why might this not be cloneable?  ahh... might not be clonable if there is no action!!
+							OFFlowMod newFlow = flowMod.clone();
+							newFlow.getMatch().setInputPort(port.getValue().getPortId());
+							newFlow.getMatch().setDataLayerVirtualLan(port.getValue().getVlanRange().getAvailableTags()[0]);
+							List<OFFlowMod> newFlows = this.managedFlowActions(newFlow);
+							for( OFFlowMod flow : newFlows){
+								flows.add(flow);
+							}
+						}catch (CloneNotSupportedException e){
+							flows.clear();
+							return flows;
+						}catch (Exception e){
+							flows.clear();
+							return flows;
+						}
+					}
+				}
+			}else{
+				short vlanId;
+				PortConfig pConfig = this.getPortConfig(match.getInputPort());
+				if(pConfig == null){
+					flows.clear();
+					return flows;
+				}else{
+					vlanId = (short)pConfig.getVlanRange().getAvailableTags()[0];
+				}
+				match.setDataLayerVirtualLan(vlanId);
+				flowMod.setMatch(match);
+				//process the actions and add setVlanVid actions if necessary
+				flows = this.managedFlowActions(flowMod);
+			}
+		}else{
+			log.debug("denied Flow: " + flowMod.toString());
+			return flows;
+		}
+		
+		return flows;
+	}
+	
+	public List<OFFlowMod> managedFlowActions(OFFlowMod flowMod){
+		List<OFFlowMod> newFlows = new ArrayList<OFFlowMod>();
+		List<OFAction> actions = flowMod.getActions();
+		List<OFAction> newActions = new ArrayList<OFAction>();
+		short additional_length = 0;
+		for(OFAction act : actions){
+			switch(act.getType()){
+				case OUTPUT:
+					OFActionOutput out = (OFActionOutput)act;
+					//probably need to do some vlan tag manipulation first			
+					short vlanTag;
+					PortConfig pConfig = this.getPortConfig(out.getPort());
+					if(pConfig == null){
+						return newFlows;
+					}else{
+						vlanTag = (short)pConfig.getVlanRange().getAvailableTags()[0];
+					}
+					if(vlanTag == -1){
+						//do a strip vlan tag
+						OFActionStripVirtualLan strip_vlan_vid = new OFActionStripVirtualLan();
+						newActions.add(strip_vlan_vid);
+						additional_length += strip_vlan_vid.getLength();
+					}else{
+						//set the vlan id
+						OFActionVirtualLanIdentifier set_vlan_vid = new OFActionVirtualLanIdentifier();
+						set_vlan_vid.setVirtualLanIdentifier(vlanTag);
+						newActions.add(set_vlan_vid);
+						additional_length += set_vlan_vid.getLength();
+					}
+					newActions.add(out);
+					break;
+				case SET_VLAN_ID:
+					//sorry you are DENIED!!
+					return newFlows;
+				case STRIP_VLAN:
+					//sorry you are DENIED!!
+					return newFlows;
+				default:
+					newActions.add(act);
+					break;
+			}
+			
+		}
+		OFFlowMod newFlow = new OFFlowMod();
+		newFlow.setMatch(flowMod.getMatch());
+		newFlow.setActions(newActions);
+		//need to set the length
+		newFlow.setLength((short)(flowMod.getLength() + additional_length));
+		newFlows.add(newFlow);		
+		return newFlows;
 	}
 	
 	/**
@@ -785,4 +1018,21 @@ public class VLANSlicer implements Slicer{
 	public void addBufferId(int bufferId, byte[] packetData){
 		this.bufferIds.put(bufferId, packetData);
 	}
+	
+	public void setFlushRulesOnConnect(boolean flush_on_connect){
+		this.flushOnConnect = flush_on_connect;
+	}
+
+	public boolean getFlushRulesOnConnect(){
+		return this.flushOnConnect;
+	}
+	
+	public void setTagManagement(boolean tagMgmt){
+		this.tagMgmt = tagMgmt;
+	}
+	
+	public boolean getTagManagement(){
+		return this.tagMgmt;
+	}
 }
+

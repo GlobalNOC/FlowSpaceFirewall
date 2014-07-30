@@ -78,6 +78,7 @@ public class FlowSpaceFirewallTest extends FloodlightTestCase{
         super.setUp();
         FloodlightModuleContext cntx = new FloodlightModuleContext();
         tFSFW = new TestFlowSpaceFirewall();
+        cntx.addConfigParam(tFSFW, "configFile", "src/test/resources/good_config.xml");
         MockThreadPoolService tp = new MockThreadPoolService();
         RestApiServer restApi = new RestApiServer();
         cntx.addService(IRestApiService.class, restApi);
@@ -102,15 +103,8 @@ public class FlowSpaceFirewallTest extends FloodlightTestCase{
     }
     
     @Test
-    public void basicTest(){
-    	assertTrue(true);
-    	assertNull(null);
-    }
-    
-    @Test
-	public void testConnect(){
-    	assertTrue(true);
-    	assertNull(null);
+    public void testInstantiate(){
+    	assertTrue(getFSFW() instanceof FlowSpaceFirewall );
     }
         
 }
