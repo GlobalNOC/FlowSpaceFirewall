@@ -10,7 +10,6 @@ import java.util.HashMap;
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.xpath.XPathExpressionException;
 
-import net.floodlightcontroller.core.IOFSwitch;
 
 import org.junit.Before;
 import org.junit.Rule;
@@ -18,7 +17,6 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.xml.sax.SAXException;
 
-import static org.easymock.EasyMock.createMock;
 import static org.junit.Assert.*;
 
 public class ConfigParserTest {

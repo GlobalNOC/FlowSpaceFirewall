@@ -22,8 +22,6 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
-import ch.qos.logback.core.ConsoleAppender;
-
 public class VLANRangeTest {
 	
 	@Rule
