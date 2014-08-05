@@ -63,17 +63,19 @@ public class VLANSlicer implements Slicer{
 	private boolean adminState;
 	private boolean flushOnConnect;
 	private boolean tagMgmt;
+	private boolean doTimeouts;
 	
 	private static final Logger log = LoggerFactory.getLogger(VLANSlicer.class);
 	
 	public VLANSlicer(HashMap <String, PortConfig> ports, 
-			InetSocketAddress controllerAddress, int rate, String name, boolean flushOnConnect, boolean tagMgmt){
+			InetSocketAddress controllerAddress, int rate, String name, boolean flushOnConnect, boolean tagMgmt, boolean doTimeouts){
 		myRateTracker = new RateTracker(10,100);
 		portList = ports;
 		this.name = name;
 		this.adminState = true;
 		this.flushOnConnect = flushOnConnect;
 		this.tagMgmt = tagMgmt;
+		this.doTimeouts = doTimeouts;
 		if(controllerAddress == null){
 			//not allowed
 		}
@@ -104,6 +106,7 @@ public class VLANSlicer implements Slicer{
 		this.adminState = true;
 		this.flushOnConnect = false;
 		this.tagMgmt = false;
+		this.doTimeouts = false;
 		this.bufferIds = Collections.synchronizedMap(
 				new LinkedHashMap<Integer,byte[]>(){
 					/**
@@ -119,6 +122,14 @@ public class VLANSlicer implements Slicer{
 					}
 				}
 				);
+	}
+	
+	public boolean doTimeouts(){
+		return this.doTimeouts;
+	}
+	
+	public void setDoTimeouts(boolean doTimeouts){
+		this.doTimeouts = doTimeouts;
 	}
 	
 	public boolean getAdminState(){
