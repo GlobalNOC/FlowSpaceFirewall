@@ -18,6 +18,7 @@ package edu.iu.grnoc.flowspace_firewall;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map.Entry;
 import java.util.Iterator;
@@ -77,7 +78,8 @@ public class Proxy {
 	private Integer flowCount;
 	private Boolean adminStatus;
 	private RateTracker packetInRate;
-	
+	private List<FlowTimeout> timeouts;
+		
 	public Proxy(IOFSwitch switchImp, Slicer slicer, FlowSpaceFirewall fsf){
 		mySlicer = slicer;
 		mySwitch = switchImp;
@@ -87,7 +89,8 @@ public class Proxy {
 		xidMap = new XidMap();
 		adminStatus = mySlicer.getAdminState();
 		packetInRate = new RateTracker(100,slicer.getPacketInRate());
-
+		timeouts = Collections.synchronizedList( new ArrayList<FlowTimeout>());
+		
 	}
 	
 	public void setAdminStatus(Boolean status){
@@ -111,6 +114,10 @@ public class Proxy {
 	
 	public double getPacketInRate(){
 		return this.packetInRate.getRate();
+	}
+	
+	public List<FlowTimeout> getTimeouts(){
+		return this.timeouts;
 	}
 	
 	public void removeFlows(){
@@ -302,6 +309,31 @@ public class Proxy {
 		}
 	}
 	
+	/*
+	 * check to see if any flows are expired
+	 * this is called from the stats cacher after
+	 * the stats cacher updates the stats
+	 */
+	
+	public void checkExpiredFlows(){
+		log.debug("Checking for expired flows");
+		Iterator<FlowTimeout> it = this.timeouts.iterator();
+		while(it.hasNext()){
+			FlowTimeout timeout = it.next();
+			if(timeout.isExpired()){
+				log.debug("Removing Flow that has timed out");
+				it.remove();
+				OFFlowMod flow = timeout.getFlow();
+				flow.setCommand(OFFlowMod.OFPFC_DELETE_STRICT);
+				List<OFAction> actions = new ArrayList<OFAction>();
+				flow.setActions(actions);
+				flow.setHardTimeout((short)0);
+				flow.setIdleTimeout((short)0);
+				this.toSwitch((OFMessage) flow,  null);				
+			}
+		}
+	}
+	
 	private void processFlowMod(OFMessage msg, FloodlightContext cntx){
 		List <OFFlowMod> flows;
 		if(this.mySlicer.getTagManagement()){
@@ -329,21 +361,53 @@ public class Proxy {
 		Iterator <OFFlowMod> it = flows.iterator();
 		while(it.hasNext()){
 			OFFlowMod flow = it.next();
-			messages.add((OFMessage) msg);
+			
 			switch(flow.getCommand()){
 			case OFFlowMod.OFPFC_ADD:
+
 				if( this.mySlicer.isGreaterThanMaxFlows(this.flowCount + 1) ) {
 					log.warn("Switch: "+this.mySwitch.getStringId()+" Slice: "+this.mySlicer.getSliceName()+" Flow count is already at threshold. Skipping flow mod");
 					this.sendError((OFMessage)msg);
 					return;
 				}
+				//if this switch does not support idle/hard timeouts
+				//we need to strip the idle/hard timeout from the flow mod 
+				//and implement them in FSFW
+				if(this.mySlicer.doTimeouts()){
+					if(flow.getIdleTimeout() != 0){
+						FlowTimeout timeout = new FlowTimeout(flow, flow.getIdleTimeout(), false);					
+						this.timeouts.add(timeout);
+						flow.setIdleTimeout((short)0);
+					}
+					if(flow.getHardTimeout() != 0){
+						FlowTimeout timeout = new FlowTimeout(flow, flow.getHardTimeout(), true);					
+						this.timeouts.add(timeout);
+						flow.setHardTimeout((short)0);
+					}
+				}
 				this.updateFlowCount(1);
 				break;
 			case OFFlowMod.OFPFF_CHECK_OVERLAP:
+
 				if( this.mySlicer.isGreaterThanMaxFlows(this.flowCount + 1) ) {
 					log.warn("Switch: "+this.mySwitch.getStringId()+" Slice: "+this.mySlicer.getSliceName()+"Flow count is already at threshold. Skipping flow mod");
 					this.sendError((OFMessage)msg);
 					return;
+				}
+				//if this switch does not support idle/hard timeouts
+				//we need to strip the idle/hard timeout from the flow mod 
+				//and implement them in FSFW
+				if(this.mySlicer.doTimeouts()){
+					if(flow.getIdleTimeout() != 0){
+						FlowTimeout timeout = new FlowTimeout(flow, flow.getIdleTimeout(), false);					
+						this.timeouts.add(timeout);
+						flow.setIdleTimeout((short)0);
+					}
+					if(flow.getHardTimeout() != 0){
+						FlowTimeout timeout = new FlowTimeout(flow, flow.getHardTimeout(), true);					
+						this.timeouts.add(timeout);
+						flow.setHardTimeout((short)0);
+					}
 				}
 				this.updateFlowCount(1);
 				break;
@@ -357,8 +421,9 @@ public class Proxy {
 				//++ and -- so noop
 				break;
 			}
+			messages.add((OFMessage) flow);
 		}
-		
+		log.error("Sending messages: " + messages.toString());		
 		mapXids(messages);
 		try {
 			mySwitch.write(messages, cntx);

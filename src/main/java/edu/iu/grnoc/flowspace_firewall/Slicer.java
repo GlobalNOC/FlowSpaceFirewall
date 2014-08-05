@@ -58,4 +58,6 @@ public interface Slicer {
 	void setFlushRulesOnConnect(boolean fluhsRulesOnConnect);
 	boolean getFlushRulesOnConnect();
 	boolean getTagManagement();
+	boolean doTimeouts();
+	void setDoTimeouts(boolean doTimeouts);
 }
