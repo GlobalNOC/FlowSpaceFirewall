@@ -277,6 +277,33 @@ public class ProxyTest {
 		        return null;
 		    }
 		}).anyTimes();
+                
+        sw.write(EasyMock.isA(java.util.List.class), EasyMock.isNull(net.floodlightcontroller.core.FloodlightContext.class));
+        EasyMock.expectLastCall().andAnswer(new IAnswer<Object>() {
+		    public Object answer() {
+		    	log.error("Here!");
+		        //supply your mock implementation here...
+		    	List<OFMessage> msgs = (List<OFMessage>)EasyMock.getCurrentArguments()[0];
+		        for(OFMessage msg : msgs){
+		        	messagesSentToSwitch.add(msg);
+		        }
+		        //return the value to be returned by the method (null for void)
+		        return null;
+		    }
+		}).anyTimes();
+        sw.write(EasyMock.isA(org.openflow.protocol.OFMessage.class), EasyMock.isNull(net.floodlightcontroller.core.FloodlightContext.class));
+        EasyMock.expectLastCall().andAnswer(new IAnswer<Object>() {
+		    public Object answer() {
+		    	log.error("Here!");
+		        //supply your mock implementation here...
+		    	List<OFMessage> msgs = (List<OFMessage>)EasyMock.getCurrentArguments()[0];
+		        for(OFMessage msg : msgs){
+		        	messagesSentToSwitch.add(msg);
+		        }
+		        //return the value to be returned by the method (null for void)
+		        return null;
+		    }
+		}).anyTimes();
         
         EasyMock.replay(sw);
 	
@@ -378,7 +405,7 @@ public class ProxyTest {
 		OFFlowMod sentFlow = (OFFlowMod) msg;
 		//need to set the XID to 0 because it got mapped for us :)
 		sentFlow.setXid(0);
-		this.log.error("Received message: " + sentFlow.toString());
+		log.error("Received message: " + sentFlow.toString());
 		assertTrue("Sent Flow matches what we actually sent", sentFlow.equals(flow));
 	}
 
@@ -1066,8 +1093,124 @@ public class ProxyTest {
 	}
 	
 	@Test
-	public void testHardTimeouts(){
+	public void testHardTimeouts() throws InterruptedException{
+		messagesSentToSwitch.clear();
+		messagesSentToController.clear();
+		Proxy proxy = new Proxy(sw, slicer, fsfw);
+		expect(channel.isConnected()).andReturn(true).anyTimes();
+		expect(handler.isHandshakeComplete()).andReturn(true).anyTimes();
+		EasyMock.replay(handler);
+		EasyMock.replay(channel);
+		assertNotNull("Proxy was created",proxy);
+		assertFalse("Proxy is not connected as expected", proxy.connected());
+		proxy.connect(channel);
+		assertTrue("Proxy is now connected", proxy.connected());
+		OFFlowMod flow = new OFFlowMod();
+		flow.setCommand(OFFlowMod.OFPFC_ADD);
+		OFMatch match = new OFMatch();
+		match.setDataLayerVirtualLan((short)100);
+		match.setInputPort((short)1);
+		List<OFAction> actions = new ArrayList<OFAction>();
+		OFActionVirtualLanIdentifier act1 = new OFActionVirtualLanIdentifier();
+		act1.setVirtualLanIdentifier((short)102);
+		OFActionOutput act2 = new OFActionOutput();
+		act2.setPort((short)2);
+		flow.setMatch(match);
+		actions.add(act1);
+		actions.add(act2);
+		flow.setActions(actions);
+		flow.setHardTimeout((short)10);
+		slicer.setDoTimeouts(true);
+		assertTrue("Slice is set to do timeouts", slicer.doTimeouts());
+		proxy.toSwitch(flow, cntx);
+		assertTrue("Flow was successfully pushed", proxy.getFlowCount() == 1);
+		assertTrue("Flow was pushed to the switch", messagesSentToSwitch.size() == 1);
+		OFMessage msg = messagesSentToSwitch.get(0);
 		
+		assertTrue("Message is a FlowMod", msg.getType().getTypeValue() == OFMessageType.FLOW_MOD.getValue());
+		OFFlowMod sentFlow = (OFFlowMod) msg;
+		//need to set the XID to 0 because it got mapped for us :)
+		sentFlow.setXid(0);
+		//since we set the hard Timeout we need clear it because are expecting it to be empty now
+		flow.setHardTimeout((short)0);
+		log.error("Received message: " + sentFlow.toString());
+		assertTrue("Sent Flow matches what we actually sent", sentFlow.equals(flow));
+		List<FlowTimeout> timeouts = proxy.getTimeouts();
+		assertTrue("Slice has a flow to timeout", timeouts.size() == 1);
+		proxy.checkExpiredFlows();
+		assertTrue("Flow was not removed from the switch yet", messagesSentToSwitch.size() == 1);
+		Thread.sleep(11000);
+		proxy.checkExpiredFlows();
+		log.error("Messages to Controller size: " + messagesSentToController.size());
+		log.error("Messages to Switch size: " + messagesSentToSwitch.size());
+		assertTrue("Flow was removed from the switch", messagesSentToSwitch.size() == 2);
+		msg = messagesSentToSwitch.get(1);
+		assertTrue("Message is a FlowMod", msg.getType().getTypeValue() == OFMessageType.FLOW_MOD.getValue());
+		sentFlow = (OFFlowMod) msg;
+		assertTrue("Flow is a remove", sentFlow.getCommand() == OFFlowMod.OFPFC_DELETE_STRICT);
+		assertTrue("No more flows to expire",proxy.getTimeouts().size() == 0);
+	}
+	
+	@Test
+	public void testIdleTimeouts() throws InterruptedException{
+		messagesSentToSwitch.clear();
+		messagesSentToController.clear();
+		Proxy proxy = new Proxy(sw, slicer, fsfw);
+		expect(channel.isConnected()).andReturn(true).anyTimes();
+		expect(handler.isHandshakeComplete()).andReturn(true).anyTimes();
+		EasyMock.replay(handler);
+		EasyMock.replay(channel);
+		assertNotNull("Proxy was created",proxy);
+		assertFalse("Proxy is not connected as expected", proxy.connected());
+		proxy.connect(channel);
+		assertTrue("Proxy is now connected", proxy.connected());
+		OFFlowMod flow = new OFFlowMod();
+		flow.setCommand(OFFlowMod.OFPFC_ADD);
+		OFMatch match = new OFMatch();
+		match.setDataLayerVirtualLan((short)100);
+		match.setInputPort((short)1);
+		List<OFAction> actions = new ArrayList<OFAction>();
+		OFActionVirtualLanIdentifier act1 = new OFActionVirtualLanIdentifier();
+		act1.setVirtualLanIdentifier((short)102);
+		OFActionOutput act2 = new OFActionOutput();
+		act2.setPort((short)2);
+		flow.setMatch(match);
+		actions.add(act1);
+		actions.add(act2);
+		flow.setActions(actions);
+		flow.setIdleTimeout((short)10);
+		slicer.setDoTimeouts(true);
+		assertTrue("Slice is set to do timeouts", slicer.doTimeouts());
+		proxy.toSwitch(flow, cntx);
+		assertTrue("Flow was successfully pushed", proxy.getFlowCount() == 1);
+		assertTrue("Flow was pushed to the switch", messagesSentToSwitch.size() == 1);
+		OFMessage msg = messagesSentToSwitch.get(0);
+		
+		assertTrue("Message is a FlowMod", msg.getType().getTypeValue() == OFMessageType.FLOW_MOD.getValue());
+		OFFlowMod sentFlow = (OFFlowMod) msg;
+		//need to set the XID to 0 because it got mapped for us :)
+		sentFlow.setXid(0);
+		//since we set the hard Timeout we need clear it because are expecting it to be empty now
+		flow.setIdleTimeout((short)0);
+		log.error("Received message: " + sentFlow.toString());
+		assertTrue("Sent Flow matches what we actually sent", sentFlow.equals(flow));
+		List<FlowTimeout> timeouts = proxy.getTimeouts();
+		assertTrue("Slice has a flow to timeout", timeouts.size() == 1);
+		Thread.sleep(5000);
+		timeouts.get(0).updateLastUsed();
+		Thread.sleep(6000);
+		proxy.checkExpiredFlows();
+		log.error("Messages to Controller size: " + messagesSentToController.size());
+		log.error("Messages to Switch size: " + messagesSentToSwitch.size());
+		assertTrue("Flow was not removed from the switch", messagesSentToSwitch.size() == 1);
+		Thread.sleep(5000);
+		proxy.checkExpiredFlows();
+		assertTrue("Flow was removed from the switch", messagesSentToSwitch.size() == 2);
+		msg = messagesSentToSwitch.get(1);
+		assertTrue("Message is a FlowMod", msg.getType().getTypeValue() == OFMessageType.FLOW_MOD.getValue());
+		sentFlow = (OFFlowMod) msg;
+		assertTrue("Flow is a remove", sentFlow.getCommand() == OFFlowMod.OFPFC_DELETE_STRICT);
+		assertTrue("No more flows to expire",proxy.getTimeouts().size() == 0);
 	}
 	
 	@Test

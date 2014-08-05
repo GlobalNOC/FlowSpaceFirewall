@@ -17,11 +17,9 @@
 package edu.iu.grnoc.flowspace_firewall;
 
 import java.io.IOException;
-import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Iterator;
 import java.util.List;
@@ -318,13 +316,19 @@ public class Proxy {
 	 */
 	
 	public void checkExpiredFlows(){
+		log.error("Checking for expired flows");
 		Iterator<FlowTimeout> it = this.timeouts.iterator();
 		while(it.hasNext()){
 			FlowTimeout timeout = it.next();
 			if(timeout.isExpired()){
+				log.debug("Removing Flow that has timed out");
 				it.remove();
 				OFFlowMod flow = timeout.getFlow();
 				flow.setCommand(OFFlowMod.OFPFC_DELETE_STRICT);
+				List<OFAction> actions = new ArrayList<OFAction>();
+				flow.setActions(actions);
+				flow.setHardTimeout((short)0);
+				flow.setIdleTimeout((short)0);
 				this.toSwitch((OFMessage) flow,  null);				
 			}
 		}
@@ -419,10 +423,7 @@ public class Proxy {
 			}
 			messages.add((OFMessage) flow);
 		}
-		
-
-		
-		
+		log.error("Sending messages: " + messages.toString());		
 		mapXids(messages);
 		try {
 			mySwitch.write(messages, cntx);
