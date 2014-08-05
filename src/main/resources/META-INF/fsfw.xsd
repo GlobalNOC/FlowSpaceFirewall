@@ -42,6 +42,7 @@
       <xs:attribute name="name" use="required" type="xs:NCName" />
       <xs:attribute name="packet_in_rate" type="xs:int" use="required" />
       <xs:attribute name="tag_management" type="xs:boolean" use="optional" />
+      <xs:attribute name="do_timeouts" type="xs:boolean" use="optional" />
     </xs:complexType>
   </xs:element>
 

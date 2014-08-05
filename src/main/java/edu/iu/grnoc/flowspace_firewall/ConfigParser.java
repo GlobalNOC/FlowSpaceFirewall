@@ -162,6 +162,12 @@ public final class ConfigParser {
 	        				slicer.setFlowRate(flowRate);
 	        				int packetInRate = Integer.parseInt(switchConfig.getAttributes().getNamedItem("packet_in_rate").getTextContent());
 	        				slicer.setPacketInRate(packetInRate);
+	        				Node do_timeouts_node = switchConfig.getAttributes().getNamedItem("do_timeouts");
+	        				boolean do_timeouts = false;
+	        				if(do_timeouts_node != null){
+	        					do_timeouts = Boolean.parseBoolean(switchConfig.getAttributes().getNamedItem("do_timeouts").getTextContent());
+	        				}
+	        				slicer.setDoTimeouts(do_timeouts);
 	        				NodeList ports = switchConfig.getChildNodes();
 	        				//for every port create a port config
 	        				for(int k=0; k < ports.getLength(); k++){

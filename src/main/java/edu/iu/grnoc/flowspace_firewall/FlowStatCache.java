@@ -15,6 +15,7 @@
 */
 package edu.iu.grnoc.flowspace_firewall;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
@@ -88,6 +89,33 @@ public class FlowStatCache {
 				slicedStats.put(slice.getSliceName(), FlowStatSlicer.SliceStats(slice,stats));
 				this.parent.getProxy(switchId, slice.getSliceName()).setFlowCount(slicedStats.get(slice.getSliceName()).size());
 			}
+		}
+	}
+	
+	public List<FlowTimeout> getPossibleExpiredFlows(Long switchId){
+		List<FlowTimeout> flowTimeouts = new ArrayList<FlowTimeout>();
+		List<HashMap<Long, Slicer>> slices = parent.getSlices();
+
+		for(HashMap<Long,Slicer> tmpSlices : slices){
+			if(!tmpSlices.containsKey(switchId)){
+				//switch not part of this slice
+				continue;
+			}
+			flowTimeouts.addAll( this.parent.getProxy(switchId, tmpSlices.get(switchId).getSliceName()).getTimeouts());
+		}
+			
+		return flowTimeouts;
+	}
+	
+	public void checkExpireFlows(Long switchId){
+		List<HashMap<Long, Slicer>> slices = parent.getSlices();
+
+		for(HashMap<Long,Slicer> tmpSlices : slices){
+			if(!tmpSlices.containsKey(switchId)){
+				//switch not part of this slice
+				continue;
+			}
+			this.parent.getProxy(switchId, tmpSlices.get(switchId).getSliceName()).checkExpiredFlows();
 		}
 	}
 	
