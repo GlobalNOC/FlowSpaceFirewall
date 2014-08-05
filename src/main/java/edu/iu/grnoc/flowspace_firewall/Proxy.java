@@ -316,7 +316,7 @@ public class Proxy {
 	 */
 	
 	public void checkExpiredFlows(){
-		log.error("Checking for expired flows");
+		log.debug("Checking for expired flows");
 		Iterator<FlowTimeout> it = this.timeouts.iterator();
 		while(it.hasNext()){
 			FlowTimeout timeout = it.next();

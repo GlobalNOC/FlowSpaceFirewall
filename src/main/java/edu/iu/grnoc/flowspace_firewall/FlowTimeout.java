@@ -33,14 +33,9 @@ public class FlowTimeout {
 	
 	public boolean isExpired(){
 		Timestamp now = new Timestamp(System.currentTimeMillis());
-		log.error("Now: " + now.toString());
-		log.error("Checking to see if I am expired");
-		log.error("Expires: " + this.expires.toString());
 		if(this.expires.before(now)){
-			log.error("I am expired!!");
 			return true;
 		}else{
-			log.error("I am not expired");
 			return false;
 		}
 	}
