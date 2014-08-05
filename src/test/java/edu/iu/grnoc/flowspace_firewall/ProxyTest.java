@@ -376,6 +376,9 @@ public class ProxyTest {
 		OFMessage msg = messagesSentToSwitch.get(0);
 		assertTrue("Message is a FlowMod", msg.getType().getTypeValue() == OFMessageType.FLOW_MOD.getValue());
 		OFFlowMod sentFlow = (OFFlowMod) msg;
+		//need to set the XID to 0 because it got mapped for us :)
+		sentFlow.setXid(0);
+		this.log.error("Received message: " + sentFlow.toString());
 		assertTrue("Sent Flow matches what we actually sent", sentFlow.equals(flow));
 	}
 
@@ -1060,6 +1063,11 @@ public class ProxyTest {
 		
 		proxy.toController(portStat, cntx);
 		assertTrue("sent message to controller", messagesSentToController.size() == 0);
+	}
+	
+	@Test
+	public void testHardTimeouts(){
+		
 	}
 	
 	@Test

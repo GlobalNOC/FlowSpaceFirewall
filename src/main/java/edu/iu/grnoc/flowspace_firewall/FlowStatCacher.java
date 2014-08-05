@@ -15,6 +15,7 @@
 */
 package edu.iu.grnoc.flowspace_firewall;
 
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -30,6 +31,7 @@ import org.openflow.protocol.OFMatch;
 import org.openflow.protocol.OFPort;
 import org.openflow.protocol.OFStatisticsRequest;
 
+import org.openflow.protocol.statistics.OFFlowStatisticsReply;
 import org.openflow.protocol.statistics.OFFlowStatisticsRequest;
 import org.openflow.protocol.statistics.OFPortStatisticsReply;
 import org.openflow.protocol.statistics.OFPortStatisticsRequest;
@@ -73,10 +75,34 @@ public class FlowStatCacher extends TimerTask{
 			statsCache.setFlowCache(sw.getId(), statsReply);
 			HashMap<Short, OFStatistics> portStatsReply = getPortStatsForSwitch(sw);
 			statsCache.setPortCache(sw.getId(), portStatsReply);
+			
+			//check for anything that has expired
+			List<FlowTimeout> timeouts = statsCache.getPossibleExpiredFlows(sw.getId());
+			this.updateExpire(timeouts, sw.getId());
+			statsCache.checkExpireFlows(sw.getId());
 		}
 		
 	}
 	
+	public void updateExpire(List<FlowTimeout> timeouts, Long switchId){
+		for(FlowTimeout timeout : timeouts){
+			if(!timeout.isHard()){
+				for(OFStatistics stat : statsCache.getSwitchFlowStats(switchId)){
+					OFFlowStatisticsReply flowStat = (OFFlowStatisticsReply) stat;
+					if(flowStat.getMatch().equals(timeout.getFlow().getMatch())){
+						if(timeout.getPacketCount() == flowStat.getPacketCount()){
+							//hasn't changed... so it has been idle
+						}else{
+							timeout.setPacketCount(flowStat.getPacketCount());
+							timeout.updateLastUsed();
+						}
+					}
+				}
+			}
+		}
+	}
+	
+
 	/**
 	 * 
 	 * 
