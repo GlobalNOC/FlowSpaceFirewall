@@ -45,6 +45,7 @@ import org.junit.Before;
 import org.junit.rules.ExpectedException;
 import org.openflow.protocol.*;
 import org.openflow.protocol.OFError.OFErrorType;
+import org.openflow.protocol.Wildcards.Flag;
 import org.openflow.protocol.action.*;
 import org.openflow.protocol.statistics.OFStatistics;
 import org.slf4j.Logger;
@@ -388,6 +389,8 @@ public class ProxyTest {
 		OFMatch match = new OFMatch();
 		match.setDataLayerVirtualLan((short)100);
 		match.setInputPort((short)1);
+		match.setWildcards(match.getWildcardObj().matchOn(Flag.DL_VLAN));
+		match.setWildcards(match.getWildcardObj().matchOn(Flag.IN_PORT));
 		List<OFAction> actions = new ArrayList<OFAction>();
 		OFActionVirtualLanIdentifier act1 = new OFActionVirtualLanIdentifier();
 		act1.setVirtualLanIdentifier((short)102);
@@ -428,6 +431,8 @@ public class ProxyTest {
 		OFMatch match = new OFMatch();
 		match.setDataLayerVirtualLan((short)100);
 		match.setInputPort((short)1);
+		match.setWildcards(match.getWildcardObj().matchOn(Flag.DL_VLAN));
+		match.setWildcards(match.getWildcardObj().matchOn(Flag.IN_PORT));
 		List<OFAction> actions = new ArrayList<OFAction>();
 				
 		//create the output action
@@ -474,6 +479,8 @@ public class ProxyTest {
 		OFMatch match = new OFMatch();
 		match.setDataLayerVirtualLan((short)100);
 		match.setInputPort((short)1);
+		match.setWildcards(match.getWildcardObj().matchOn(Flag.DL_VLAN));
+		match.setWildcards(match.getWildcardObj().matchOn(Flag.IN_PORT));
 		List<OFAction> actions = new ArrayList<OFAction>();
 				
 		//create the output action
@@ -502,7 +509,8 @@ public class ProxyTest {
 		assertTrue("1 message went to the controller", messagesSentToController.size() == 1);
 		OFMessage msg = messagesSentToController.get(0);
 		assertTrue("Message to Controller was an error", msg.getType().getTypeValue() == OFMessageType.ERROR.getValue());
-		
+		OFError error = (OFError)msg;
+		assertTrue("Error type is now OFPET_FLOW_MOD_FAILED", error.getErrorType() == OFError.OFErrorType.OFPET_FLOW_MOD_FAILED.getValue());
 	}
 	
 	
@@ -792,6 +800,51 @@ public class ProxyTest {
 	}
 	
 	@Test
+	public void testWildCardErrorReturned(){
+		setupSlicer();
+		messagesSentToSwitch.clear();
+		messagesSentToController.clear();
+		Proxy proxy = new Proxy(sw, slicer, fsfw);
+		expect(channel.isConnected()).andReturn(true).anyTimes();
+		expect(handler.isHandshakeComplete()).andReturn(true).anyTimes();
+		EasyMock.replay(handler);
+		EasyMock.replay(channel);
+		assertNotNull("Proxy was created",proxy);
+		assertFalse("Proxy is not connected as expected", proxy.connected());
+		proxy.connect(channel);
+		assertTrue("Proxy is now connected", proxy.connected());
+		
+		//build the match
+		OFMatch match = new OFMatch();
+		match.setDataLayerVirtualLan((short)100);
+		match.setInputPort((short)1);
+		match.setWildcards(match.getWildcardObj().matchOn(Flag.IN_PORT));
+		List<OFAction> actions = new ArrayList<OFAction>();
+				
+		//create the output action
+		OFActionOutput act2 = new OFActionOutput();
+		act2.setPort((short)1);
+		act2.setType(OFActionType.OUTPUT);
+		
+		//add the actions to the action list
+		actions.add(act2);
+				
+		//build the flow
+		OFFlowMod flow = new OFFlowMod();
+		flow.setCommand(OFFlowMod.OFPFC_ADD);
+		flow.setXid(101);
+		flow.setMatch(match);
+		flow.setActions(actions);
+		flow.setLengthU(80);
+		proxy.toSwitch(flow, cntx);
+		
+		log.debug(messagesSentToSwitch.toString());
+		assertTrue("Message was sent to Switch", messagesSentToSwitch.size() == 0);
+		assertTrue("Message was not sent to Controller", messagesSentToController.size() == 1);
+		
+	}
+	
+	@Test
 	public void testErrorReturnedNotPartOfSlice(){
 		setupSlicer();
 		messagesSentToSwitch.clear();
@@ -810,6 +863,8 @@ public class ProxyTest {
 		OFMatch match = new OFMatch();
 		match.setDataLayerVirtualLan((short)100);
 		match.setInputPort((short)1);
+		match.setWildcards(match.getWildcardObj().matchOn(Flag.DL_VLAN));
+		match.setWildcards(match.getWildcardObj().matchOn(Flag.IN_PORT));
 		List<OFAction> actions = new ArrayList<OFAction>();
 				
 		//create the output action
@@ -856,9 +911,6 @@ public class ProxyTest {
 		assertFalse("Proxy is not connected as expected", proxy.connected());
 		proxy.connect(channel);
 		assertTrue("Proxy is now connected", proxy.connected());
-		
-		
-		
 	}
 	
 	@Test
@@ -1110,6 +1162,8 @@ public class ProxyTest {
 		OFMatch match = new OFMatch();
 		match.setDataLayerVirtualLan((short)100);
 		match.setInputPort((short)1);
+		match.setWildcards(match.getWildcardObj().matchOn(Flag.DL_VLAN));
+		match.setWildcards(match.getWildcardObj().matchOn(Flag.IN_PORT));
 		List<OFAction> actions = new ArrayList<OFAction>();
 		OFActionVirtualLanIdentifier act1 = new OFActionVirtualLanIdentifier();
 		act1.setVirtualLanIdentifier((short)102);
@@ -1169,6 +1223,8 @@ public class ProxyTest {
 		OFMatch match = new OFMatch();
 		match.setDataLayerVirtualLan((short)100);
 		match.setInputPort((short)1);
+		match.setWildcards(match.getWildcardObj().matchOn(Flag.DL_VLAN));
+		match.setWildcards(match.getWildcardObj().matchOn(Flag.IN_PORT));
 		List<OFAction> actions = new ArrayList<OFAction>();
 		OFActionVirtualLanIdentifier act1 = new OFActionVirtualLanIdentifier();
 		act1.setVirtualLanIdentifier((short)102);

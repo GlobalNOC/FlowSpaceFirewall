@@ -33,6 +33,7 @@ import org.openflow.protocol.OFMatch;
 import org.openflow.protocol.OFMessage;
 import org.openflow.protocol.OFPacketOut;
 import org.openflow.protocol.OFPort;
+import org.openflow.protocol.Wildcards;
 import org.openflow.protocol.Wildcards.Flag;
 import org.openflow.protocol.action.OFAction;
 import org.openflow.protocol.action.OFActionOutput;
@@ -628,7 +629,7 @@ public class VLANSlicer implements Slicer{
 			return flows;
 		}
 		
-		if(match.getDataLayerVirtualLan() == 0 || match.getDataLayerVirtualLan() == -1){
+		if(match.getDataLayerVirtualLan() == 0 || match.getDataLayerVirtualLan() == -1 ){
 			//untagged or no tag...
 			if(match.getInputPort() == 0){
 				//needs to expand it out unless has access to all ports
@@ -640,7 +641,9 @@ public class VLANSlicer implements Slicer{
 							//why might this not be cloneable?  ahh... might not be clonable if there is no action!!
 							OFFlowMod newFlow = flowMod.clone();
 							newFlow.getMatch().setInputPort(port.getValue().getPortId());
+							newFlow.getMatch().setWildcards(newFlow.getMatch().getWildcardObj().matchOn(Flag.IN_PORT));
 							newFlow.getMatch().setDataLayerVirtualLan(port.getValue().getVlanRange().getAvailableTags()[0]);
+							newFlow.getMatch().setWildcards(newFlow.getMatch().getWildcardObj().matchOn(Flag.DL_VLAN));
 							List<OFFlowMod> newFlows = this.managedFlowActions(newFlow);
 							for( OFFlowMod flow : newFlows){
 								flows.add(flow);
@@ -744,6 +747,12 @@ public class VLANSlicer implements Slicer{
 			return flowMods;
 		}
 		
+		//wildcarded DL_VLAN?
+		Wildcards wc = match.getWildcardObj();
+		if(wc.isWildcarded(Wildcards.Flag.DL_VLAN)){
+			log.debug("Slice: " + this.getSliceName() + ":" + this.sw.getStringId() + " Flow rule VLAN wildcarded.  Denied: " + flowMod.toString());
+			return flowMods;
+		}
 		//if you wildcarded the vlan then tough we are blowing up now
 		//we require an input vlan
 		if(match.getDataLayerVirtualLan() == 0){
@@ -752,7 +761,7 @@ public class VLANSlicer implements Slicer{
 		}
 		
 		//wildcarded input port?
-		if(match.getInputPort() == 0){
+		if(match.getInputPort() == 0 || wc.isWildcarded(Wildcards.Flag.IN_PORT)){
 			//needs to expand it out unless has access to all ports
 			Iterator<Entry<String, PortConfig>> it = this.portList.entrySet().iterator();
 					
@@ -848,12 +857,22 @@ public class VLANSlicer implements Slicer{
 		
 		//we require an input port
 		//need to do something special if you do have access to all ports
+		Wildcards wc = match.getWildcardObj();
+		if(wc.isWildcarded(Wildcards.Flag.IN_PORT)){
+			log.debug("Slice: " + this.getSliceName() + ":" + this.sw.getStringId() + " Flow rule VLAN wildcarded.  Denied: " + flowMod.toString());
+			return false;
+		}
 		if(match.getInputPort() == 0){
 			//this is bad we shouldn't get here...
 			log.debug("got a null port and we shouldn't have that");
 			return false;
 		}
 		
+		//checking for wildcarded input vlan
+		if(wc.isWildcarded(Wildcards.Flag.DL_VLAN)){
+			log.debug("Slice: " + this.getSliceName() + ":" + this.sw.getStringId() + " Flow rule VLAN wildcarded.  Denied: " + flowMod.toString());
+			return false;
+		}
 		//we require an input vlan
 		if(match.getDataLayerVirtualLan() == 0){
 			log.debug("VLAN is wildcarded");
