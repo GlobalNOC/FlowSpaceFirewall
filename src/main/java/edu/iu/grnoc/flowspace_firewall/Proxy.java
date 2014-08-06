@@ -28,6 +28,7 @@ import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.socket.*;
 import org.openflow.protocol.OFError;
+import org.openflow.protocol.OFError.OFBadRequestCode;
 import org.openflow.protocol.OFFlowMod;
 import org.openflow.protocol.OFFlowRemoved;
 import org.openflow.protocol.OFMatch;
@@ -293,15 +294,10 @@ public class Proxy {
 	 * send an error back with a matching Xid to the controller
 	 * @param msg
 	 */
-	private void sendError(OFMessage msg){
-		OFError error = new OFError();
-		error.setErrorType(OFError.OFErrorType.OFPET_BAD_REQUEST);
-		error.setErrorCode(OFError.OFBadRequestCode.OFPBRC_EPERM);
+	private void sendError(OFMessage msg, OFError error){
 		error.setXid(msg.getXid());
 		error.setOffendingMsg(msg);
-		//don't need to set the size... it knows how to do it!
-		//error.setLengthU( msg.getLengthU() + 12);
-		
+	
 		try {
 			ofcch.sendMessage(error);
 		} catch (IOException e) {
@@ -340,7 +336,9 @@ public class Proxy {
 			flows = this.mySlicer.managedFlows((OFFlowMod)msg);
 			if(flows.size() ==0){
 				log.error("Slice: " + this.mySlicer.getSliceName() + ":" + this.mySwitch.getStringId() + " denied flow: " + ((OFFlowMod)msg).toString());
-				this.sendError((OFMessage)msg);
+				OFError error = new OFError(OFError.OFErrorType.OFPET_BAD_REQUEST);
+				error.setErrorCode(OFBadRequestCode.OFPBRC_EPERM);
+				this.sendError((OFMessage)msg,error );
 				return;
 			}else{
 				log.info("Slice: " + this.mySlicer.getSliceName() + ":" + this.mySwitch.getStringId() + " Sent Flow: " + ((OFFlowMod)msg).toString());
@@ -350,7 +348,9 @@ public class Proxy {
 			if(flows.size() == 0){
 				//really we need to send a perm error
 				log.error("Slice: " + this.mySlicer.getSliceName() + ":" + this.mySwitch.getStringId() + " denied flow: " + ((OFFlowMod)msg).toString());
-				this.sendError((OFMessage)msg);
+				OFError error = new OFError(OFError.OFErrorType.OFPET_BAD_REQUEST);
+				error.setErrorCode(OFBadRequestCode.OFPBRC_EPERM);
+				this.sendError((OFMessage)msg,error);
 				return;
 			}else{
 				log.info("Slice: " + this.mySlicer.getSliceName() + ":" + this.mySwitch.getStringId() + " Sent Flow: " + ((OFFlowMod)msg).toString());
@@ -367,7 +367,9 @@ public class Proxy {
 
 				if( this.mySlicer.isGreaterThanMaxFlows(this.flowCount + 1) ) {
 					log.warn("Switch: "+this.mySwitch.getStringId()+" Slice: "+this.mySlicer.getSliceName()+" Flow count is already at threshold. Skipping flow mod");
-					this.sendError((OFMessage)msg);
+					OFError error = new OFError(OFError.OFErrorType.OFPET_FLOW_MOD_FAILED);
+					error.setErrorCode(OFError.OFFlowModFailedCode.OFPFMFC_ALL_TABLES_FULL);
+					this.sendError((OFMessage)msg, error);
 					return;
 				}
 				//if this switch does not support idle/hard timeouts
@@ -391,7 +393,9 @@ public class Proxy {
 
 				if( this.mySlicer.isGreaterThanMaxFlows(this.flowCount + 1) ) {
 					log.warn("Switch: "+this.mySwitch.getStringId()+" Slice: "+this.mySlicer.getSliceName()+"Flow count is already at threshold. Skipping flow mod");
-					this.sendError((OFMessage)msg);
+					OFError error = new OFError(OFError.OFErrorType.OFPET_FLOW_MOD_FAILED);
+					error.setErrorCode(OFError.OFFlowModFailedCode.OFPFMFC_ALL_TABLES_FULL);
+					this.sendError((OFMessage)msg,error);
 					return;
 				}
 				//if this switch does not support idle/hard timeouts
@@ -696,7 +700,9 @@ public class Proxy {
 		log.debug("Proxy Slicing request of type: " + msg.getType());
 		if(!this.mySlicer.isOkToProcessMessage()){
 			log.warn("Switch: "+this.mySwitch.getStringId()+"Slice:"+this.mySlicer.getSliceName()+"Rate limit exceeded");
-			this.sendError((OFMessage)msg);
+			OFError error = new OFError(OFError.OFErrorType.OFPET_BAD_REQUEST);
+			error.setErrorCode(OFBadRequestCode.OFPBRC_EPERM);
+			this.sendError((OFMessage)msg,error);
 			return;
 		}
 		
@@ -710,7 +716,9 @@ public class Proxy {
 				if(allowed.isEmpty()){
 					//really we need to send a perm error
 					log.info("PacketOut is not allowed");
-					this.sendError((OFMessage)msg);
+					OFError error = new OFError(OFError.OFErrorType.OFPET_BAD_REQUEST);
+					error.setErrorCode(OFBadRequestCode.OFPBRC_EPERM);
+					this.sendError((OFMessage)msg,error);
 					return;
 				}else{
 					log.debug("PacketOut is allowed");
@@ -727,10 +735,14 @@ public class Proxy {
 				handleStatsRequest(msg);
 				return;
 			case PORT_MOD:
-				this.sendError((OFMessage)msg);
+				OFError error = new OFError(OFError.OFErrorType.OFPET_BAD_REQUEST);
+				error.setErrorCode(OFBadRequestCode.OFPBRC_EPERM);
+				this.sendError((OFMessage)msg,error);
 				return;
 			case SET_CONFIG:
-				this.sendError((OFMessage)msg);
+				OFError error2 = new OFError(OFError.OFErrorType.OFPET_BAD_REQUEST);
+				error2.setErrorCode(OFBadRequestCode.OFPBRC_EPERM);
+				this.sendError((OFMessage)msg,error2);
 				return;
 			default:
 				//do nothing.. basically fall through to the write
