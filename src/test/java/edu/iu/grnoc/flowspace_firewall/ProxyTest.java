@@ -45,6 +45,7 @@ import org.junit.Before;
 import org.junit.rules.ExpectedException;
 import org.openflow.protocol.*;
 import org.openflow.protocol.OFError.OFErrorType;
+import org.openflow.protocol.Wildcards.Flag;
 import org.openflow.protocol.action.*;
 import org.openflow.protocol.statistics.OFStatistics;
 import org.slf4j.Logger;
@@ -388,6 +389,8 @@ public class ProxyTest {
 		OFMatch match = new OFMatch();
 		match.setDataLayerVirtualLan((short)100);
 		match.setInputPort((short)1);
+		match.setWildcards(match.getWildcardObj().matchOn(Flag.DL_VLAN));
+		match.setWildcards(match.getWildcardObj().matchOn(Flag.IN_PORT));
 		List<OFAction> actions = new ArrayList<OFAction>();
 		OFActionVirtualLanIdentifier act1 = new OFActionVirtualLanIdentifier();
 		act1.setVirtualLanIdentifier((short)102);
@@ -474,6 +477,8 @@ public class ProxyTest {
 		OFMatch match = new OFMatch();
 		match.setDataLayerVirtualLan((short)100);
 		match.setInputPort((short)1);
+		match.setWildcards(match.getWildcardObj().matchOn(Flag.DL_VLAN));
+		match.setWildcards(match.getWildcardObj().matchOn(Flag.IN_PORT));
 		List<OFAction> actions = new ArrayList<OFAction>();
 				
 		//create the output action
@@ -810,6 +815,8 @@ public class ProxyTest {
 		OFMatch match = new OFMatch();
 		match.setDataLayerVirtualLan((short)100);
 		match.setInputPort((short)1);
+		match.setWildcards(match.getWildcardObj().matchOn(Flag.DL_VLAN));
+		match.setWildcards(match.getWildcardObj().matchOn(Flag.IN_PORT));
 		List<OFAction> actions = new ArrayList<OFAction>();
 				
 		//create the output action
@@ -1110,6 +1117,8 @@ public class ProxyTest {
 		OFMatch match = new OFMatch();
 		match.setDataLayerVirtualLan((short)100);
 		match.setInputPort((short)1);
+		match.setWildcards(match.getWildcardObj().matchOn(Flag.DL_VLAN));
+		match.setWildcards(match.getWildcardObj().matchOn(Flag.IN_PORT));
 		List<OFAction> actions = new ArrayList<OFAction>();
 		OFActionVirtualLanIdentifier act1 = new OFActionVirtualLanIdentifier();
 		act1.setVirtualLanIdentifier((short)102);
@@ -1169,6 +1178,8 @@ public class ProxyTest {
 		OFMatch match = new OFMatch();
 		match.setDataLayerVirtualLan((short)100);
 		match.setInputPort((short)1);
+		match.setWildcards(match.getWildcardObj().matchOn(Flag.DL_VLAN));
+		match.setWildcards(match.getWildcardObj().matchOn(Flag.IN_PORT));
 		List<OFAction> actions = new ArrayList<OFAction>();
 		OFActionVirtualLanIdentifier act1 = new OFActionVirtualLanIdentifier();
 		act1.setVirtualLanIdentifier((short)102);

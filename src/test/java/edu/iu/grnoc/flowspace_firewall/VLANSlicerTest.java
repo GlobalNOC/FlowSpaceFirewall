@@ -36,6 +36,7 @@ import org.openflow.protocol.OFMatch;
 import org.openflow.protocol.OFMessage;
 import org.openflow.protocol.OFPacketOut;
 import org.openflow.protocol.OFPort;
+import org.openflow.protocol.Wildcards.Flag;
 import org.openflow.protocol.action.OFAction;
 import org.openflow.protocol.action.OFActionOutput;
 import org.openflow.protocol.action.OFActionType;
@@ -291,6 +292,8 @@ public class VLANSlicerTest {
 		OFMatch match = new OFMatch();
 		match.setInputPort((short)1);
 		match.setDataLayerVirtualLan((short)100);
+		match.setWildcards(match.getWildcardObj().matchOn(Flag.DL_VLAN));
+		match.setWildcards(match.getWildcardObj().matchOn(Flag.IN_PORT));
 		flow.setMatch(match);
 		flow.setActions(actions);
 
@@ -321,6 +324,7 @@ public class VLANSlicerTest {
 		match = new OFMatch();
 		match.setInputPort((short)0);
 		match.setDataLayerVirtualLan((short)1000);
+		match.setWildcards(match.getWildcardObj().matchOn(Flag.DL_VLAN));
 		flow.setMatch(match);
 		flow.setActions(actions);
 		flows = slicer.allowedFlows(flow);
@@ -356,6 +360,8 @@ public class VLANSlicerTest {
 		OFMatch match = new OFMatch();
 		match.setInputPort((short)1);
 		match.setDataLayerVirtualLan((short)1000);
+		match.setWildcards(match.getWildcardObj().matchOn(Flag.DL_VLAN));
+		match.setWildcards(match.getWildcardObj().matchOn(Flag.IN_PORT));
 		flow.setMatch(match);
 		List<OFAction> actions = new ArrayList<OFAction>();
 		OFActionVirtualLanIdentifier setVid = new OFActionVirtualLanIdentifier();
@@ -389,6 +395,7 @@ public class VLANSlicerTest {
 		OFMatch match = new OFMatch();
 		match.setInputPort((short)0);
 		match.setDataLayerVirtualLan((short)1000);
+		match.setWildcards(match.getWildcardObj().matchOn(Flag.DL_VLAN));
 		flow.setMatch(match);
 		flow.setActions(actions);
 		List<OFFlowMod>flows = slicer.allowedFlows(flow);
@@ -435,6 +442,8 @@ public class VLANSlicerTest {
 		OFMatch match = new OFMatch();
 		match.setInputPort((short)1);
 		match.setDataLayerVirtualLan((short)1000);
+		match.setWildcards(match.getWildcardObj().matchOn(Flag.DL_VLAN));
+		match.setWildcards(match.getWildcardObj().matchOn(Flag.IN_PORT));
 		flow.setMatch(match);
 		flow.setActions(actions);
 		
@@ -481,6 +490,7 @@ public class VLANSlicerTest {
 		OFMatch match = new OFMatch();
 		match.setInputPort((short)0);
 		match.setDataLayerVirtualLan((short)1000);
+		match.setWildcards(match.getWildcardObj().matchOn(Flag.DL_VLAN));
 		flow.setMatch(match);
 		flow.setActions(actions);
 		
