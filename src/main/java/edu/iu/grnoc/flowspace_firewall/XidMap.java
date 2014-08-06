@@ -61,6 +61,7 @@ public class XidMap {
 	}
 	
 	public synchronized void put(int key, int value) {
+		log.debug("Mapping XID: %d to %d", key, value);
 		xidMap.put(key, value);
 	}
 		
