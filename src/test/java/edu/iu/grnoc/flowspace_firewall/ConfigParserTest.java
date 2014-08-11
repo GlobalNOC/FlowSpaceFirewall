@@ -113,4 +113,23 @@ public class ConfigParserTest {
 		assertTrue("VLAN 4000 is allowed", otherPConfig.vlanAllowed((short)4000));
 		assertFalse("VLAN 4001 is not allowed", otherPConfig.vlanAllowed((short)4001));
 	}
+	
+	@Test
+	public void testTagManagedConfigLoadedProperly() throws IOException, SAXException, XPathExpressionException, ParserConfigurationException{
+		ArrayList<HashMap<Long, Slicer>> slices = ConfigParser.parseConfig("src/test/resources/good_tag_managed_config.xml");
+		assertTrue("Number of Slices is correct at " + slices.size(), slices.size() == 2);
+		HashMap<Long,Slicer> slice = slices.get(0);
+		assertNotNull("Slice is not null", slice);
+		Long dpid = new Long(3);
+		Slicer slicer = slice.get(dpid);
+		assertTrue("Slice name expected is 'Slice1' got " + slicer.getSliceName(), slicer.getSliceName().equals("Slice1"));
+		assertNotNull("Slicer is not null",slicer);
+	}
+	
+	@Test
+	public void testTagManagedConfigInvalid() throws IOException, SAXException, XPathExpressionException, ParserConfigurationException{
+		ArrayList<HashMap<Long, Slicer>> slices = ConfigParser.parseConfig("src/test/resources/bad_tag_managed_config.xml");
+		assertTrue(slices.size() == 0);
+		
+	}
 }
