@@ -182,11 +182,7 @@ public final class ConfigParser {
 		        				NodeList ranges = port.getChildNodes();
 		        				VLANRange myRange = new VLANRange();
 		        				//for every range element add to our vlan range
-		        				if(tag_management == true && ranges.getLength() > 1){
-		        					log.error("Tag Management can only be used on a single VLAN, please fix config and try again");
-		        					newSlices.clear();
-		        					return newSlices;
-		        				}
+
 		        				
 		        				for(int l=0; l < ranges.getLength(); l++){
 		        					Node range = ranges.item(l);
@@ -207,6 +203,11 @@ public final class ConfigParser {
 		        				pConfig.setVLANRange(myRange);
 		        				//add the port config to the slicer
 		        				slicer.setPortConfig(pConfig.getPortName(), pConfig);
+		        				if(tag_management == true && myRange.getAvailableTags().length > 1){
+		        					log.error("Tag Management can only be used on a single VLAN, please fix config and try again");
+		        					newSlices.clear();
+		        					return newSlices;
+		        				}
 		        			}
 	        				//add the slicer to the whole slice container (all switches)
 		        			dpidSlicer.put(switchDPID.get(switchConfig.getAttributes().getNamedItem("name").getTextContent()), slicer);
