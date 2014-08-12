@@ -435,6 +435,7 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 		floodlightProvider.addOFMessageListener(OFType.PORT_MOD, this);
 		floodlightProvider.addOFMessageListener(OFType.PORT_STATUS, this);
 		floodlightProvider.addOFMessageListener(OFType.ERROR,this);
+		floodlightProvider.addOFMessageListener(OFType.FLOW_REMOVED, this);
 		switches = new ArrayList<IOFSwitch>();
 		//start up the stats collector timer
 		statsTimer = new Timer("StatsTimer");

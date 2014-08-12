@@ -605,9 +605,14 @@ class OFControllerChannelHandler
             log.warn("Could not process message: queue full");
             
         } else {
-            log.error("Error while processing message from  slice "+ this.proxy.getSlicer().getSliceName()+" controller "+
-            this.proxy.getSlicer().getControllerAddress().toString() + " state " + this.state, e.getCause());
-            
+        	try{
+	            log.error("Error while processing message from  slice "+ this.proxy.getSlicer().getSliceName()+" controller "+
+	            this.proxy.getSlicer().getControllerAddress().toString() + " state " + this.state, e.getCause());
+        	}catch(NullPointerException bad){
+        		log.error("Something super crazy happened: " + bad.getMessage());
+        		//damn something is fucked
+        		ctx.getChannel().close();
+        	}
             ctx.getChannel().close();
         }
     }

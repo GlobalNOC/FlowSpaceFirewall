@@ -2,6 +2,8 @@ package edu.iu.grnoc.flowspace_firewall;
 
 import java.sql.Timestamp;
 
+import net.floodlightcontroller.core.FloodlightContext;
+
 import org.openflow.protocol.OFFlowMod;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -15,12 +17,14 @@ public class FlowTimeout {
 	//is a hard timeout or an idle timeout?
 	private boolean hard;
 	private long packetCount;
+	private FloodlightContext context;
+	
 	private static final Logger log = LoggerFactory.getLogger(FlowTimeout.class);
 	
-	public FlowTimeout(OFFlowMod flow, int timeout, boolean hard){
+	public FlowTimeout(OFFlowMod flow, int timeout, boolean hard, FloodlightContext context){
 		this.flow = flow;
 		this.hard = hard;
-		
+		this.context = context;
 		this.expires = new Timestamp( System.currentTimeMillis() + (timeout  * 1000) );
 		log.error("I expire at: " + this.expires.toString());
 		this.timeout = timeout;
@@ -29,6 +33,10 @@ public class FlowTimeout {
 	
 	public OFFlowMod getFlow(){
 		return this.flow;		
+	}
+	
+	public FloodlightContext getContext(){
+		return this.context;
 	}
 	
 	public boolean isExpired(){

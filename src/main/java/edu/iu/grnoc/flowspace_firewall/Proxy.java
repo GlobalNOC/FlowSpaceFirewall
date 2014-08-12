@@ -320,12 +320,14 @@ public class Proxy {
 				log.debug("Removing Flow that has timed out");
 				it.remove();
 				OFFlowMod flow = timeout.getFlow();
-				flow.setCommand(OFFlowMod.OFPFC_DELETE_STRICT);
+				flow.setOutPort(OFPort.OFPP_NONE);
+				flow.setCommand(OFFlowMod.OFPFC_DELETE);
 				List<OFAction> actions = new ArrayList<OFAction>();
 				flow.setActions(actions);
 				flow.setHardTimeout((short)0);
 				flow.setIdleTimeout((short)0);
-				this.toSwitch((OFMessage) flow,  null);				
+				flow.setFlags(OFFlowMod.OFPFF_SEND_FLOW_REM);
+				this.toSwitch((OFMessage) flow,  timeout.getContext());				
 			}
 		}
 	}
@@ -377,12 +379,12 @@ public class Proxy {
 				//and implement them in FSFW
 				if(this.mySlicer.doTimeouts()){
 					if(flow.getIdleTimeout() != 0){
-						FlowTimeout timeout = new FlowTimeout(flow, flow.getIdleTimeout(), false);					
+						FlowTimeout timeout = new FlowTimeout(flow, flow.getIdleTimeout(), false, cntx);					
 						this.timeouts.add(timeout);
 						flow.setIdleTimeout((short)0);
 					}
 					if(flow.getHardTimeout() != 0){
-						FlowTimeout timeout = new FlowTimeout(flow, flow.getHardTimeout(), true);					
+						FlowTimeout timeout = new FlowTimeout(flow, flow.getHardTimeout(), true, cntx);					
 						this.timeouts.add(timeout);
 						flow.setHardTimeout((short)0);
 					}
@@ -403,12 +405,12 @@ public class Proxy {
 				//and implement them in FSFW
 				if(this.mySlicer.doTimeouts()){
 					if(flow.getIdleTimeout() != 0){
-						FlowTimeout timeout = new FlowTimeout(flow, flow.getIdleTimeout(), false);					
+						FlowTimeout timeout = new FlowTimeout(flow, flow.getIdleTimeout(), false, cntx);					
 						this.timeouts.add(timeout);
 						flow.setIdleTimeout((short)0);
 					}
 					if(flow.getHardTimeout() != 0){
-						FlowTimeout timeout = new FlowTimeout(flow, flow.getHardTimeout(), true);					
+						FlowTimeout timeout = new FlowTimeout(flow, flow.getHardTimeout(), true, cntx);					
 						this.timeouts.add(timeout);
 						flow.setHardTimeout((short)0);
 					}
