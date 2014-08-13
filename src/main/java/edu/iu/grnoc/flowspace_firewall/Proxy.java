@@ -321,9 +321,7 @@ public class Proxy {
 				it.remove();
 				OFFlowMod flow = timeout.getFlow();
 				flow.setOutPort(OFPort.OFPP_NONE);
-				flow.setCommand(OFFlowMod.OFPFC_DELETE);
-				List<OFAction> actions = new ArrayList<OFAction>();
-				flow.setActions(actions);
+				flow.setCommand(OFFlowMod.OFPFC_DELETE_STRICT);
 				flow.setHardTimeout((short)0);
 				flow.setIdleTimeout((short)0);
 				flow.setFlags(OFFlowMod.OFPFF_SEND_FLOW_REM);
