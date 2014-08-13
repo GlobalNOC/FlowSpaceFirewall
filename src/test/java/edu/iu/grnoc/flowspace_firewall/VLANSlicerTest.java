@@ -610,6 +610,7 @@ public class VLANSlicerTest {
 		OFFlowMod flowMod = new OFFlowMod();
 		OFMatch match = new OFMatch();
 		match.setInputPort((short)3);
+		match.setWildcards(match.getWildcardObj().matchOn(Flag.IN_PORT));
 		flowMod.setMatch(match);
 		List<OFAction> actions = new ArrayList<OFAction>();
 		OFActionOutput out = new OFActionOutput();
@@ -626,6 +627,17 @@ public class VLANSlicerTest {
 		assertTrue(processedActions.get(0).getType() == OFActionType.SET_VLAN_ID);
 		OFActionVirtualLanIdentifier set_vlan_vid = (OFActionVirtualLanIdentifier)processedActions.get(0);
 		assertTrue(set_vlan_vid.getVirtualLanIdentifier() == 101);
+		
+		actions = new ArrayList<OFAction>();
+		OFActionVirtualLanIdentifier set_vlan = new OFActionVirtualLanIdentifier();
+		set_vlan.setVirtualLanIdentifier((short)100);
+		actions.add(set_vlan);
+		actions.add(out);
+		flowMod.setActions(actions);
+		flowMod.setLength((short)(OFFlowMod.MINIMUM_LENGTH + OFActionOutput.MINIMUM_LENGTH + OFActionVirtualLanIdentifier.MINIMUM_LENGTH));
+		managedFlows = otherSlicer.managedFlows(flowMod);
+		assertTrue(managedFlows.size() == 0);
+		
 	}
 	
 	/*
@@ -676,6 +688,8 @@ public class VLANSlicerTest {
 		OFMatch match = new OFMatch();
 		match.setInputPort((short)3);
 		match.setDataLayerVirtualLan((short)200);
+		match.setWildcards(match.getWildcardObj().matchOn(Flag.IN_PORT));
+		match.setWildcards(match.getWildcardObj().matchOn(Flag.DL_VLAN));
 		flowMod.setMatch(match);
 		List<OFAction> actions = new ArrayList<OFAction>();
 		OFActionOutput out = new OFActionOutput();
@@ -745,6 +759,7 @@ public class VLANSlicerTest {
 		OFFlowMod flowMod = new OFFlowMod();
 		OFMatch match = new OFMatch();
 		match.setInputPort((short)4);
+		match.setWildcards(match.getWildcardObj().matchOn(Flag.IN_PORT));
 		flowMod.setMatch(match);
 		List<OFAction> actions = new ArrayList<OFAction>();
 		OFActionOutput out = new OFActionOutput();
