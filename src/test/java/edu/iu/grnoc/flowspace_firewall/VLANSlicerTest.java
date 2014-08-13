@@ -627,6 +627,17 @@ public class VLANSlicerTest {
 		assertTrue(processedActions.get(0).getType() == OFActionType.SET_VLAN_ID);
 		OFActionVirtualLanIdentifier set_vlan_vid = (OFActionVirtualLanIdentifier)processedActions.get(0);
 		assertTrue(set_vlan_vid.getVirtualLanIdentifier() == 101);
+		
+		actions = new ArrayList<OFAction>();
+		OFActionVirtualLanIdentifier set_vlan = new OFActionVirtualLanIdentifier();
+		set_vlan.setVirtualLanIdentifier((short)100);
+		actions.add(set_vlan);
+		actions.add(out);
+		flowMod.setActions(actions);
+		flowMod.setLength((short)(OFFlowMod.MINIMUM_LENGTH + OFActionOutput.MINIMUM_LENGTH + OFActionVirtualLanIdentifier.MINIMUM_LENGTH));
+		managedFlows = otherSlicer.managedFlows(flowMod);
+		assertTrue(managedFlows.size() == 0);
+		
 	}
 	
 	/*

@@ -693,6 +693,7 @@ public class VLANSlicer implements Slicer{
 					short vlanTag;
 					PortConfig pConfig = this.getPortConfig(out.getPort());
 					if(pConfig == null){
+						newFlows.clear();
 						return newFlows;
 					}else{
 						vlanTag = (short)pConfig.getVlanRange().getAvailableTags()[0];
@@ -713,16 +714,20 @@ public class VLANSlicer implements Slicer{
 					break;
 				case SET_VLAN_ID:
 					//sorry you are DENIED!!
+					log.error("Flow Denied because managed tag mode and SET_VLAN_ID set");
+					newFlows.clear();
 					return newFlows;
 				case STRIP_VLAN:
 					//sorry you are DENIED!!
+					log.error("FLOW denied because managed tag mode and STRIP_VLAN set");
+					newFlows.clear();
 					return newFlows;
 				default:
 					newActions.add(act);
 					break;
 			}
 		}
-			
+
 		flowMod.setActions(newActions);
 		flowMod.setLength((short)(flowMod.getLength() + additional_length));
 		newFlows.add(flowMod);		
