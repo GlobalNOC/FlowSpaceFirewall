@@ -95,7 +95,7 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 	
 	@Override
 	public void switchAdded(long switchId) {
-        logger.debug("Switch " + switchId + " has joined");
+        logger.info("Switch " + switchId + " has joined");
         IOFSwitch sw = floodlightProvider.getSwitch(switchId);
         
         this.switches.add(sw);
