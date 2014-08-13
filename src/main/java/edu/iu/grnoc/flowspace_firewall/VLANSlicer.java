@@ -629,9 +629,9 @@ public class VLANSlicer implements Slicer{
 			return flows;
 		}
 		
-		if(match.getDataLayerVirtualLan() == 0 || match.getDataLayerVirtualLan() == -1 ){
+		if(match.getWildcardObj().isWildcarded(Flag.DL_VLAN) || match.getDataLayerVirtualLan() == -1 ){
 			//untagged or no tag...
-			if(match.getInputPort() == 0){
+			if(match.getWildcardObj().isWildcarded(Flag.IN_PORT)){
 				//needs to expand it out unless has access to all ports
 				Iterator<Entry<String, PortConfig>> it = this.portList.entrySet().iterator();
 				while(it.hasNext()){
@@ -667,6 +667,7 @@ public class VLANSlicer implements Slicer{
 					vlanId = (short)pConfig.getVlanRange().getAvailableTags()[0];
 				}
 				match.setDataLayerVirtualLan(vlanId);
+				match.setWildcards(match.getWildcardObj().matchOn(Flag.DL_VLAN));
 				flowMod.setMatch(match);
 				//process the actions and add setVlanVid actions if necessary
 				flows = this.managedFlowActions(flowMod);
@@ -720,14 +721,11 @@ public class VLANSlicer implements Slicer{
 					newActions.add(act);
 					break;
 			}
-			
 		}
-		OFFlowMod newFlow = new OFFlowMod();
-		newFlow.setMatch(flowMod.getMatch());
-		newFlow.setActions(newActions);
-		//need to set the length
-		newFlow.setLength((short)(flowMod.getLength() + additional_length));
-		newFlows.add(newFlow);		
+			
+		flowMod.setActions(newActions);
+		flowMod.setLength((short)(flowMod.getLength() + additional_length));
+		newFlows.add(flowMod);		
 		return newFlows;
 	}
 	
