@@ -36,7 +36,7 @@ public class FlowSpaceFirewallSlices extends ServerResource{
 		logger = LoggerFactory.getLogger(FlowSpaceFirewall.class);		
 		IFlowSpaceFirewallService iFSFs = (IFlowSpaceFirewallService)getContext().getAttributes().get(IFlowSpaceFirewallService.class.getCanonicalName());
 		List<HashMap<Long,Slicer>> slices = Collections.synchronizedList(iFSFs.getSlices() );
-		logger.error("webservice Size of slices:"+slices.size());
+		logger.debug("webservice Size of slices:"+slices.size());
 		
 		synchronized(slices){
 			HashMap<String, List<String>> newSlices = new HashMap<String,List<String>>();

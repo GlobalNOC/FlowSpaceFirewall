@@ -286,7 +286,7 @@ public class Proxy {
 	}
 	
 	public void setFlowCount(int totalFlows){
-		log.error("set flow count to: " + totalFlows + " for slice " + this.getSlicer().getSliceName() + " " + this.getSwitch().getStringId());
+		log.debug("set flow count to: " + totalFlows + " for slice " + this.getSlicer().getSliceName() + " " + this.getSwitch().getStringId());
 		this.flowCount = totalFlows;
 	}
 	
