@@ -1,6 +1,6 @@
 Name: flowspace-firewall
-Version: 1.0.2
-Release: 4%{?dist}
+Version: 1.0.3
+Release: 1%{?dist}
 Summary: Flowspace Firewall
 License: CHECK(Distributable)
 Group: SDN

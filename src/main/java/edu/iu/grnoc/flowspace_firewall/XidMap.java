@@ -29,7 +29,7 @@ public class XidMap {
 
 	private Map<Integer, Integer> xidMap;
 	private static final int max_xid_size = 1000;
-	@SuppressWarnings("unused")
+	
 	private static final Logger log = LoggerFactory.getLogger(XidMap.class);
 	
 	public XidMap(){
@@ -61,6 +61,7 @@ public class XidMap {
 	}
 	
 	public synchronized void put(int key, int value) {
+		log.debug("Mapping XID: %d to %d", key, value);
 		xidMap.put(key, value);
 	}
 		

@@ -31,13 +31,13 @@ public class FlowTimeoutTest {
 
 	@Test
 	public void testFlowTimeoutInit(){
-		FlowTimeout timeout = new FlowTimeout(new OFFlowMod(), 10, false);
+		FlowTimeout timeout = new FlowTimeout(new OFFlowMod(), 10, false,null);
 		assertNotNull("timeout was properly created",timeout);
 		assertTrue("is an idle timemout", timeout.isHard() == false);
 		assertTrue("packet count init was 0",timeout.getPacketCount() == 0);
 		assertTrue("is expired == false", timeout.isExpired() == false);
 		
-		timeout = new FlowTimeout(new OFFlowMod(), 100, true);
+		timeout = new FlowTimeout(new OFFlowMod(), 100, true,null);
 		assertNotNull("timeout was properly created",timeout);
 		assertTrue("is an idle timemout", timeout.isHard());
 		assertTrue("packet count init was 0",timeout.getPacketCount() == 0);
@@ -47,7 +47,7 @@ public class FlowTimeoutTest {
 	
 	@Test
 	public void testFlowTimeoutSetPacketCount(){
-		FlowTimeout timeout = new FlowTimeout(new OFFlowMod(), 1, false);
+		FlowTimeout timeout = new FlowTimeout(new OFFlowMod(), 1, false, null);
 		timeout.setPacketCount((long)100);
 		assertTrue("packet count was updated",timeout.getPacketCount() == 100);
 		timeout.setPacketCount((long)1000);
@@ -56,7 +56,7 @@ public class FlowTimeoutTest {
 	
 	@Test
 	public void testFlowTimeoutTimeout() throws InterruptedException{
-		FlowTimeout timeout = new FlowTimeout(new OFFlowMod(), 1, false);
+		FlowTimeout timeout = new FlowTimeout(new OFFlowMod(), 1, false,null);
 		assertFalse("Not timed out",timeout.isExpired());
 		Thread.sleep(2000);
 		assertTrue("Now timed out",timeout.isExpired());
@@ -64,7 +64,7 @@ public class FlowTimeoutTest {
 	
 	@Test
 	public void testFlowTimeoutUpdateLastUsed() throws InterruptedException{
-		FlowTimeout timeout = new FlowTimeout(new OFFlowMod(), 10, false);
+		FlowTimeout timeout = new FlowTimeout(new OFFlowMod(), 10, false,null);
 		assertFalse("Not timed out", timeout.isExpired());
 		Thread.sleep(5000);
 		timeout.updateLastUsed();

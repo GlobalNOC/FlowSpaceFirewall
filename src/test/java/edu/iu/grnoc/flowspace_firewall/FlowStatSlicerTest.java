@@ -31,11 +31,14 @@ import net.floodlightcontroller.core.ImmutablePort;
 import org.junit.Test;
 import org.junit.Before;
 import org.openflow.protocol.OFMatch;
+import org.openflow.protocol.Wildcards.Flag;
 import org.openflow.protocol.action.OFAction;
 import org.openflow.protocol.action.OFActionOutput;
 import org.openflow.protocol.action.OFActionVirtualLanIdentifier;
 import org.openflow.protocol.statistics.OFFlowStatisticsReply;
 import org.openflow.protocol.statistics.OFStatistics;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.junit.Rule;
 import org.junit.rules.ExpectedException;
@@ -51,6 +54,7 @@ public class FlowStatSlicerTest {
 	PortConfig pConfig2;
 	PortConfig pConfig3;
 	PortConfig pConfig5;
+	protected static Logger log = LoggerFactory.getLogger(FlowStatSlicerTest.class);
 	
 	@Rule
 	public ExpectedException thrown = ExpectedException.none();
@@ -64,7 +68,8 @@ public class FlowStatSlicerTest {
 		OFMatch match = new OFMatch();
 		match.setInputPort((short)1);
 		match.setDataLayerVirtualLan((short)100);
-		
+		match.setWildcards(match.getWildcardObj().matchOn(Flag.DL_VLAN));
+		match.setWildcards(match.getWildcardObj().matchOn(Flag.IN_PORT));
 		//all allowed stats
 		allowedStats = new ArrayList<OFStatistics>();
 		OFFlowStatisticsReply stat = new OFFlowStatisticsReply();
@@ -80,6 +85,8 @@ public class FlowStatSlicerTest {
 		match = new OFMatch();
 		match.setInputPort((short)2);
 		match.setDataLayerVirtualLan((short)102);
+		match.setWildcards(match.getWildcardObj().matchOn(Flag.DL_VLAN));
+		match.setWildcards(match.getWildcardObj().matchOn(Flag.IN_PORT));
 		stat = new OFFlowStatisticsReply();
 		stat.setActions(actions);
 		stat.setMatch(match);
@@ -93,6 +100,8 @@ public class FlowStatSlicerTest {
 		match = new OFMatch();
 		match.setInputPort((short)3);
 		match.setDataLayerVirtualLan((short)103);
+		match.setWildcards(match.getWildcardObj().matchOn(Flag.DL_VLAN));
+		match.setWildcards(match.getWildcardObj().matchOn(Flag.IN_PORT));
 		stat = new OFFlowStatisticsReply();
 		stat.setActions(actions);
 		stat.setMatch(match);
@@ -106,6 +115,8 @@ public class FlowStatSlicerTest {
 		match = new OFMatch();
 		match.setInputPort((short)5);
 		match.setDataLayerVirtualLan((short)105);
+		match.setWildcards(match.getWildcardObj().matchOn(Flag.DL_VLAN));
+		match.setWildcards(match.getWildcardObj().matchOn(Flag.IN_PORT));
 		stat = new OFFlowStatisticsReply();
 		stat.setActions(actions);
 		stat.setMatch(match);
@@ -139,6 +150,8 @@ public class FlowStatSlicerTest {
 		match = new OFMatch();
 		match.setInputPort((short)2);
 		match.setDataLayerVirtualLan((short)202);
+		match.setWildcards(match.getWildcardObj().matchOn(Flag.DL_VLAN));
+		match.setWildcards(match.getWildcardObj().matchOn(Flag.IN_PORT));
 		stat = new OFFlowStatisticsReply();
 		stat.setActions(actions);
 		stat.setMatch(match);
@@ -155,6 +168,8 @@ public class FlowStatSlicerTest {
 		match = new OFMatch();
 		match.setInputPort((short)3);
 		match.setDataLayerVirtualLan((short)103);
+		match.setWildcards(match.getWildcardObj().matchOn(Flag.DL_VLAN));
+		match.setWildcards(match.getWildcardObj().matchOn(Flag.IN_PORT));
 		stat = new OFFlowStatisticsReply();
 		stat.setActions(actions);
 		stat.setMatch(match);
@@ -168,6 +183,8 @@ public class FlowStatSlicerTest {
 		match = new OFMatch();
 		match.setInputPort((short)5);
 		match.setDataLayerVirtualLan((short)105);
+		match.setWildcards(match.getWildcardObj().matchOn(Flag.DL_VLAN));
+		match.setWildcards(match.getWildcardObj().matchOn(Flag.IN_PORT));
 		stat = new OFFlowStatisticsReply();
 		stat.setActions(actions);
 		stat.setMatch(match);
@@ -181,6 +198,8 @@ public class FlowStatSlicerTest {
 		match = new OFMatch();
 		match.setInputPort((short)5);
 		match.setDataLayerVirtualLan((short)105);
+		match.setWildcards(match.getWildcardObj().matchOn(Flag.DL_VLAN));
+		match.setWildcards(match.getWildcardObj().matchOn(Flag.IN_PORT));
 		stat = new OFFlowStatisticsReply();
 		stat.setActions(actions);
 		stat.setMatch(match);
@@ -194,6 +213,9 @@ public class FlowStatSlicerTest {
 		match = new OFMatch();
 		match.setInputPort((short)4);
 		match.setDataLayerVirtualLan((short)105);
+		match.setWildcards(match.getWildcardObj().matchOn(Flag.DL_VLAN));
+		match.setWildcards(match.getWildcardObj().matchOn(Flag.IN_PORT));
+		
 		stat = new OFFlowStatisticsReply();
 		stat.setActions(actions);
 		stat.setMatch(match);
@@ -253,6 +275,7 @@ public class FlowStatSlicerTest {
 		
 		sw = createMock(IOFSwitch.class);
 		expect(sw.getId()).andReturn(0L).anyTimes();
+		expect(sw.getStringId()).andReturn("0000000").anyTimes();
 		expect(sw.getPort((short)1)).andReturn(p).anyTimes();
 		expect(sw.getPort((short)2)).andReturn(p2).anyTimes();
 		expect(sw.getPort((short)3)).andReturn(p3).anyTimes();
@@ -307,7 +330,7 @@ public class FlowStatSlicerTest {
 	@Test
 	public void testSliceStatsAllAllowed() {
 		List <OFStatistics> slicedStats = FlowStatSlicer.SliceStats(slicer, allowedStats);
-		assertEquals("Number of sliced stat is same as number of total stats", slicedStats.size(), allowedStats.size());
+		assertEquals("Number of sliced stat is same as number of total stats",  allowedStats.size(),slicedStats.size());
 	}
 	
 	@Test
