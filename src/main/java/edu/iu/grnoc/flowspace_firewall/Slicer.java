@@ -1,5 +1,5 @@
 /*
- Copyright 2013 Trustees of Indiana University
+ Copyright 2014 Trustees of Indiana University
 
    Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -29,6 +29,7 @@ public interface Slicer {
 	List <OFFlowMod> allowedFlows(OFFlowMod flow);
 	List <OFFlowMod> managedFlows(OFFlowMod flow);
 	List<OFMessage> allowedPacketOut(OFPacketOut output);
+	List<OFMessage> managedPacketOut(OFPacketOut output);
 	void setController(InetSocketAddress addr);
 	InetSocketAddress getControllerAddress();
 	void setSwitch(IOFSwitch mySwitch);

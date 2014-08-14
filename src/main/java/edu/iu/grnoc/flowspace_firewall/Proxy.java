@@ -1,5 +1,5 @@
 /*
- Copyright 2013 Trustees of Indiana University
+ Copyright 2014 Trustees of Indiana University
 
    Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -712,23 +712,44 @@ public class Proxy {
 				return;
 			case PACKET_OUT:
 				//super simple case no need for the extra method
-				List<OFMessage> allowed = this.mySlicer.allowedPacketOut((OFPacketOut)msg);
-				if(allowed.isEmpty()){
-					//really we need to send a perm error
-					log.info("PacketOut is not allowed");
-					OFError error = new OFError(OFError.OFErrorType.OFPET_BAD_REQUEST);
-					error.setErrorCode(OFBadRequestCode.OFPBRC_EPERM);
-					this.sendError((OFMessage)msg,error);
-					return;
-				}else{
-					log.debug("PacketOut is allowed");
-					mapXids(allowed);
-					try {
-						mySwitch.write(allowed, cntx);
-					} catch (IOException e) {
-						e.printStackTrace();
+				if(this.mySlicer.getTagManagement()){
+					List<OFMessage> allowed = this.mySlicer.managedPacketOut((OFPacketOut)msg);
+					if(allowed.isEmpty()){
+						//really we need to send a perm error
+						log.info("PacketOut is not allowed");
+						OFError error = new OFError(OFError.OFErrorType.OFPET_BAD_REQUEST);
+						error.setErrorCode(OFBadRequestCode.OFPBRC_EPERM);
+						this.sendError((OFMessage)msg,error);
+						return;
+					}else{
+						log.debug("PacketOut is allowed");
+						mapXids(allowed);
+						try {
+							mySwitch.write(allowed, cntx);
+						} catch (IOException e) {
+							e.printStackTrace();
+						}
+						mySwitch.flush();
 					}
-					mySwitch.flush();
+				}else{
+					List<OFMessage> allowed = this.mySlicer.allowedPacketOut((OFPacketOut)msg);
+					if(allowed.isEmpty()){
+						//really we need to send a perm error
+						log.info("PacketOut is not allowed");
+						OFError error = new OFError(OFError.OFErrorType.OFPET_BAD_REQUEST);
+						error.setErrorCode(OFBadRequestCode.OFPBRC_EPERM);
+						this.sendError((OFMessage)msg,error);
+						return;
+					}else{
+						log.debug("PacketOut is allowed");
+						mapXids(allowed);
+						try {
+							mySwitch.write(allowed, cntx);
+						} catch (IOException e) {
+							e.printStackTrace();
+						}
+						mySwitch.flush();
+					}
 				}
 				return;
 			case STATS_REQUEST:
