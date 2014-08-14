@@ -1,5 +1,5 @@
 /*
- Copyright 2013 Trustees of Indiana University
+ Copyright 2014 Trustees of Indiana University
 
    Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -440,6 +440,7 @@ public class VLANSlicer implements Slicer{
 								size = size + act.getLengthU();
 							}
 							newOut.setActionsLength((short)size);
+							newOut.setLength((short)(OFPacketOut.MINIMUM_LENGTH + newOut.getPacketData().length + size));
 							packets.add(newOut);
 						}
 						
@@ -470,7 +471,7 @@ public class VLANSlicer implements Slicer{
 							size = size + act.getLengthU();
 						}
 						newOut.setActionsLength((short)size);
-						
+						newOut.setLength((short)(OFPacketOut.MINIMUM_LENGTH + newOut.getPacketData().length + size));
 						packets.add(newOut);
 					}
 					break;
@@ -569,6 +570,7 @@ public class VLANSlicer implements Slicer{
 								size = size + act.getLengthU();
 							}
 							newOut.setActionsLength((short)size);
+							newOut.setLength((short)(OFPacketOut.MINIMUM_LENGTH + newOut.getPacketData().length + size));
 							packets.add(newOut);
 						}
 						
@@ -603,7 +605,7 @@ public class VLANSlicer implements Slicer{
 							size = size + act.getLengthU();
 						}
 						newOut.setActionsLength((short)size);
-						
+						newOut.setLength((short)(OFPacketOut.MINIMUM_LENGTH + newOut.getPacketData().length + size));
 						packets.add(newOut);
 					}
 					break;
@@ -691,6 +693,45 @@ public class VLANSlicer implements Slicer{
 					OFActionOutput out = (OFActionOutput)act;
 					//probably need to do some vlan tag manipulation first			
 					short vlanTag;
+					if(out.getPort() == OFPort.OFPP_CONTROLLER.getValue()){
+						//some devices can't strip vlan so we need to strip it
+						//in the packet in
+						newActions.add(out);
+						break;
+					}
+					if(out.getPort() == OFPort.OFPP_ALL.getValue()){
+						//in the case of output all... we need to expand
+						//TODO handle OUTPUT ALL
+						Iterator<Entry<String, PortConfig>> it = this.portList.entrySet().iterator();
+						while(it.hasNext()){
+							Map.Entry<String, PortConfig> port = (Entry<String, PortConfig>) it.next();
+							if(port.getValue().getPortId() != 0){
+								PortConfig pConfig = this.getPortConfig(port.getValue().getPortId());
+								vlanTag = (short)pConfig.getVlanRange().getAvailableTags()[0];
+								if(vlanTag == -1){
+									//do a strip vlan tag
+									OFActionStripVirtualLan strip_vlan_vid = new OFActionStripVirtualLan();
+									newActions.add(strip_vlan_vid);
+									additional_length += strip_vlan_vid.getLength();
+								}else{
+									//set the vlan id
+									OFActionVirtualLanIdentifier set_vlan_vid = new OFActionVirtualLanIdentifier();
+									set_vlan_vid.setVirtualLanIdentifier(vlanTag);
+									newActions.add(set_vlan_vid);
+									additional_length += set_vlan_vid.getLength();
+								}
+								OFActionOutput newOut = new OFActionOutput();
+								out.setPort(port.getValue().getPortId());
+								newActions.add(newOut);
+								additional_length += newOut.getLength();
+							}
+						}
+						//we never added our orig action so remove its length from what we
+						//are sending it
+						additional_length -= out.getLengthU();
+						break;
+					}
+					
 					PortConfig pConfig = this.getPortConfig(out.getPort());
 					if(pConfig == null){
 						newFlows.clear();
@@ -719,7 +760,7 @@ public class VLANSlicer implements Slicer{
 					return newFlows;
 				case STRIP_VLAN:
 					//sorry you are DENIED!!
-					log.error("FLOW denied because managed tag mode and STRIP_VLAN set");
+					log.error("FLow Denied because managed tag mode and STRIP_VLAN set");
 					newFlows.clear();
 					return newFlows;
 				default:
