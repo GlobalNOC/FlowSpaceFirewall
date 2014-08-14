@@ -121,7 +121,6 @@ do
     *)
         echo "usage: $0 (start|stop|restart|help)"
         cat <<EOF
-EOF
 
 start      - start FlowSpace Firewall
 stop       - stop FlowSpace Firewall
