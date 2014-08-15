@@ -91,7 +91,7 @@ public class ControllerConnector extends TimerTask {
 	 * Looks through every proxy and determines if the proxy needs to 
 	 * attempt to connect to the controller.
 	 */
-	public void run(){
+	public synchronized void run(){
 		log.debug("Looking for controllers not currently connected");
 		Iterator <Long> it = proxies.keySet().iterator();
 		while(it.hasNext()){
