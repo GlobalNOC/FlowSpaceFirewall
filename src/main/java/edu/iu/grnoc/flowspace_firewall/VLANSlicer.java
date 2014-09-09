@@ -949,6 +949,7 @@ public class VLANSlicer implements Slicer{
 			//track our current vlan... start with the matchVlan
 			short curVlan = match.getDataLayerVirtualLan();
 			
+			
 			while(actionIterator.hasNext()){
 				OFAction action = actionIterator.next();
 				switch(action.getType()){
@@ -982,10 +983,16 @@ public class VLANSlicer implements Slicer{
 							return false;
 						}
 						break;
-					//vlan required!
+					
 					case STRIP_VLAN:
 						log.info("Doing a strip vlan");
-						return false;
+						
+						//if the output port allows -1, we should permit this flow otherwise deny. 
+						//OUTPUT case now determines allow/deny.
+						curVlan=-1;
+						
+						
+						//return false;
 					//we are not slicing anything else at this time
 					//so by default we let it through
 					default:
