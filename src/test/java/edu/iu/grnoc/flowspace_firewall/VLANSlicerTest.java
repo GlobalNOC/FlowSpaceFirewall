@@ -41,6 +41,9 @@ import org.openflow.protocol.action.OFAction;
 import org.openflow.protocol.action.OFActionOutput;
 import org.openflow.protocol.action.OFActionType;
 import org.openflow.protocol.action.OFActionVirtualLanIdentifier;
+import org.openflow.protocol.action.OFActionStripVirtualLan;
+
+
 
 public class VLANSlicerTest {
 
@@ -377,6 +380,52 @@ public class VLANSlicerTest {
 		assertEquals("flow was allowed and matches", flow, flows.get(0));
 		
 	}
+	/**
+	 *  tests isFlowModAllowed for STRIP_VLAN Actions, first without -1 as an available vlan, then adding the -1,-1 range to the output port config.
+	 */
+	
+	@Test
+	public void testIsFlowModAllowedStripVLAN(){
+		OFFlowMod flow = new OFFlowMod();
+		OFMatch match = new OFMatch();
+		match.setInputPort((short)1);
+		match.setDataLayerVirtualLan((short)1000);
+		match.setWildcards(match.getWildcardObj().matchOn(Flag.DL_VLAN));
+		match.setWildcards(match.getWildcardObj().matchOn(Flag.IN_PORT));
+		flow.setMatch(match);
+		List<OFAction> actions = new ArrayList<OFAction>();
+		//OFActionVirtualLanIdentifier setVid = new OFActionVirtualLanIdentifier();
+		//setVid.setVirtualLanIdentifier((short)102);		
+		OFActionStripVirtualLan strip_vlan_vid = new OFActionStripVirtualLan();
+		OFActionOutput output = new OFActionOutput();
+		output.setPort((short)2);
+		actions.add(strip_vlan_vid);
+		actions.add(output);
+		flow.setActions(actions);
+		
+		// should not have access
+		List <OFFlowMod> flows = slicer.allowedFlows(flow);
+		assertTrue("flows were denied", flows.size() == 0);
+		//assertEquals("flow was allowed and matches", flow, flows.get(0));
+		PortConfig tmpPConfig = new PortConfig();
+		tmpPConfig.setPortName("foo2");
+		
+		VLANRange range = new VLANRange();
+				tmpPConfig.setVLANRange(range);
+		slicer.setPortConfig("foo4", tmpPConfig);
+		range.setVlanAvail((short)-1,true);
+		range.setVlanAvail((short)102,true);
+		range.setVlanAvail((short)1000,true);
+		pConfig2.setVLANRange(range);
+		slicer.setPortConfig("foo2", pConfig2);
+		
+		//added to config, should work now.
+		flows = slicer.allowedFlows(flow);
+		assertTrue("flows were denied", flows.size() == 1);
+		assertEquals("flow was allowed and matches", flow, flows.get(0));
+		
+	}
+	
 	
 	/**
 	 * tests isFlowModAllowed for expansions
