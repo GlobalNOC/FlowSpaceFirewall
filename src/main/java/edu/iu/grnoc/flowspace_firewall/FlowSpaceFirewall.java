@@ -67,7 +67,7 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
     private Timer controllerConnectTimer;
     
     private ArrayList<HashMap<Long, Slicer>> slices;
-    private ArrayList<IOFSwitch> switches;
+    private List<IOFSwitch> switches;
     private FlowStatCacher statsCacher;
     private ControllerConnector controllerConnector;
     protected IRestApiService restApi;
@@ -436,7 +436,7 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 		floodlightProvider.addOFMessageListener(OFType.PORT_STATUS, this);
 		floodlightProvider.addOFMessageListener(OFType.ERROR,this);
 		floodlightProvider.addOFMessageListener(OFType.FLOW_REMOVED, this);
-		switches = new ArrayList<IOFSwitch>();
+		switches = Collections.synchronizedList(new ArrayList<IOFSwitch>());
 		//start up the stats collector timer
 		statsTimer = new Timer("StatsTimer");
 		statsCacher = new FlowStatCacher(this);
