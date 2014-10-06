@@ -154,6 +154,7 @@ public final class ConfigParser {
 	        				if(tag_mgmt != null){
 	        					tag_management = Boolean.parseBoolean(switchConfig.getAttributes().getNamedItem("tag_management").getTextContent());
 	        				}
+	        				slicer.setSwitchName(switchConfig.getAttributes().getNamedItem("name").getTextContent());
 	        				slicer.setTagManagement(tag_management);
 	        				slicer.setFlushRulesOnConnect(flush_on_connect);
 	        				int numberOfFlows = Integer.parseInt(switchConfig.getAttributes().getNamedItem("max_flows").getTextContent());

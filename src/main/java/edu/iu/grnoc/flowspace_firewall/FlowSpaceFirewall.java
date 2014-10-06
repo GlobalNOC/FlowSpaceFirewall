@@ -284,7 +284,7 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 				
 				if(!updated){
 					logger.warn("Slice "
-							+p.getSlicer().getSliceName()+":" + p.getSwitch().getStringId() +" was not found, removing");
+							+p.getSlicer().getSliceName()+":" + p.getSlicer().getSwitchName() +" was not found, removing");
 					p.disconnect();
 					toBeRemoved.add(p);
 				}
@@ -359,7 +359,7 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 				logger.debug("slice disabled... skipping");
 			}else{
 				try{
-					logger.debug("attempting to send " + msg.toString() + " to slice: " + p.getSlicer().getSliceName() + " from switch: " + sw.getStringId());
+					logger.debug("attempting to send " + msg.toString() + " to slice: " + p.getSlicer().getSliceName() + " from switch: " + p.getSlicer().getSwitchName());
 					p.toController(msg,cntx);
 				}catch (Exception e){
 					//don't die please... just keep going and error the stack trace

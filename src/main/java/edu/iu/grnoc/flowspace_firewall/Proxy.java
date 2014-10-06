@@ -286,7 +286,7 @@ public class Proxy {
 	}
 	
 	public void setFlowCount(int totalFlows){
-		log.debug("set flow count to: " + totalFlows + " for slice " + this.getSlicer().getSliceName() + " " + this.getSwitch().getStringId());
+		log.debug("set flow count to: " + totalFlows + " for slice " + this.getSlicer().getSliceName() + " " + this.getSlicer().getSwitchName());
 		this.flowCount = totalFlows;
 	}
 	
@@ -335,25 +335,25 @@ public class Proxy {
 		if(this.mySlicer.getTagManagement()){
 			flows = this.mySlicer.managedFlows((OFFlowMod)msg);
 			if(flows.size() ==0){
-				log.error("Slice: " + this.mySlicer.getSliceName() + ":" + this.mySwitch.getStringId() + " denied flow: " + ((OFFlowMod)msg).toString());
+				log.error("Slice: " + this.mySlicer.getSliceName() + ":" + this.getSlicer().getSwitchName() + " denied flow: " + ((OFFlowMod)msg).toString());
 				OFError error = new OFError(OFError.OFErrorType.OFPET_BAD_REQUEST);
 				error.setErrorCode(OFBadRequestCode.OFPBRC_EPERM);
 				this.sendError((OFMessage)msg,error );
 				return;
 			}else{
-				log.info("Slice: " + this.mySlicer.getSliceName() + ":" + this.mySwitch.getStringId() + " Sent Flow: " + ((OFFlowMod)msg).toString());
+				log.info("Slice: " + this.mySlicer.getSliceName() + ":" + this.getSlicer().getSwitchName() + " Sent Flow: " + ((OFFlowMod)msg).toString());
 			}
 		}else{
 			flows = this.mySlicer.allowedFlows((OFFlowMod)msg);
 			if(flows.size() == 0){
 				//really we need to send a perm error
-				log.error("Slice: " + this.mySlicer.getSliceName() + ":" + this.mySwitch.getStringId() + " denied flow: " + ((OFFlowMod)msg).toString());
+				log.error("Slice: " + this.mySlicer.getSliceName() + ":" + this.getSlicer().getSwitchName() + " denied flow: " + ((OFFlowMod)msg).toString());
 				OFError error = new OFError(OFError.OFErrorType.OFPET_BAD_REQUEST);
 				error.setErrorCode(OFBadRequestCode.OFPBRC_EPERM);
 				this.sendError((OFMessage)msg,error);
 				return;
 			}else{
-				log.info("Slice: " + this.mySlicer.getSliceName() + ":" + this.mySwitch.getStringId() + " Sent Flow: " + ((OFFlowMod)msg).toString());
+				log.info("Slice: " + this.mySlicer.getSliceName() + ":" + this.getSlicer().getSwitchName() + " Sent Flow: " + ((OFFlowMod)msg).toString());
 			}
 		}
 		List <OFMessage> messages = new ArrayList<OFMessage>();
@@ -366,7 +366,7 @@ public class Proxy {
 			case OFFlowMod.OFPFC_ADD:
 
 				if( this.mySlicer.isGreaterThanMaxFlows(this.flowCount + 1) ) {
-					log.warn("Switch: "+this.mySwitch.getStringId()+" Slice: "+this.mySlicer.getSliceName()+" Flow count is already at threshold. Skipping flow mod");
+					log.warn("Switch: "+this.getSlicer().getSwitchName()+" Slice: "+this.mySlicer.getSliceName()+" Flow count is already at threshold. Skipping flow mod");
 					OFError error = new OFError(OFError.OFErrorType.OFPET_FLOW_MOD_FAILED);
 					error.setErrorCode(OFError.OFFlowModFailedCode.OFPFMFC_ALL_TABLES_FULL);
 					this.sendError((OFMessage)msg, error);
@@ -392,7 +392,7 @@ public class Proxy {
 			case OFFlowMod.OFPFF_CHECK_OVERLAP:
 
 				if( this.mySlicer.isGreaterThanMaxFlows(this.flowCount + 1) ) {
-					log.warn("Switch: "+this.mySwitch.getStringId()+" Slice: "+this.mySlicer.getSliceName()+"Flow count is already at threshold. Skipping flow mod");
+					log.warn("Switch: "+this.getSlicer().getSwitchName()+" Slice: "+this.mySlicer.getSliceName()+"Flow count is already at threshold. Skipping flow mod");
 					OFError error = new OFError(OFError.OFErrorType.OFPET_FLOW_MOD_FAILED);
 					error.setErrorCode(OFError.OFFlowModFailedCode.OFPFMFC_ALL_TABLES_FULL);
 					this.sendError((OFMessage)msg,error);
@@ -615,7 +615,7 @@ public class Proxy {
 	
 	private void handleFlowStatsRequest(OFMessage msg){
 		//we have the stats cached so slice n' dice and return
-		log.debug("Working on stats for switch: " + mySwitch.getStringId() + " for slice this slice");
+		log.debug("Working on stats for switch: " + this.getSlicer().getSwitchName() + " for slice this slice");
 		List<OFStatistics> results = this.parent.getSlicedFlowStats(mySwitch.getId(),this.mySlicer.getSliceName());
 		
 		if(results == null){
@@ -699,7 +699,7 @@ public class Proxy {
 		//first figure out what the message is
 		log.debug("Proxy Slicing request of type: " + msg.getType());
 		if(!this.mySlicer.isOkToProcessMessage()){
-			log.warn("Switch: "+this.mySwitch.getStringId()+"Slice:"+this.mySlicer.getSliceName()+"Rate limit exceeded");
+			log.warn("Switch: "+this.getSlicer().getSwitchName()+"Slice:"+this.mySlicer.getSliceName()+"Rate limit exceeded");
 			OFError error = new OFError(OFError.OFErrorType.OFPET_BAD_REQUEST);
 			error.setErrorCode(OFBadRequestCode.OFPBRC_EPERM);
 			this.sendError((OFMessage)msg,error);
@@ -776,7 +776,7 @@ public class Proxy {
 		if(!this.valid_header(msg)){
 			//invalid packet don't send it back so we cant send an error
 			//just log and drop it
-			log.error("Slice " + this.getSlicer().getSliceName() + " to switch " + this.mySwitch.getStringId() + "  Invalid Header Rejecting!");
+			log.error("Slice " + this.getSlicer().getSliceName() + " to switch " + this.mySlicer.getSwitchName() + "  Invalid Header Rejecting!");
 			return;
 		}
 		
@@ -856,7 +856,7 @@ public class Proxy {
 				break;
 			}else{
 				log.error("Packet in Rate for Slice: " +
-							this.getSlicer().getSliceName() + ":" + this.getSwitch().getStringId() +
+							this.getSlicer().getSliceName() + ":" + this.getSlicer().getSwitchName() +
 							" has passed the packet in rate limit Disabling slice!!!!");
 				this.setAdminStatus(false);
 				return;
@@ -868,7 +868,7 @@ public class Proxy {
 			OFPortStatus portStatus = (OFPortStatus)msg;
 			OFPhysicalPort port = portStatus.getDesc();
 			if(!this.mySlicer.isPortPartOfSlice(port.getName())){
-				log.debug("Port status even for switch"+this.mySwitch.getStringId()+" port " + port.getName() + " is not allowed for slice"+this.mySlicer.getSliceName());
+				log.debug("Port status even for switch" + this.getSlicer().getSwitchName() + " port " + port.getName() + " is not allowed for slice"+this.mySlicer.getSliceName());
 				return;
 			}
 			

@@ -60,6 +60,7 @@ public class VLANSlicer implements Slicer{
 	private int maxFlows;
 	private String name;
 	private int packetInRate;
+	private String swName;
 	private Map<Integer, byte[]> bufferIds;
 	private boolean adminState;
 	private boolean flushOnConnect;
@@ -123,6 +124,14 @@ public class VLANSlicer implements Slicer{
 					}
 				}
 				);
+	}
+	
+	public void setSwitchName(String swName){
+		this.swName = swName;
+	}
+	
+	public String getSwitchName(){
+		return this.swName;
 	}
 	
 	public boolean doTimeouts(){
@@ -395,7 +404,7 @@ public class VLANSlicer implements Slicer{
 			packets.clear();
 			return packets;
 		}
-		log.error("VLAN ID: " + match.getDataLayerVirtualLan());
+		log.debug("VLAN ID: " + match.getDataLayerVirtualLan());
 		if(match.getDataLayerVirtualLan() != -1){
 			log.error("Packet has VID Set");
 			packets.clear();
@@ -794,13 +803,13 @@ public class VLANSlicer implements Slicer{
 		//wildcarded DL_VLAN?
 		Wildcards wc = match.getWildcardObj();
 		if(wc.isWildcarded(Wildcards.Flag.DL_VLAN)){
-			log.debug("Slice: " + this.getSliceName() + ":" + this.sw.getStringId() + " Flow rule VLAN wildcarded.  Denied: " + flowMod.toString());
+			log.debug("Slice: " + this.getSliceName() + ":" + this.getSwitchName() + " Flow rule VLAN wildcarded.  Denied: " + flowMod.toString());
 			return flowMods;
 		}
 		//if you wildcarded the vlan then tough we are blowing up now
 		//we require an input vlan
 		if(match.getDataLayerVirtualLan() == 0){
-			log.debug("Slice: " + this.getSliceName() + ":" + this.sw.getStringId() + " Flow rule VLAN wildcarded.  Denied: " + flowMod.toString());
+			log.debug("Slice: " + this.getSliceName() + ":" + this.getSwitchName() + " Flow rule VLAN wildcarded.  Denied: " + flowMod.toString());
 			return flowMods;
 		}
 		
@@ -845,7 +854,7 @@ public class VLANSlicer implements Slicer{
 					}catch (CloneNotSupportedException e){
 						log.error("This can't happen in the real world");
 					}catch (Exception e){
-						log.error("WTF");
+						
 					}
 				}
 			}
@@ -903,7 +912,7 @@ public class VLANSlicer implements Slicer{
 		//need to do something special if you do have access to all ports
 		Wildcards wc = match.getWildcardObj();
 		if(wc.isWildcarded(Wildcards.Flag.IN_PORT)){
-			log.debug("Slice: " + this.getSliceName() + ":" + this.sw.getStringId() + " Flow rule VLAN wildcarded.  Denied: " + flowMod.toString());
+			log.debug("Slice: " + this.getSliceName() + ":" + this.getSwitchName() + " Flow rule VLAN wildcarded.  Denied: " + flowMod.toString());
 			return false;
 		}
 		if(match.getInputPort() == 0){
@@ -914,7 +923,7 @@ public class VLANSlicer implements Slicer{
 		
 		//checking for wildcarded input vlan
 		if(wc.isWildcarded(Wildcards.Flag.DL_VLAN)){
-			log.debug("Slice: " + this.getSliceName() + ":" + this.sw.getStringId() + " Flow rule VLAN wildcarded.  Denied: " + flowMod.toString());
+			log.debug("Slice: " + this.getSliceName() + ":" + this.getSwitchName() + " Flow rule VLAN wildcarded.  Denied: " + flowMod.toString());
 			return false;
 		}
 		//we require an input vlan
