@@ -61,4 +61,6 @@ public interface Slicer {
 	boolean getTagManagement();
 	boolean doTimeouts();
 	void setDoTimeouts(boolean doTimeouts);
+	void setSwitchName(String swName);
+	String getSwitchName();
 }
