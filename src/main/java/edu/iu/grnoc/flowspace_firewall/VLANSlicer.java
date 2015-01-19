@@ -441,11 +441,11 @@ public class VLANSlicer implements Slicer{
 							pkt.setVlanID(myPortCfg.getVlanRange().getAvailableTags()[0]);
 							newOut.setPacketData(pkt.serialize());
 							
-							
 							actualActions.add(newOutput);
 							newOut.setActions(actualActions);
 							int size = 0;
 							for(OFAction act : actualActions){
+								log.error("Packet Out Action: " + act.getType());
 								size = size + act.getLengthU();
 							}
 							newOut.setActionsLength((short)size);
@@ -470,13 +470,20 @@ public class VLANSlicer implements Slicer{
 						List<OFAction> actualActions = new ArrayList<OFAction>();
 						actualActions.addAll(newActions);
 						OFPacketOut newOut = this.clonePacketOut(outPacket);
+						/*
 						OFActionVirtualLanIdentifier set_vlan_vid = new OFActionVirtualLanIdentifier();
 						set_vlan_vid.setVirtualLanIdentifier(myPortCfg.getVlanRange().getAvailableTags()[0]);
 						actualActions.add(set_vlan_vid);
+						*/
+						Ethernet pkt =  (Ethernet) new Ethernet().deserialize(outPacket.getPacketData(), 
+								  0, outPacket.getPacketData().length);
+						pkt.setVlanID(myPortCfg.getVlanRange().getAvailableTags()[0]);
+						newOut.setPacketData(pkt.serialize());
 						actualActions.add(output);
 						newOut.setActions(actualActions);
 						int size = 0;
 						for(OFAction act : actualActions){
+							log.error("Packet OUt Action: " + act.getType());
 							size = size + act.getLengthU();
 						}
 						newOut.setActionsLength((short)size);
