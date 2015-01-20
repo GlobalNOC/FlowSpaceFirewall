@@ -334,8 +334,8 @@ public class Proxy {
 	private void processFlowMod(OFMessage msg, FloodlightContext cntx){
 		List <OFFlowMod> flows;
 		
-		OFFlowMod flow = (OFFlowMod)msg;
-		if(flow.getCommand() == OFFlowMod.OFPFC_DELETE && flow.getMatch().equals(new OFMatch())){
+		OFFlowMod tmpFlow = (OFFlowMod)msg;
+		if(tmpFlow.getCommand() == OFFlowMod.OFPFC_DELETE && tmpFlow.getMatch().equals(new OFMatch())){
 			//this is a delete all flow path
 			this.removeFlows();
 			return;
