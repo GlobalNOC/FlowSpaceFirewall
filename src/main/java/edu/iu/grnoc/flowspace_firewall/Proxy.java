@@ -57,6 +57,7 @@ import org.slf4j.LoggerFactory;
 
 import net.floodlightcontroller.core.*;
 import net.floodlightcontroller.packet.Ethernet;
+import net.floodlightcontroller.packetstreamer.thrift.OFMessageType;
 
 /**
  * Proxies all requests to and from the
@@ -332,6 +333,14 @@ public class Proxy {
 	
 	private void processFlowMod(OFMessage msg, FloodlightContext cntx){
 		List <OFFlowMod> flows;
+		
+		OFFlowMod tmpFlow = (OFFlowMod)msg;
+		if(tmpFlow.getCommand() == OFFlowMod.OFPFC_DELETE && tmpFlow.getMatch().equals(new OFMatch())){
+			//this is a delete all flow path
+			this.removeFlows();
+			return;
+		}
+		
 		if(this.mySlicer.getTagManagement()){
 			flows = this.mySlicer.managedFlows((OFFlowMod)msg);
 			if(flows.size() ==0){
