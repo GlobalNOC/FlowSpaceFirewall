@@ -81,6 +81,7 @@ public final class FlowStatSlicer {
 					
 					flowStat.setActions(newActions);
 					flowStat.getMatch().setWildcards(flowStat.getMatch().getWildcardObj().wildcard(Wildcards.Flag.DL_VLAN));
+					flowStat.getMatch().setDataLayerVirtualLan((short)0);
 				}
 				reply.add(flowStat);
 			}
