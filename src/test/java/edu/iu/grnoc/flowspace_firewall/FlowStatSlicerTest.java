@@ -315,7 +315,160 @@ public class FlowStatSlicerTest {
 	
 	public void buildMixedStats(){
 		//a mixed set of stats some allowed some not allowed
+		
+		List<OFAction> actions = new ArrayList<OFAction>();
+		OFActionOutput output = new OFActionOutput();
+		output.setPort((short)1);
+		actions.add(output);
+		
+		OFMatch match = new OFMatch();
+		match.setInputPort((short)1);
+		match.setDataLayerVirtualLan((short)100);
+		match.setWildcards(match.getWildcardObj().matchOn(Flag.DL_VLAN));
+		match.setWildcards(match.getWildcardObj().matchOn(Flag.IN_PORT));
+		
 		mixedStats = new ArrayList<OFStatistics>();
+		OFFlowStatisticsReply stat = new OFFlowStatisticsReply();
+		stat.setActions(actions);
+		stat.setMatch(match);
+		stat.setByteCount(123126L);
+		mixedStats.add(stat);
+		
+		actions = new ArrayList<OFAction>();
+		output = new OFActionOutput();
+		output.setPort((short)2);
+		actions.add(output);
+		match = new OFMatch();
+		match.setInputPort((short)2);
+		match.setDataLayerVirtualLan((short)102);
+		match.setWildcards(match.getWildcardObj().matchOn(Flag.DL_VLAN));
+		match.setWildcards(match.getWildcardObj().matchOn(Flag.IN_PORT));
+		stat = new OFFlowStatisticsReply();
+		stat.setActions(actions);
+		stat.setMatch(match);
+		stat.setByteCount(123125L);
+		mixedStats.add(stat);
+		
+		actions = new ArrayList<OFAction>();
+		output = new OFActionOutput();
+		output.setPort((short)3);
+		actions.add(output);
+		match = new OFMatch();
+		match.setInputPort((short)3);
+		match.setDataLayerVirtualLan((short)103);
+		match.setWildcards(match.getWildcardObj().matchOn(Flag.DL_VLAN));
+		match.setWildcards(match.getWildcardObj().matchOn(Flag.IN_PORT));
+		stat = new OFFlowStatisticsReply();
+		stat.setActions(actions);
+		stat.setMatch(match);
+		stat.setByteCount(123124L);
+		mixedStats.add(stat);
+		
+		actions = new ArrayList<OFAction>();
+		output = new OFActionOutput();
+		output.setPort((short)5);
+		actions.add(output);
+		match = new OFMatch();
+		match.setInputPort((short)5);
+		match.setDataLayerVirtualLan((short)105);
+		match.setWildcards(match.getWildcardObj().matchOn(Flag.DL_VLAN));
+		match.setWildcards(match.getWildcardObj().matchOn(Flag.IN_PORT));
+		stat = new OFFlowStatisticsReply();
+		stat.setActions(actions);
+		stat.setMatch(match);
+		stat.setByteCount(123123L);
+		mixedStats.add(stat);
+
+		
+		match = new OFMatch();
+		match.setInputPort((short)1);
+		match.setDataLayerVirtualLan((short)300);
+		
+		stat = new OFFlowStatisticsReply();
+		stat.setActions(actions);
+		stat.setMatch(match);
+		stat.setByteCount(123126L);
+		mixedStats.add(stat);
+		
+		actions = new ArrayList<OFAction>();
+		output = new OFActionOutput();
+		output.setPort((short)2);
+		actions.add(output);
+		match = new OFMatch();
+		match.setInputPort((short)2);
+		match.setDataLayerVirtualLan((short)202);
+		match.setWildcards(match.getWildcardObj().matchOn(Flag.DL_VLAN));
+		match.setWildcards(match.getWildcardObj().matchOn(Flag.IN_PORT));
+		stat = new OFFlowStatisticsReply();
+		stat.setActions(actions);
+		stat.setMatch(match);
+		stat.setByteCount(123125L);
+		mixedStats.add(stat);
+		
+		actions = new ArrayList<OFAction>();
+		output = new OFActionOutput();
+		output.setPort((short)3);
+		OFActionVirtualLanIdentifier setVid = new OFActionVirtualLanIdentifier();
+		setVid.setVirtualLanIdentifier((short)300);
+		actions.add(setVid);
+		actions.add(output);
+		match = new OFMatch();
+		match.setInputPort((short)3);
+		match.setDataLayerVirtualLan((short)103);
+		match.setWildcards(match.getWildcardObj().matchOn(Flag.DL_VLAN));
+		match.setWildcards(match.getWildcardObj().matchOn(Flag.IN_PORT));
+		stat = new OFFlowStatisticsReply();
+		stat.setActions(actions);
+		stat.setMatch(match);
+		stat.setByteCount(123124L);
+		mixedStats.add(stat);
+		
+		actions = new ArrayList<OFAction>();
+		output = new OFActionOutput();
+		output.setPort((short)4);
+		actions.add(output);
+		match = new OFMatch();
+		match.setInputPort((short)5);
+		match.setDataLayerVirtualLan((short)105);
+		match.setWildcards(match.getWildcardObj().matchOn(Flag.DL_VLAN));
+		match.setWildcards(match.getWildcardObj().matchOn(Flag.IN_PORT));
+		stat = new OFFlowStatisticsReply();
+		stat.setActions(actions);
+		stat.setMatch(match);
+		stat.setByteCount(123123L);
+		mixedStats.add(stat);
+		
+		actions = new ArrayList<OFAction>();
+		output = new OFActionOutput();
+		output.setPort((short)4);
+		actions.add(output);
+		match = new OFMatch();
+		match.setInputPort((short)5);
+		match.setDataLayerVirtualLan((short)105);
+		match.setWildcards(match.getWildcardObj().matchOn(Flag.DL_VLAN));
+		match.setWildcards(match.getWildcardObj().matchOn(Flag.IN_PORT));
+		stat = new OFFlowStatisticsReply();
+		stat.setActions(actions);
+		stat.setMatch(match);
+		stat.setByteCount(123123L);
+		mixedStats.add(stat);
+		
+		actions = new ArrayList<OFAction>();
+		output = new OFActionOutput();
+		output.setPort((short)5);
+		actions.add(output);
+		match = new OFMatch();
+		match.setInputPort((short)4);
+		match.setDataLayerVirtualLan((short)105);
+		match.setWildcards(match.getWildcardObj().matchOn(Flag.DL_VLAN));
+		match.setWildcards(match.getWildcardObj().matchOn(Flag.IN_PORT));
+		
+		stat = new OFFlowStatisticsReply();
+		stat.setActions(actions);
+		stat.setMatch(match);
+		stat.setByteCount(123123L);
+		mixedStats.add(stat);
+		
 	}
 	
 	
@@ -483,10 +636,25 @@ public class FlowStatSlicerTest {
 	
 	@Test
 	public void testsManagedTagSliceStatsNoStats(){
-		List <OFStatistics> slicedStats = FlowStatSlicer.SliceStats(managedSlicer,  new ArrayList<OFStatistics>());
+		List <OFStatistics> slicedStats = FlowStatSlicer.SliceStats(slicer,  new ArrayList<OFStatistics>());
 		assertNotNull("Sliced Stats with no allowed stats returend ok", slicedStats);
 		assertEquals("Sliced stats", 0, slicedStats.size());
 	}
+	
+	@Test
+	public void testMixedStats(){
+		List <OFStatistics> slicedStats = FlowStatSlicer.SliceStats(slicer,  mixedStats);
+		assertNotNull("Sliced Stats with mixed stats returend ok", slicedStats);
+		assertEquals("Sliced stats", 4, slicedStats.size());
+	}
+	
+	@Test
+	public void testAllowedStats(){
+		List <OFStatistics> slicedStats = FlowStatSlicer.SliceStats(slicer,  allowedStats);
+		assertNotNull("Sliced Stats with all allowed stats returend ok", slicedStats);
+		assertEquals("Sliced stats", 4, slicedStats.size());
+	}
+	
 	
 	@Test
 	public void testsManagedTagSliceStats(){

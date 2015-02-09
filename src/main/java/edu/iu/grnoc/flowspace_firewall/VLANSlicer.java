@@ -431,13 +431,10 @@ public class VLANSlicer implements Slicer{
 							newOutput.setType(OFActionType.OUTPUT);
 							newOutput.setLength((short)OFActionOutput.MINIMUM_LENGTH);
 							newOutput.setPort(port.getValue().getPortId());
-/*							
-							OFActionVirtualLanIdentifier set_vlan_vid = new OFActionVirtualLanIdentifier();
-							set_vlan_vid.setVirtualLanIdentifier(myPortCfg.getVlanRange().getAvailableTags()[0]);
-							actualActions.add(set_vlan_vid);
-*/
+
 							Ethernet pkt =  (Ethernet) new Ethernet().deserialize(outPacket.getPacketData(), 
 																				  0, outPacket.getPacketData().length);
+							
 							pkt.setVlanID(myPortCfg.getVlanRange().getAvailableTags()[0]);
 							newOut.setPacketData(pkt.serialize());
 							
@@ -475,8 +472,13 @@ public class VLANSlicer implements Slicer{
 						set_vlan_vid.setVirtualLanIdentifier(myPortCfg.getVlanRange().getAvailableTags()[0]);
 						actualActions.add(set_vlan_vid);
 						*/
-						Ethernet pkt =  (Ethernet) new Ethernet().deserialize(outPacket.getPacketData(), 
+						
+						Ethernet pkt = (Ethernet) new Ethernet();
+						pkt.deserialize(outPacket.getPacketData(), 
 								  0, outPacket.getPacketData().length);
+						
+						log.error("Setting the packet vlan ID to " + myPortCfg.getVlanRange().getAvailableTags()[0]);
+						log.error("Packet: " + pkt.getEtherType());
 						pkt.setVlanID(myPortCfg.getVlanRange().getAvailableTags()[0]);
 						newOut.setPacketData(pkt.serialize());
 						actualActions.add(output);
