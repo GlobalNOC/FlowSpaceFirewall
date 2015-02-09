@@ -20,6 +20,8 @@ import java.util.Iterator;
 import java.util.List;
 
 import org.openflow.protocol.OFFlowMod;
+import org.openflow.protocol.Wildcards;
+import org.openflow.protocol.action.OFAction;
 import org.openflow.protocol.statistics.OFFlowStatisticsReply;
 import org.openflow.protocol.statistics.OFStatistics;
 import org.slf4j.Logger;
@@ -60,6 +62,26 @@ public final class FlowStatSlicer {
 			log.debug("Built FlowMod: " + flowMod.toString());
 			List <OFFlowMod> flowMods = slicer.allowedFlows(flowMod);
 			if(flowMods.size() != 0){
+				if(slicer.getTagManagement()){
+					List<OFAction> actions = flowStat.getActions();
+					List<OFAction> newActions = new ArrayList<OFAction>();
+					//loop through all the actions and remove any set_vlan_vid or strip_vlan actions
+					for(OFAction act : actions){
+						switch(act.getType()){
+							case SET_VLAN_ID:
+								flowStat.setLength((short)(flowStat.getLength() - act.getLength()));
+								break;
+							case STRIP_VLAN:
+								flowStat.setLength((short)(flowStat.getLength() - act.getLength()));
+								break;
+							default:
+								newActions.add(act);
+						}
+					}
+					
+					flowStat.setActions(newActions);
+					flowStat.getMatch().setWildcards(flowStat.getMatch().getWildcardObj().wildcard(Wildcards.Flag.DL_VLAN));
+				}
 				reply.add(flowStat);
 			}
 		}
