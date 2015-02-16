@@ -396,9 +396,9 @@ public class VLANSlicer implements Slicer{
 			packets.clear();
 			return packets;
 		}
-		log.error("VLAN ID: " + match.getDataLayerVirtualLan());
+		//log.error("VLAN ID: " + match.getDataLayerVirtualLan());
 		if(match.getDataLayerVirtualLan() != -1){
-			log.error("Packet has VID Set");
+			//log.error("Packet has VID Set");
 			packets.clear();
 			return packets;
 		}
@@ -463,29 +463,24 @@ public class VLANSlicer implements Slicer{
 						}
 						
 						//find the vlantag it should be and put the vlan tag on						
-						log.error("Simple case, single output and it was allowed");
+						log.debug("Simple case, single output and it was allowed");
 						List<OFAction> actualActions = new ArrayList<OFAction>();
 						actualActions.addAll(newActions);
 						OFPacketOut newOut = this.clonePacketOut(outPacket);
-						/*
-						OFActionVirtualLanIdentifier set_vlan_vid = new OFActionVirtualLanIdentifier();
-						set_vlan_vid.setVirtualLanIdentifier(myPortCfg.getVlanRange().getAvailableTags()[0]);
-						actualActions.add(set_vlan_vid);
-						*/
+						
 						
 						Ethernet pkt = (Ethernet) new Ethernet();
 						pkt.deserialize(outPacket.getPacketData(), 
 								  0, outPacket.getPacketData().length);
 						
-						log.error("Setting the packet vlan ID to " + myPortCfg.getVlanRange().getAvailableTags()[0]);
-						log.error("Packet: " + pkt.getEtherType());
+						log.debug("Setting the packet vlan ID to " + myPortCfg.getVlanRange().getAvailableTags()[0]);
+						log.debug("Packet: " + pkt.getEtherType());
 						pkt.setVlanID(myPortCfg.getVlanRange().getAvailableTags()[0]);
 						newOut.setPacketData(pkt.serialize());
 						actualActions.add(output);
 						newOut.setActions(actualActions);
 						int size = 0;
 						for(OFAction act : actualActions){
-							log.error("Packet OUt Action: " + act.getType());
 							size = size + act.getLengthU();
 						}
 						newOut.setActionsLength((short)size);

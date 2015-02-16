@@ -65,20 +65,20 @@ public final class FlowStatSlicer {
 				if(slicer.getTagManagement()){
 					List<OFAction> actions = flowStat.getActions();
 					List<OFAction> newActions = new ArrayList<OFAction>();
+					short length = 0;
 					//loop through all the actions and remove any set_vlan_vid or strip_vlan actions
 					for(OFAction act : actions){
 						switch(act.getType()){
 							case SET_VLAN_ID:
-								flowStat.setLength((short)(flowStat.getLength() - act.getLength()));
 								break;
 							case STRIP_VLAN:
-								flowStat.setLength((short)(flowStat.getLength() - act.getLength()));
 								break;
 							default:
 								newActions.add(act);
+								length += act.getLength();
 						}
 					}
-					
+					flowStat.setLength((short)(length + OFFlowStatisticsReply.MINIMUM_LENGTH));
 					flowStat.setActions(newActions);
 					flowStat.getMatch().setWildcards(flowStat.getMatch().getWildcardObj().wildcard(Wildcards.Flag.DL_VLAN));
 					flowStat.getMatch().setDataLayerVirtualLan((short)0);

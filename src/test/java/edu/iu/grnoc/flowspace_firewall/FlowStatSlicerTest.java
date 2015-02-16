@@ -667,6 +667,7 @@ public class FlowStatSlicerTest {
 		
 		assertTrue( stat.getActions().size() == 1);
 		assertTrue( stat.getActions().get(0).getType() == OFActionType.OUTPUT);
+		assertTrue( stat.getMatch().getDataLayerVirtualLan() == (short)0);
 		
 	}
 
