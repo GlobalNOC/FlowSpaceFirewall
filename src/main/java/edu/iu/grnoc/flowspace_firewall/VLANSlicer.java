@@ -673,19 +673,28 @@ public class VLANSlicer implements Slicer{
 					}
 				}
 			}else{
-				short vlanId;
-				PortConfig pConfig = this.getPortConfig(match.getInputPort());
-				if(pConfig == null){
+				try{
+					OFFlowMod newFlow = flowMod.clone();
+					short vlanId;
+					PortConfig pConfig = this.getPortConfig(match.getInputPort());
+					if(pConfig == null){
+						flows.clear();
+						return flows;
+					}else{
+						vlanId = (short)pConfig.getVlanRange().getAvailableTags()[0];
+					}
+					match.setDataLayerVirtualLan(vlanId);
+					match.setWildcards(match.getWildcardObj().matchOn(Flag.DL_VLAN));
+					newFlow.setMatch(match);
+					//process the actions and add setVlanVid actions if necessary
+					flows = this.managedFlowActions(newFlow);
+				}catch (CloneNotSupportedException e){
 					flows.clear();
 					return flows;
-				}else{
-					vlanId = (short)pConfig.getVlanRange().getAvailableTags()[0];
+				}catch (Exception e){
+					flows.clear();
+					return flows;
 				}
-				match.setDataLayerVirtualLan(vlanId);
-				match.setWildcards(match.getWildcardObj().matchOn(Flag.DL_VLAN));
-				flowMod.setMatch(match);
-				//process the actions and add setVlanVid actions if necessary
-				flows = this.managedFlowActions(flowMod);
 			}
 		}else{
 			log.debug("denied Flow: " + flowMod.toString());

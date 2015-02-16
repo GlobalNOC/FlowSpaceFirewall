@@ -57,7 +57,6 @@ import org.slf4j.LoggerFactory;
 
 import net.floodlightcontroller.core.*;
 import net.floodlightcontroller.packet.Ethernet;
-import net.floodlightcontroller.packetstreamer.thrift.OFMessageType;
 
 /**
  * Proxies all requests to and from the
@@ -396,6 +395,7 @@ public class Proxy {
 						flow.setHardTimeout((short)0);
 					}
 				}
+				this.parent.addFlowCache(this.mySwitch.getId(), this.mySlicer.getSliceName(), (OFFlowMod)msg);
 				this.updateFlowCount(1);
 				break;
 			case OFFlowMod.OFPFF_CHECK_OVERLAP:
@@ -422,6 +422,7 @@ public class Proxy {
 						flow.setHardTimeout((short)0);
 					}
 				}
+				this.parent.addFlowCache(this.mySwitch.getId(), this.mySlicer.getSliceName(), (OFFlowMod)msg);
 				this.updateFlowCount(1);
 				break;
 			case OFFlowMod.OFPFC_DELETE:
@@ -479,13 +480,8 @@ public class Proxy {
 		
 		OFAggregateStatisticsRequest specificRequest = (OFAggregateStatisticsRequest) request.getFirstStatistics();
 		
-		List<OFStatistics> stats = this.parent.getStats(mySwitch.getId());
-		List<OFStatistics> results = null;
-		try{
-			results = FlowStatSlicer.SliceStats(mySlicer, stats);
-		}catch(IllegalArgumentException e){
-			
-		}
+		//List<OFStatistics> stats = this.parent.getStats(mySwitch.getId());
+		List<OFStatistics> results = this.parent.getSlicedFlowStats(this.mySwitch.getId(), this.mySlicer.getSliceName());
 		
 		if(results == null){
 			log.debug("Slicing failed!");
@@ -541,7 +537,7 @@ public class Proxy {
 		reply.setStatisticType(OFStatisticsType.AGGREGATE);
 		List<OFStatistics> statsReply = new ArrayList<OFStatistics>();
 		statsReply.add(stat);
-		reply.setStatistics(stats);
+		reply.setStatistics(statsReply);
 		reply.setXid(msg.getXid());
 		reply.setFlags((short)0x0000);
 		try {

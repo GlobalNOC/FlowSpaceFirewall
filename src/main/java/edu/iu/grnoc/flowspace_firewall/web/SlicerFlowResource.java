@@ -26,7 +26,6 @@ import org.restlet.resource.ServerResource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import edu.iu.grnoc.flowspace_firewall.FlowStatSlicer;
 import edu.iu.grnoc.flowspace_firewall.Proxy;
 import edu.iu.grnoc.flowspace_firewall.Slicer;
 
@@ -41,39 +40,8 @@ public class SlicerFlowResource extends ServerResource{
 		logger.debug("Long: " + dpid);
 		String sliceStr = (String) getRequestAttributes().get("slice");
 		logger.debug("Slice: " + sliceStr);
-		List<OFStatistics> stats = iFSFs.getStats(dpid);
-		List<OFStatistics> results = null;
-		if(dpid == null || sliceStr == null){
-			logger.error("Either the dpid or the slice name are null");
-			return results;
-		}
-		List<Proxy> proxies = iFSFs.getSwitchProxies(dpid);
-		if(proxies == null){
-			logger.error("Unable to get proxies for switch " + dpidStr);
-			return results;
-		}
-		Iterator <Proxy> it = proxies.iterator();
-		Slicer mySlicer = null;
-		while(it.hasNext()){
-			Proxy p = it.next();
-			logger.debug("Proxy name: " + p.getSlicer().getSliceName());
-			if(p.getSlicer().getSliceName().equals(sliceStr)){
-				logger.debug("MATCHED!!!!!!");
-				mySlicer = p.getSlicer();
-			}
-		}
-		
-		if(mySlicer == null){
-			logger.error("unable to find the slicer associated with " + sliceStr + ":" + dpidStr);
-			return results;
-		}
-		
-		try{
-			results = FlowStatSlicer.SliceStats(mySlicer, stats);
-		}catch(IllegalArgumentException e){
-			logger.error("Problem slicing stats!");
-		}
-		
+		List<OFStatistics> results = iFSFs.getSlicedFlowStats(dpid, sliceStr);
+
 		return results;
 		
 	}
