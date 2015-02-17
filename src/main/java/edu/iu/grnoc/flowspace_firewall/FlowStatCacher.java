@@ -100,8 +100,8 @@ public class FlowStatCacher extends TimerTask{
 			fos = new FileOutputStream(cacheFile);
 			oos = new ObjectOutputStream(fos);
 			statsCache.writeObject(oos);
+			oos.flush();
 			oos.close();
-			fos.close();
 		} catch (IOException e) {
 			e.printStackTrace();
 			log.error("Error occured writing statsCache");

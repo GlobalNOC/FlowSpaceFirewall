@@ -38,6 +38,7 @@ import org.openflow.protocol.OFPacketOut;
 import org.openflow.protocol.OFPhysicalPort;
 import org.openflow.protocol.OFPort;
 import org.openflow.protocol.OFPortStatus;
+import org.openflow.protocol.Wildcards;
 import org.openflow.protocol.OFPortStatus.OFPortReason;
 import org.openflow.protocol.OFStatisticsReply;
 import org.openflow.protocol.OFStatisticsRequest;
@@ -659,6 +660,33 @@ public class Proxy {
 		while(it2.hasNext()){
 			//TODO: implement the filter capabilities of FLowStats Request
 			OFFlowStatisticsReply stat = (OFFlowStatisticsReply) it2.next();
+			if(this.mySlicer.getAdminState()){
+				//in managed tag mode... remove the vlan tag from the match and any set vlan actions
+				stat.getMatch().setDataLayerVirtualLan((short)0);
+				stat.getMatch().getWildcardObj().wildcard(Wildcards.Flag.DL_VLAN);
+				List<OFAction> newActions = new ArrayList<OFAction>();
+				short actLength = 0;
+				List<OFAction> actions = stat.getActions();
+				Iterator<OFAction> actIt = actions.iterator();
+				while(actIt.hasNext()){
+					OFAction act = actIt.next();
+					switch(act.getType()){
+					case SET_VLAN_ID:
+						break;
+					case SET_VLAN_PCP:
+						break;
+					case STRIP_VLAN:
+						break;
+					default:
+						newActions.add(act);
+						actLength += act.getLength();
+						break;
+					}
+				}
+				stat.setActions(newActions);
+				stat.setLength((short)(OFFlowStatisticsReply.MINIMUM_LENGTH + actLength));
+			}
+						
 			length += stat.getLength();
 			counter++;
 			if(this.mySlicer.getTagManagement()){

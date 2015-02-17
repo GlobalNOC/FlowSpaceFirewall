@@ -20,10 +20,12 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 
 import net.floodlightcontroller.core.IOFSwitch;
 
+import org.openflow.protocol.action.OFAction;
 import org.openflow.protocol.statistics.OFFlowStatisticsReply;
 import org.openflow.protocol.statistics.OFStatistics;
 import org.slf4j.Logger;
@@ -72,7 +74,8 @@ public class FlowStatCache{
 	
 	//lets us write out object to disk
 	public void writeObject(ObjectOutputStream aOutputStream) throws IOException{
-		aOutputStream.writeObject(slicedCache);
+		//need to clone it so that we can make changes while serializing
+		aOutputStream.writeObject(slicedCache.clone());
 	}
 	
 	//lets us read our object from disk
@@ -110,7 +113,28 @@ public class FlowStatCache{
 		flowStat.setCookie(flow.getCookie());
 		flowStat.setHardTimeout(flow.getHardTimeout());
 		flowStat.setIdleTimeout(flow.getIdleTimeout());
-		slicedCache.get(dpid).get(sliceName).add((OFStatistics)flowStat);		
+		short length = 0;
+		for(OFAction act : flowStat.getActions()){
+			length += act.getLengthU();
+		}
+		flowStat.setLength((short)(OFFlowStatisticsReply.MINIMUM_LENGTH + length));
+
+		if(slicedCache.containsKey(dpid)){
+			HashMap<String, List<OFStatistics>> sliceStats = slicedCache.get(dpid);
+			if(sliceStats.containsKey(sliceName)){
+				sliceStats.get(sliceName).add(flowStat);
+			}else{
+				List<OFStatistics> stats = new ArrayList<OFStatistics>();
+				stats.add(flowStat);		
+				sliceStats.put(sliceName, stats);
+			}
+		}else{
+			HashMap<String, List<OFStatistics>> sliceStats = new HashMap<String, List<OFStatistics>>();
+			List<OFStatistics> stats = new ArrayList<OFStatistics>();
+			sliceStats.put(sliceName, stats);
+			stats.add(flowStat);
+			slicedCache.put(dpid, sliceStats);
+		}
 		lastSeen.put(flowStat, System.currentTimeMillis());
 	}	
 	
@@ -238,14 +262,18 @@ public class FlowStatCache{
 	 */
 	public synchronized void setFlowCache(Long switchId, List <OFStatistics> stats){
 		cache.put(switchId, stats);
-		
-		//loop through our current cache and set all packet/byte counts to 0
-		for(String slice: this.slicedCache.get(switchId).keySet()){
-			List<OFStatistics> ofStats = this.slicedCache.get(switchId).get(slice);
-			for(OFStatistics stat : ofStats){
-				OFFlowStatisticsReply flowStat = (OFFlowStatisticsReply) stat;
-				flowStat.setByteCount(0);
-				flowStat.setPacketCount(0);
+	
+		if(this.slicedCache.containsKey(switchId)){
+			//loop through our current cache and set all packet/byte counts to 0
+			Iterator<String> it = this.slicedCache.get(switchId).keySet().iterator();
+			while(it.hasNext()){
+				String slice = (String)it.next();
+				List<OFStatistics> ofStats = this.slicedCache.get(switchId).get(slice);
+				for(OFStatistics stat : ofStats){
+					OFFlowStatisticsReply flowStat = (OFFlowStatisticsReply) stat;
+					flowStat.setByteCount(0);
+					flowStat.setPacketCount(0);
+				}
 			}
 		}
 		
@@ -257,17 +285,27 @@ public class FlowStatCache{
 		
 		long timeToRemove = System.currentTimeMillis() - 60000;
 		
-		//loop through our current cache and set all packet/byte counts to 0
-		for(String slice: this.slicedCache.get(switchId).keySet()){
-			List<OFStatistics> ofStats = this.slicedCache.get(switchId).get(slice);
-			for(OFStatistics stat : ofStats){
-				if(lastSeen.get(stat) > timeToRemove){
-					ofStats.remove(stat);
-					lastSeen.remove(stat);
+		if(this.slicedCache.containsKey(switchId)){
+			HashMap<String, List<OFStatistics>> sliceStats = this.slicedCache.get(switchId);
+			//loop through our current cache and set all packet/byte counts to 0
+			Iterator<String> it = sliceStats.keySet().iterator();
+			while(it.hasNext()){
+				String slice = (String)it.next();
+				List<OFStatistics> ofStats = this.slicedCache.get(switchId).get(slice);
+				Iterator<OFStatistics> itStat = ofStats.iterator();
+				while(itStat.hasNext()){
+					OFStatistics stat = (OFStatistics)itStat.next();
+					if(lastSeen.containsKey(stat)){
+						if(lastSeen.get(stat) > timeToRemove && lastSeen.get(stat) > 0){
+							itStat.remove();
+							//lastSeen.remove(stat);
+						}
+					}else{
+						itStat.remove();						
+					}
 				}
 			}
 		}
-		
 	}
 	
 	public List<FlowTimeout> getPossibleExpiredFlows(Long switchId){
