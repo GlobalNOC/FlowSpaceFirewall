@@ -213,7 +213,7 @@ public class FlowStatCache{
 				log.error("flow stat was not in our expected, trying by wildcarding IN_PORT");
 				//ok so we didn't find it first go around
 				//wildcard the in_port and try again
-				OFMatch match = flowStat.getMatch();
+				OFMatch match = flowStat.getMatch().clone();
 				match.setInputPort((short)0);
 				match.setWildcards(match.getWildcardObj().wildcard(Wildcards.Flag.IN_PORT));
 				stat = this.findCachedStat(switchId, match);
@@ -227,10 +227,12 @@ public class FlowStatCache{
 				for(HashMap<Long,Slicer> tmpSlices : slices){
 					if(!tmpSlices.containsKey(switchId)){
 						//switch not part of this slice
+						log.error("Switch is not part of this slice!");
 						continue;
 					}
 			
 					Slicer slice = tmpSlices.get(switchId);
+					log.error("Looking at slice: " + slice.getSliceName());
 					OFFlowMod flowMod = new OFFlowMod();
 					flowMod.setMatch(flowStat.getMatch());
 					flowMod.setActions(flowStat.getActions());
@@ -244,7 +246,7 @@ public class FlowStatCache{
 						if(slice.getTagManagement()){
 							//ok so its probably in need of some wildcarding
 							//first remove the vlan tag
-							OFMatch match = flowStat.getMatch();
+							OFMatch match = flowStat.getMatch().clone();
 							match.setDataLayerVirtualLan((short)0);
 							match.getWildcardObj().wildcard(Wildcards.Flag.DL_VLAN);
 							stat = this.findCachedStat(switchId, match);
@@ -404,10 +406,10 @@ public class FlowStatCache{
 				return stats;
 			}
 			log.error("Switch cache has no slice cache named: " + sliceName);
-			return null;
+			return new ArrayList<OFStatistics>();
 		}
 		log.error("Switch cache does not even exist");
-		return null;
+		return new ArrayList<OFStatistics>();
 	}
 	
 	public synchronized void setPortCache(Long switchId, HashMap<Short, OFStatistics> stats){
