@@ -816,13 +816,13 @@ public class VLANSlicer implements Slicer{
 		//wildcarded DL_VLAN?
 		Wildcards wc = match.getWildcardObj();
 		if(wc.isWildcarded(Wildcards.Flag.DL_VLAN)){
-			log.error("Slice: " + this.getSliceName() + ":" + this.sw.getStringId() + " Flow rule VLAN wildcarded.  Denied: " + flowMod.toString());
+			log.debug("Slice: " + this.getSliceName() + ":" + this.sw.getStringId() + " Flow rule VLAN wildcarded.  Denied: " + flowMod.toString());
 			return flowMods;
 		}
 		//if you wildcarded the vlan then tough we are blowing up now
 		//we require an input vlan
 		if(match.getDataLayerVirtualLan() == 0){
-			log.error("Slice: " + this.getSliceName() + ":" + this.sw.getStringId() + " Flow rule VLAN wildcarded.  Denied: " + flowMod.toString());
+			log.debug("Slice: " + this.getSliceName() + ":" + this.sw.getStringId() + " Flow rule VLAN wildcarded.  Denied: " + flowMod.toString());
 			return flowMods;
 		}
 		
@@ -836,7 +836,7 @@ public class VLANSlicer implements Slicer{
 				Map.Entry<String, PortConfig> port = (Entry<String, PortConfig>) it.next();
 				if(port.getValue().getPortId() != 0){
 					//create a new match like our old match but change the port
-					log.error("Expanding Match to port : " + port.getValue().getPortId());
+					log.debug("Expanding Match to port : " + port.getValue().getPortId());
 					
 					try{
 						//why might this not be cloneable?  ahh... might not be clonable if there is no action!!
@@ -860,7 +860,7 @@ public class VLANSlicer implements Slicer{
 						if(this.isFlowAllowed(expandedFlow)){
 							flowMods.add(expandedFlow);
 						}else{
-							log.error("denied Flow " + expandedFlow.toString());
+							log.debug("denied Flow " + expandedFlow.toString());
 							flowMods.clear();
 							return flowMods;
 						}
