@@ -32,6 +32,7 @@ public interface IFlowSpaceFirewallService extends IFloodlightService {
 	//public List<OFFlowMod> getSliceFlows(String sliceName, Long dpid);
 	//public HashMap<String, Object> getSliceStatus(String sliceName, Long dpid);
 	public List<OFStatistics> getStats(long switchId);
+	public List<OFStatistics> getSlicedFlowStats(long switchId, String sliceName);
 	public List<Proxy> getSwitchProxies(long switchId);
 	public List<HashMap<Long,Slicer>> getSlices();
 	public List<IOFSwitch> getSwitches();

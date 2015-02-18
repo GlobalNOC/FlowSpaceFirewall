@@ -38,6 +38,7 @@ import org.openflow.protocol.OFPacketOut;
 import org.openflow.protocol.OFPhysicalPort;
 import org.openflow.protocol.OFPort;
 import org.openflow.protocol.OFPortStatus;
+import org.openflow.protocol.Wildcards;
 import org.openflow.protocol.OFPortStatus.OFPortReason;
 import org.openflow.protocol.OFStatisticsReply;
 import org.openflow.protocol.OFStatisticsRequest;
@@ -57,7 +58,6 @@ import org.slf4j.LoggerFactory;
 
 import net.floodlightcontroller.core.*;
 import net.floodlightcontroller.packet.Ethernet;
-import net.floodlightcontroller.packetstreamer.thrift.OFMessageType;
 
 /**
  * Proxies all requests to and from the
@@ -342,7 +342,7 @@ public class Proxy {
 		}
 		
 		if(this.mySlicer.getTagManagement()){
-			flows = this.mySlicer.managedFlows((OFFlowMod)msg);
+			flows = this.mySlicer.managedFlows(tmpFlow);
 			if(flows.size() ==0){
 				log.error("Slice: " + this.mySlicer.getSliceName() + ":" + this.mySwitch.getStringId() + " denied flow: " + ((OFFlowMod)msg).toString());
 				OFError error = new OFError(OFError.OFErrorType.OFPET_BAD_REQUEST);
@@ -353,7 +353,7 @@ public class Proxy {
 				log.info("Slice: " + this.mySlicer.getSliceName() + ":" + this.mySwitch.getStringId() + " Sent Flow: " + ((OFFlowMod)msg).toString());
 			}
 		}else{
-			flows = this.mySlicer.allowedFlows((OFFlowMod)msg);
+			flows = this.mySlicer.allowedFlows(tmpFlow);
 			if(flows.size() == 0){
 				//really we need to send a perm error
 				log.error("Slice: " + this.mySlicer.getSliceName() + ":" + this.mySwitch.getStringId() + " denied flow: " + ((OFFlowMod)msg).toString());
@@ -364,6 +364,13 @@ public class Proxy {
 			}else{
 				log.info("Slice: " + this.mySlicer.getSliceName() + ":" + this.mySwitch.getStringId() + " Sent Flow: " + ((OFFlowMod)msg).toString());
 			}
+		}
+		
+		if(tmpFlow.getCommand() == OFFlowMod.OFPFC_ADD){
+			this.parent.addFlowCache(this.mySwitch.getId(), this.mySlicer.getSliceName(), tmpFlow);
+		}
+		if(tmpFlow.getCommand() == OFFlowMod.OFPFC_DELETE || tmpFlow.getCommand() == OFFlowMod.OFPFC_DELETE_STRICT){
+			this.parent.delFlowCache(this.mySwitch.getId(), this.mySlicer.getSliceName(), tmpFlow);
 		}
 		List <OFMessage> messages = new ArrayList<OFMessage>();
 		//count the total number of flowMods
@@ -396,6 +403,7 @@ public class Proxy {
 						flow.setHardTimeout((short)0);
 					}
 				}
+				
 				this.updateFlowCount(1);
 				break;
 			case OFFlowMod.OFPFF_CHECK_OVERLAP:
@@ -422,6 +430,7 @@ public class Proxy {
 						flow.setHardTimeout((short)0);
 					}
 				}
+				this.parent.addFlowCache(this.mySwitch.getId(), this.mySlicer.getSliceName(), (OFFlowMod)msg);
 				this.updateFlowCount(1);
 				break;
 			case OFFlowMod.OFPFC_DELETE:
@@ -479,13 +488,8 @@ public class Proxy {
 		
 		OFAggregateStatisticsRequest specificRequest = (OFAggregateStatisticsRequest) request.getFirstStatistics();
 		
-		List<OFStatistics> stats = this.parent.getStats(mySwitch.getId());
-		List<OFStatistics> results = null;
-		try{
-			results = FlowStatSlicer.SliceStats(mySlicer, stats);
-		}catch(IllegalArgumentException e){
-			
-		}
+		//List<OFStatistics> stats = this.parent.getStats(mySwitch.getId());
+		List<OFStatistics> results = this.parent.getSlicedFlowStats(this.mySwitch.getId(), this.mySlicer.getSliceName());
 		
 		if(results == null){
 			log.debug("Slicing failed!");
@@ -541,7 +545,7 @@ public class Proxy {
 		reply.setStatisticType(OFStatisticsType.AGGREGATE);
 		List<OFStatistics> statsReply = new ArrayList<OFStatistics>();
 		statsReply.add(stat);
-		reply.setStatistics(stats);
+		reply.setStatistics(statsReply);
 		reply.setXid(msg.getXid());
 		reply.setFlags((short)0x0000);
 		try {
@@ -663,11 +667,39 @@ public class Proxy {
 		while(it2.hasNext()){
 			//TODO: implement the filter capabilities of FLowStats Request
 			OFFlowStatisticsReply stat = (OFFlowStatisticsReply) it2.next();
+			if(this.mySlicer.getTagManagement()){
+				//in managed tag mode... remove the vlan tag from the match and any set vlan actions
+				stat.getMatch().setDataLayerVirtualLan((short)0);
+				stat.getMatch().setWildcards(stat.getMatch().getWildcardObj().wildcard(Wildcards.Flag.DL_VLAN));
+				List<OFAction> newActions = new ArrayList<OFAction>();
+				if(stat.getMatch().getInputPort() == 0){
+					stat.getMatch().setWildcards(stat.getMatch().getWildcardObj().wildcard(Wildcards.Flag.IN_PORT));
+				}
+				short actLength = 0;
+				List<OFAction> actions = stat.getActions();
+				Iterator<OFAction> actIt = actions.iterator();
+				while(actIt.hasNext()){
+					OFAction act = actIt.next();
+					switch(act.getType()){
+					case SET_VLAN_ID:
+						break;
+					case SET_VLAN_PCP:
+						break;
+					case STRIP_VLAN:
+						break;
+					default:
+						newActions.add(act);
+						actLength += act.getLength();
+						break;
+					}
+				}
+				stat.setActions(newActions);
+				stat.setLength((short)(OFFlowStatisticsReply.MINIMUM_LENGTH + actLength));
+			}
+						
 			length += stat.getLength();
 			counter++;
-			if(this.mySlicer.getTagManagement()){
-				stat.getMatch().setDataLayerVirtualLan((short)-1);
-			}
+
 			limitedResults.add(stat);
 			
 			if(counter >= 10 || it2.hasNext() == false){

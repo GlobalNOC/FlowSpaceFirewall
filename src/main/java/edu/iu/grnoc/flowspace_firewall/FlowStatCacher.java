@@ -16,6 +16,11 @@
 package edu.iu.grnoc.flowspace_firewall;
 
 
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -27,6 +32,7 @@ import java.util.concurrent.TimeUnit;
 
 import net.floodlightcontroller.core.IOFSwitch;
 
+import org.openflow.protocol.OFFlowMod;
 import org.openflow.protocol.OFMatch;
 import org.openflow.protocol.OFPort;
 import org.openflow.protocol.OFStatisticsRequest;
@@ -47,16 +53,20 @@ import org.slf4j.LoggerFactory;
 
 public class FlowStatCacher extends TimerTask{
 
+	private static String cacheFile = "/var/run/fsfw/flowCache.ser";
 	FlowStatCache statsCache;
 	private static final Logger log = LoggerFactory.getLogger(FlowStatCacher.class);
 	
 	/**
 	 * A TimerTask that everytime is run gets the most recent 
 	 * stats from the switch and caches them
+	 * @throws  
 	 */
 	
 	public FlowStatCacher(FlowSpaceFirewall parent){
 		statsCache = new FlowStatCache(parent);
+
+		
 	}
 	/**
 	 * the TimerTask run method called by the Timer
@@ -81,6 +91,22 @@ public class FlowStatCacher extends TimerTask{
 			this.updateExpire(timeouts, sw.getId());
 			statsCache.checkExpireFlows(sw.getId());
 		}
+		
+		
+		//write our cache to disk!
+		FileOutputStream fos;
+		ObjectOutputStream oos;
+		try {
+			fos = new FileOutputStream(cacheFile);
+			oos = new ObjectOutputStream(fos);
+			statsCache.writeObject(oos);
+			oos.flush();
+			oos.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+			log.error("Error occured writing statsCache");
+		}
+		
 		
 	}
 	
@@ -206,6 +232,24 @@ public class FlowStatCacher extends TimerTask{
         }
         log.debug("Stats cached for switch: " + sw.getId() + ". Total ports stats cached: " + statsReply.size());
         return statsReply;
+	}
+	public void addFlowCache(long switchId, String sliceName, OFFlowMod flowMod) {
+		this.statsCache.addFlowMod(switchId, sliceName, flowMod);
+	}
+	public void delFlowCache(long switchId, String sliceName, OFFlowMod flowMod){
+		this.statsCache.delFlowMod(switchId,  sliceName, flowMod);
+	}
+	
+	//load the cache from disk
+	//this only happens during startup of FSFW
+	public void loadCache(){
+		try{
+			FileInputStream fis = new FileInputStream(cacheFile);
+			ObjectInputStream ois = new ObjectInputStream(fis);
+			statsCache.readObject(ois);
+		}catch(IOException e){
+			
+		}
 	}
 	
 }
