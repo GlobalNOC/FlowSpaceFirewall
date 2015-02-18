@@ -236,7 +236,9 @@ public class FlowStatCacher extends TimerTask{
 	public void addFlowCache(long switchId, String sliceName, OFFlowMod flowMod) {
 		this.statsCache.addFlowMod(switchId, sliceName, flowMod);
 	}
-	
+	public void delFlowCache(long switchId, String sliceName, OFFlowMod flowMod){
+		this.statsCache.delFlowMod(switchId,  sliceName, flowMod);
+	}
 	
 	//load the cache from disk
 	//this only happens during startup of FSFW
