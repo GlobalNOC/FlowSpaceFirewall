@@ -52,7 +52,7 @@ public class FlowStatCache{
 	private HashMap<Long, List<OFStatistics>> flowStats;
 	private HashMap<Long, HashMap<Short, OFStatistics>> portStats;
 	private HashMap<Long, HashMap<String, List<OFStatistics>>> sliced;
-	private HashMap<Long, HashMap<String, OFStatistics>> map;
+	private HashMap<Long, HashMap<OFMatch, OFStatistics>> map;
 	
 
 	private FlowSpaceFirewall parent;
@@ -63,7 +63,7 @@ public class FlowStatCache{
 		//this is the raw portStat from the switch
 		portStats = new HashMap<Long, HashMap<Short, OFStatistics>>();
 		//this is the mapping from DPID OFMatch to FlowMod
-		map = new HashMap<Long, HashMap<String, OFStatistics>>();
+		map = new HashMap<Long, HashMap<OFMatch, OFStatistics>>();
 		//this is the results to be returned when requested
 		sliced = new HashMap<Long, HashMap<String, List<OFStatistics>>>();
 		//need one more to track the lastSeen time
@@ -201,7 +201,7 @@ public class FlowStatCache{
 				for(OFStatistics expectedOFStat: expectedStats){
 					FSFWOFFlowStatisticsReply expectedFlowStat = (FSFWOFFlowStatisticsReply) expectedOFStat;
 					log.debug("Comparing to match: " + expectedFlowStat.getMatch());
-					if(expectedFlowStat.getMatch().toString().equals(match.toString())){
+					if(expectedFlowStat.getMatch().equals(match)){
 						//found it
 						log.debug("found the expected flow match!");
 						return expectedFlowStat;
@@ -222,7 +222,7 @@ public class FlowStatCache{
 				for(OFStatistics expectedOFStat: expectedStats){
 					FSFWOFFlowStatisticsReply expectedFlowStat = (FSFWOFFlowStatisticsReply) expectedOFStat;
 					log.debug("Comparing to match: " + expectedFlowStat.getMatch());
-					if(expectedFlowStat.getMatch().toString().equals(match.toString())){
+					if(expectedFlowStat.getMatch().equals(match)){
 						//found it
 						log.debug("found the expected flow match!");
 						return expectedFlowStat;
@@ -268,15 +268,15 @@ public class FlowStatCache{
 	private void processFlow(Long switchId, OFFlowStatisticsReply flowStat, long time){
 		
 		if(!map.containsKey(switchId)){
-			HashMap<String, OFStatistics> tmpMap = new HashMap<String, OFStatistics>();
+			HashMap<OFMatch, OFStatistics> tmpMap = new HashMap<OFMatch, OFStatistics>();
 			map.put(switchId, tmpMap);
 		}
 		
-		HashMap<String, OFStatistics> flowMap = map.get(switchId);
+		HashMap<OFMatch, OFStatistics> flowMap = map.get(switchId);
 		
-		if(flowMap.containsKey(flowStat.getMatch().toString())){
+		if(flowMap.containsKey(flowStat.getMatch())){
 			log.debug("Found the flow rule in our mapping");
-			this.updateFlowStatData(flowMap.get(flowStat.getMatch().toString()), flowStat);
+			this.updateFlowStatData(flowMap.get(flowStat.getMatch()), flowStat);
 			return;
 		}
 		log.debug("didn't find the flow rule in our mapping must be new");
@@ -332,7 +332,7 @@ public class FlowStatCache{
 		//just update it 
 		if(stat != null){
 			log.debug("Updating Flow Stat");
-			flowMap.put(flowStat.getMatch().toString(), (OFStatistics)stat);
+			flowMap.put(flowStat.getMatch(), (OFStatistics)stat);
 			log.debug("Map size: " + flowMap.size());
 			this.updateFlowStatData(stat, flowStat);
 		}else{ 
@@ -412,12 +412,12 @@ public class FlowStatCache{
 	
 	private void removeMappedCache(long switchId, OFStatistics stat){
 		if(map.containsKey(switchId)){
-			HashMap<String, OFStatistics> switchMap = map.get(switchId);
+			HashMap<OFMatch, OFStatistics> switchMap = map.get(switchId);
 			if(switchMap.containsValue(stat)){
 				//well crap no easy way to do this...
-				Iterator<Entry<String, OFStatistics>> it = switchMap.entrySet().iterator();
+				Iterator<Entry<OFMatch, OFStatistics>> it = switchMap.entrySet().iterator();
 				while(it.hasNext()){
-					Entry<String, OFStatistics> entry = (Entry<String, OFStatistics>) it.next();
+					Entry<OFMatch, OFStatistics> entry = (Entry<OFMatch, OFStatistics>) it.next();
 					if(entry.getValue().equals(stat)){
 						it.remove();
 					}
