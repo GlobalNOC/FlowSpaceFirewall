@@ -49,26 +49,24 @@ public class FlowStatCache{
 	//the logger
 	private static final Logger log = LoggerFactory.getLogger(FlowStatCache.class);
 	//the cache
-	private HashMap<Long, List<OFStatistics>> cache;
-	private HashMap<Long, HashMap<Short, OFStatistics>> portStatsCache;
-	private HashMap<Long, HashMap<String, List<OFStatistics>>> slicedCache;
-	private HashMap<Long, HashMap<OFMatch, OFStatistics>> mappedCache;
-	private HashMap<OFMatch, Long> lastSeen;
+	private HashMap<Long, List<OFStatistics>> flowStats;
+	private HashMap<Long, HashMap<Short, OFStatistics>> portStats;
+	private HashMap<Long, HashMap<String, List<OFStatistics>>> sliced;
+	private HashMap<Long, HashMap<String, OFStatistics>> map;
 	
 
 	private FlowSpaceFirewall parent;
 	
 	public FlowStatCache(FlowSpaceFirewall parent){
 		//this is the raw flowStats from the switch
-		cache = new HashMap<Long, List<OFStatistics>>();
+		flowStats = new HashMap<Long, List<OFStatistics>>();
 		//this is the raw portStat from the switch
-		portStatsCache = new HashMap<Long, HashMap<Short, OFStatistics>>();
+		portStats = new HashMap<Long, HashMap<Short, OFStatistics>>();
 		//this is the mapping from DPID OFMatch to FlowMod
-		mappedCache = new HashMap<Long, HashMap<OFMatch, OFStatistics>>();
+		map = new HashMap<Long, HashMap<String, OFStatistics>>();
 		//this is the results to be returned when requested
-		slicedCache = new HashMap<Long, HashMap<String, List<OFStatistics>>>();
+		sliced = new HashMap<Long, HashMap<String, List<OFStatistics>>>();
 		//need one more to track the lastSeen time
-		lastSeen = new HashMap<OFMatch, Long>();
 		this.parent = parent;
 	}
 	
@@ -76,7 +74,7 @@ public class FlowStatCache{
 	//lets us write out object to disk
 	public void writeObject(ObjectOutputStream aOutputStream) throws IOException{
 		//need to clone it so that we can make changes while serializing
-		aOutputStream.writeObject(slicedCache.clone());
+		aOutputStream.writeObject(sliced.clone());
 	}
 	
 	//lets us read our object from disk
@@ -85,15 +83,16 @@ public class FlowStatCache{
 		HashMap<Long, HashMap<String, List<OFStatistics>>> cache;
 		try {
 			cache = (HashMap<Long, HashMap<String, List<OFStatistics>>>) aInputStream.readObject();
-			this.slicedCache = cache;
-			//we need to set lastSeen for everything to be now!
-			for(long dpid : this.slicedCache.keySet()){
-				HashMap<String, List<OFStatistics>> sliceMap = this.slicedCache.get(dpid);
+			this.sliced = cache;
+
+			long time = System.currentTimeMillis();
+			for(long dpid : this.sliced.keySet()){
+				HashMap<String, List<OFStatistics>> sliceMap = this.sliced.get(dpid);
 				for(String sliceName : sliceMap.keySet()){
 					List<OFStatistics> stats = sliceMap.get(sliceName);
 					for(OFStatistics stat: stats){
-						OFFlowStatisticsReply flowStat = (OFFlowStatisticsReply)stat;
-						lastSeen.put(flowStat.getMatch(), System.currentTimeMillis());
+						FSFWOFFlowStatisticsReply flowStat = (FSFWOFFlowStatisticsReply)stat;
+						flowStat.setLastSeen(time);
 					}
 				}
 			}
@@ -104,20 +103,18 @@ public class FlowStatCache{
 	}
 	
 	public void delFlowMod(long dpid, String sliceName, OFFlowMod flow){
-		if(slicedCache.containsKey(dpid)){
-			if(slicedCache.get(dpid).containsKey(sliceName)){
-				if(slicedCache.get(dpid).get(sliceName).contains(flow.getMatch())){
-					OFStatistics stat = this.findCachedStat(dpid, flow.getMatch());
-					slicedCache.get(dpid).get(sliceName).remove(flow.getMatch());
-					this.removeMappedCache(dpid, stat);
-				}
-			}
+		FSFWOFFlowStatisticsReply flowStat = (FSFWOFFlowStatisticsReply) this.findCachedStat(dpid, flow.getMatch(), sliceName);
+		if(flowStat != null){
+			log.error("Setting flow mod to be deleted");
+			flowStat.setToBeDeleted(true);
+			return;
 		}
+		log.error("Flow mod was not found could not be deleted");
 	}
 	
 	public void addFlowMod(Long dpid, String sliceName, OFFlowMod flow){
 		//create a flow stat reply and set the cache to it
-		OFFlowStatisticsReply flowStat = new OFFlowStatisticsReply();
+		FSFWOFFlowStatisticsReply flowStat = new FSFWOFFlowStatisticsReply();
 		flowStat.setMatch(flow.getMatch());
 		flowStat.setActions(flow.getActions());
 		flowStat.setPacketCount(0);
@@ -132,16 +129,18 @@ public class FlowStatCache{
 		}
 		flowStat.setLength((short)(OFFlowStatisticsReply.MINIMUM_LENGTH + length));
 
-		if(slicedCache.containsKey(dpid)){
-			HashMap<String, List<OFStatistics>> sliceStats = slicedCache.get(dpid);
+		if(sliced.containsKey(dpid)){
+			HashMap<String, List<OFStatistics>> sliceStats = sliced.get(dpid);
 			if(sliceStats.containsKey(sliceName)){
 				log.debug("Adding Flow to the cache!");
 				sliceStats.get(sliceName).add(flowStat);
+				log.debug("sliced stats size: " + sliceStats.get(sliceName).size());
 			}else{
 				List<OFStatistics> stats = new ArrayList<OFStatistics>();
 				log.debug("Adding flow to the cache! Created the Slice hash");
 				stats.add(flowStat);		
 				sliceStats.put(sliceName, stats);
+				
 			}
 		}else{
 			HashMap<String, List<OFStatistics>> sliceStats = new HashMap<String, List<OFStatistics>>();
@@ -149,38 +148,60 @@ public class FlowStatCache{
 			sliceStats.put(sliceName, stats);
 			stats.add(flowStat);
 			log.debug("Adding flow to the cache, switch didn't exist");
-			slicedCache.put(dpid, sliceStats);
+			sliced.put(dpid, sliceStats);
 		}
-		lastSeen.put(flowStat.getMatch(), System.currentTimeMillis());
+		//need to update last seen
+		log.debug("Added Flow: " + flowStat.toString() + " to cache!");
+		flowStat.setLastSeen(System.currentTimeMillis());
 	}	
 	
 	public List <IOFSwitch> getSwitches(){
 		return this.parent.getSwitches();
 	}
 	
+	
+	
 	public synchronized void clearFlowCache(Long switchId){
 		
-		cache.remove(switchId);
-		slicedCache.remove(switchId);
+		flowStats.remove(switchId);
+		map.remove(switchId);
+		//sliced.remove(switchId);
 		
 	}
 	
+	/**
+	 * just updates the data in the flowstat
+	 * @param cachedStat
+	 * @param newStat
+	 */
+	
 	private void updateFlowStatData(OFStatistics cachedStat, OFFlowStatisticsReply newStat){
-		OFFlowStatisticsReply cachedFlowStat = (OFFlowStatisticsReply) cachedStat;
+		FSFWOFFlowStatisticsReply cachedFlowStat = (FSFWOFFlowStatisticsReply) cachedStat;
+		if(cachedFlowStat.toBeDeleted()){
+			return;
+		}
 		cachedFlowStat.setByteCount(cachedFlowStat.getByteCount() + newStat.getByteCount());
 		cachedFlowStat.setPacketCount(cachedFlowStat.getPacketCount() + newStat.getPacketCount());
-		lastSeen.put(cachedFlowStat.getMatch(), System.currentTimeMillis());
+		cachedFlowStat.setLastSeen(System.currentTimeMillis());
+		cachedFlowStat.setVerified(true);
 	}
 	
+	/**
+	 * internally used to find a cachedStat based on a match, only 
+	 * @param switchId
+	 * @param match
+	 * @return
+	 */
 	
-	private OFFlowStatisticsReply findCachedStat(Long switchId, OFMatch match){
+	private FSFWOFFlowStatisticsReply findCachedStat(Long switchId, OFMatch match){
 		log.debug("looking for stat in our expected cache: " + match.toString());
-		if(slicedCache.containsKey(switchId)){
-			for(String slice: slicedCache.get(switchId).keySet()){
-				List <OFStatistics> expectedStats = new ArrayList<OFStatistics>(slicedCache.get(switchId).get(slice));
+		if(sliced.containsKey(switchId)){
+			for(String slice: sliced.get(switchId).keySet()){
+				List <OFStatistics> expectedStats = new ArrayList<OFStatistics>(sliced.get(switchId).get(slice));
 				for(OFStatistics expectedOFStat: expectedStats){
-					OFFlowStatisticsReply expectedFlowStat = (OFFlowStatisticsReply) expectedOFStat;
-					if(expectedFlowStat.getMatch().equals(match)){
+					FSFWOFFlowStatisticsReply expectedFlowStat = (FSFWOFFlowStatisticsReply) expectedOFStat;
+					log.debug("Comparing to match: " + expectedFlowStat.getMatch());
+					if(expectedFlowStat.getMatch().toString().equals(match.toString())){
 						//found it
 						log.debug("found the expected flow match!");
 						return expectedFlowStat;
@@ -192,109 +213,153 @@ public class FlowStatCache{
 		return null;
 	}
 	
-	private void processFlow(Long switchId, OFFlowStatisticsReply flowStat, long time){
-		
-		if(!mappedCache.containsKey(switchId)){
-			HashMap<OFMatch, OFStatistics> tmpMap = new HashMap<OFMatch, OFStatistics>();
-			mappedCache.put(switchId, tmpMap);
-		}
-		
-		HashMap<OFMatch, OFStatistics> sliceMap = mappedCache.get(switchId);
-		
-		if(sliceMap.containsKey(flowStat.getMatch())){
-			log.debug("Found the flow rule in our mapping");
-			this.updateFlowStatData(sliceMap.get(flowStat.getMatch()), flowStat);
-		}else{
-			log.debug("didn't find the flow rule in our mapping must be new");
-			//the flow mapping wasn't found... so now we must try a few things
-			//first does it match any flow we were expecting?
-			OFFlowStatisticsReply stat = this.findCachedStat(switchId, flowStat.getMatch());
-			if(stat == null){
-				log.debug("flow stat was not in our expected, trying by wildcarding IN_PORT");
-				//ok so we didn't find it first go around
-				//wildcard the in_port and try again
-				OFMatch match = flowStat.getMatch().clone();
-				match.setInputPort((short)0);
-				match.setWildcards(match.getWildcardObj().wildcard(Wildcards.Flag.IN_PORT));
-				stat = this.findCachedStat(switchId, match);
-			}
-		
-			if(stat == null){
-				log.debug("still haven't found it, but we will keep trying");
-				//ok... haven't found either... managed tag mode?
-				//figure out what slice it is a part of
-				List<HashMap<Long, Slicer>> slices = parent.getSlices();
-				for(HashMap<Long,Slicer> tmpSlices : slices){
-					if(!tmpSlices.containsKey(switchId)){
-						//switch not part of this slice
-						log.debug("Switch is not part of this slice!");
-						continue;
-					}
-			
-					Slicer slice = tmpSlices.get(switchId);
-					log.debug("Looking at slice: " + slice.getSliceName());
-					OFFlowMod flowMod = new OFFlowMod();
-					flowMod.setMatch(flowStat.getMatch());
-					flowMod.setActions(flowStat.getActions());
-					flowMod.setPriority(flowStat.getPriority());
-					flowMod.setCookie(flowStat.getCookie());
-					flowMod.setIdleTimeout(flowStat.getIdleTimeout());
-					flowMod.setHardTimeout(flowStat.getHardTimeout());
-					List<OFFlowMod> flows = slice.allowedFlows(flowMod);
-					if(flows.size() > 0){
-						log.debug("Found the slice for this flow");
-						if(slice.getTagManagement()){
-							//ok so its probably in need of some wildcarding
-							//first remove the vlan tag
-							OFMatch match = flowStat.getMatch().clone();
-							match.setDataLayerVirtualLan((short)0);
-							match.getWildcardObj().wildcard(Wildcards.Flag.DL_VLAN);
-							stat = this.findCachedStat(switchId, match);
-							if(stat == null){
-								log.debug("tag management is on and we didn't find it with a wildcarded VLAN");
-								//ok so maybe its been both expanded and tag managed
-								match.setInputPort((short)0);
-								match.getWildcardObj().wildcard(Wildcards.Flag.IN_PORT);
-								stat = this.findCachedStat(switchId, match);
-							}
-						}
-						if(stat == null){
-							log.debug("Ok we haven't found this flow in the cache, adding it!");
-							this.addFlowMod(switchId, slice.getSliceName(), flowMod);
-							stat = this.findCachedStat(switchId,  flowMod.getMatch());
-						}
+	
+	private FSFWOFFlowStatisticsReply findCachedStat(Long switchId, OFMatch match, String sliceName){
+		log.debug("looking for stat in our expected cache: " + match.toString());
+		if(sliced.containsKey(switchId)){
+			if(sliced.get(switchId).containsKey(sliceName)){
+				List <OFStatistics> expectedStats = new ArrayList<OFStatistics>(sliced.get(switchId).get(sliceName));
+				for(OFStatistics expectedOFStat: expectedStats){
+					FSFWOFFlowStatisticsReply expectedFlowStat = (FSFWOFFlowStatisticsReply) expectedOFStat;
+					log.debug("Comparing to match: " + expectedFlowStat.getMatch());
+					if(expectedFlowStat.getMatch().toString().equals(match.toString())){
+						//found it
+						log.debug("found the expected flow match!");
+						return expectedFlowStat;
 					}
 				}
 			}
-			
-			//by this point we have either found or added our stat to the mappings
-			//just update it 
-			if(stat != null){
-				log.debug("Updating Flow Stat");
-				sliceMap.put(flowStat.getMatch(), stat);
-				this.updateFlowStatData(stat, flowStat);
-			}else{
-				log.error("Error finding/adding flow stat to the cache!  This flow is not a part of any Slice!" + flowStat.toString());
+		}
+		log.debug("Nothing matching that match!!");
+		return null;
+	}
+	
+	private OFFlowMod buildFlowMod(OFFlowStatisticsReply flowStat){
+		OFFlowMod flowMod = new OFFlowMod();
+		flowMod.setMatch(flowStat.getMatch());
+		flowMod.setActions(flowStat.getActions());
+		flowMod.setPriority(flowStat.getPriority());
+		flowMod.setCookie(flowStat.getCookie());
+		flowMod.setIdleTimeout(flowStat.getIdleTimeout());
+		flowMod.setHardTimeout(flowStat.getHardTimeout());
+		return flowMod;
+	}
+	
+	
+	private Slicer findSliceForFlow(long switchId, OFFlowMod flowMod){
+		List<HashMap<Long, Slicer>> slices = parent.getSlices();
+		for(HashMap<Long,Slicer> tmpSlices : slices){
+			if(!tmpSlices.containsKey(switchId)){
+				//switch not part of this slice
+				log.debug("Switch is not part of this slice!");
+				continue;
 			}
+	
+			Slicer slice = tmpSlices.get(switchId);
+			log.debug("Looking at slice: " + slice.getSliceName());
+			List<OFFlowMod> flows = slice.allowedFlows(flowMod);
+			if(flows.size() > 0){
+				return slice;
+			}
+		}
+		return null;
+	}
+	
+	private void processFlow(Long switchId, OFFlowStatisticsReply flowStat, long time){
+		
+		if(!map.containsKey(switchId)){
+			HashMap<String, OFStatistics> tmpMap = new HashMap<String, OFStatistics>();
+			map.put(switchId, tmpMap);
+		}
+		
+		HashMap<String, OFStatistics> flowMap = map.get(switchId);
+		
+		if(flowMap.containsKey(flowStat.getMatch().toString())){
+			log.debug("Found the flow rule in our mapping");
+			this.updateFlowStatData(flowMap.get(flowStat.getMatch().toString()), flowStat);
+			return;
+		}
+		log.debug("didn't find the flow rule in our mapping must be new");
+		//the flow mapping wasn't found... so now we must try a few things
+		//first does it match any flow we were expecting?
+		FSFWOFFlowStatisticsReply stat = this.findCachedStat(switchId, flowStat.getMatch());
+		if(stat == null){
+			log.debug("flow stat was not in our expected, trying by wildcarding IN_PORT");
+			//ok so we didn't find it first go around
+			//wildcard the in_port and try again
+			OFMatch match = flowStat.getMatch().clone();
+			match.setInputPort((short)0);
+			match.setWildcards(match.getWildcardObj().wildcard(Wildcards.Flag.IN_PORT));
+			stat = this.findCachedStat(switchId, match);
+		}
+		
+		if(stat == null){
+			log.debug("still haven't found it, but we will keep trying");
+			//ok... haven't found either... managed tag mode?
+			//figure out what slice it is a part of
+			OFFlowMod flowMod = this.buildFlowMod(flowStat);
+			Slicer slice = this.findSliceForFlow(switchId, flowMod);
+			if(slice != null){
+				//one last thing... if we are in managed tag mode wildcard the vlan and now does it match
+				if(slice.getTagManagement()){
+					OFMatch match = flowStat.getMatch().clone();
+					match.setDataLayerVirtualLan((short)0);
+					match.setWildcards(match.getWildcardObj().wildcard(Wildcards.Flag.DL_VLAN));
+					stat = this.findCachedStat(switchId, match, slice.getSliceName());
+					
+				}
+				
+				if(stat == null){
+					//ok still didn't match... now to wildcard both the VLAN and IN_PORT
+					OFMatch match = flowStat.getMatch().clone();
+					match.setDataLayerVirtualLan((short)0);
+					match.setWildcards(match.getWildcardObj().wildcard(Wildcards.Flag.DL_VLAN));
+					match.setInputPort((short)0);
+					match.setWildcards(match.getWildcardObj().wildcard(Wildcards.Flag.IN_PORT));
+					stat = this.findCachedStat(switchId, match, slice.getSliceName());
+				}
+				
+				if(stat == null){
+					log.error("Switch: " + switchId + ", Unable to find a flow that matches this flow in my cache, adding it");
+					log.debug(flowStat.toString());
+					this.addFlowMod(switchId, slice.getSliceName(), flowMod);
+					stat = this.findCachedStat(switchId,  flowMod.getMatch());
+				}
+			}
+		}
+			
+		//by this point we have either found or added our stat to the mappings
+		//just update it 
+		if(stat != null){
+			log.debug("Updating Flow Stat");
+			flowMap.put(flowStat.getMatch().toString(), (OFStatistics)stat);
+			log.debug("Map size: " + flowMap.size());
+			this.updateFlowStatData(stat, flowStat);
+		}else{ 
+			log.error("Error finding/adding flow stat to the cache!  This flow is not a part of any Slice!" + flowStat.toString());
+			//remove flow
+			
 		}
 	}
 	
 	/**
+	 * setFlowCache
 	 * sets the stats for the given switch
 	 * @param switchId
 	 * @param stats
 	 */
 	public synchronized void setFlowCache(Long switchId, List <OFStatistics> stats){
-		cache.put(switchId, stats);
+		flowStats.put(switchId, stats);
 	
 		log.debug("Setting Flow Cache! Switch: " + switchId + " Total Stats: " + stats.size());
 		
-		if(this.slicedCache.containsKey(switchId)){
+		//first thing is to set all counters for all stats to 0
+		if(this.sliced.containsKey(switchId)){
 			//loop through our current cache and set all packet/byte counts to 0
-			Iterator<String> it = this.slicedCache.get(switchId).keySet().iterator();
+			Iterator<String> it = this.sliced.get(switchId).keySet().iterator();
 			while(it.hasNext()){
 				String slice = (String)it.next();
-				List<OFStatistics> ofStats = this.slicedCache.get(switchId).get(slice);
+				List<OFStatistics> ofStats = this.sliced.get(switchId).get(slice);
 				for(OFStatistics stat : ofStats){
 					OFFlowStatisticsReply flowStat = (OFFlowStatisticsReply) stat;
 					flowStat.setByteCount(0);
@@ -302,6 +367,9 @@ public class FlowStatCache{
 				}
 			}
 		}
+		
+		
+		//now update process all the flows find their mapping and cache them
 		long time = System.currentTimeMillis();
 		//loop through all stats
 		for(OFStatistics stat : stats){
@@ -310,45 +378,46 @@ public class FlowStatCache{
 			this.processFlow(switchId, flowStat, time);
 		}
 		
+		//are there any flows that need to go away (ie... we didn't see them since the last poll cycle)		
 		long timeToRemove = time - 15000;
-		
-		if(this.slicedCache.containsKey(switchId)){
-			HashMap<String, List<OFStatistics>> sliceStats = this.slicedCache.get(switchId);
-			//loop through our current cache and set all packet/byte counts to 0
+		if(this.sliced.containsKey(switchId)){
+			HashMap<String, List<OFStatistics>> sliceStats = this.sliced.get(switchId);
 			Iterator<String> it = sliceStats.keySet().iterator();
 			while(it.hasNext()){
 				String slice = (String)it.next();
-				List<OFStatistics> ofStats = this.slicedCache.get(switchId).get(slice);
+				List<OFStatistics> ofStats = this.sliced.get(switchId).get(slice);
 				Iterator<OFStatistics> itStat = ofStats.iterator();
 				while(itStat.hasNext()){
 					OFStatistics stat = (OFStatistics)itStat.next();
-					OFFlowStatisticsReply flowStat = (OFFlowStatisticsReply)stat;
-					if(lastSeen.containsKey(flowStat.getMatch())){
-						if(lastSeen.get(flowStat.getMatch()) < timeToRemove && lastSeen.get(flowStat.getMatch()) > 0){
-							log.debug("Removing flowStat: " + stat.toString());
-							lastSeen.remove(stat);
-							itStat.remove();
-							//have to also find all flows that point to this flow :(
-							this.removeMappedCache(switchId, flowStat);
-						}
-					}else{
-						log.debug("Could not find stat in lastSeen, time to remove!");
-						log.debug("LastSeen: " + lastSeen.size());
+					FSFWOFFlowStatisticsReply flowStat = (FSFWOFFlowStatisticsReply)stat;
+					if(flowStat.lastSeen() < timeToRemove){
+						log.error("Removing flowStat: " + stat.toString());
 						itStat.remove();
+							//have to also find all flows that point to this flow :(
+						this.removeMappedCache(switchId, flowStat);
 					}
 				}
 			}
 		}
 	}
 	
+	/**
+	 * removeMappedCache
+	 * @param switchId
+	 * @param stat
+	 * 
+	 * removes the flows that are mapped to this stats
+	 * 
+	 */
+	
 	private void removeMappedCache(long switchId, OFStatistics stat){
-		if(mappedCache.containsKey(switchId)){
-			HashMap<OFMatch, OFStatistics> switchMap = mappedCache.get(switchId);
+		if(map.containsKey(switchId)){
+			HashMap<String, OFStatistics> switchMap = map.get(switchId);
 			if(switchMap.containsValue(stat)){
 				//well crap no easy way to do this...
-				Iterator<Entry<OFMatch, OFStatistics>> it = switchMap.entrySet().iterator();
+				Iterator<Entry<String, OFStatistics>> it = switchMap.entrySet().iterator();
 				while(it.hasNext()){
-					Entry<OFMatch, OFStatistics> entry = (Entry<OFMatch, OFStatistics>) it.next();
+					Entry<String, OFStatistics> entry = (Entry<String, OFStatistics>) it.next();
 					if(entry.getValue().equals(stat)){
 						it.remove();
 					}
@@ -357,6 +426,12 @@ public class FlowStatCache{
 			
 		}
 	}
+	
+	/**
+	 * tries to find expired flows and then signals that they need to be removed!
+	 * @param switchId
+	 * @return
+	 */
 	
 	public List<FlowTimeout> getPossibleExpiredFlows(Long switchId){
 		List<FlowTimeout> flowTimeouts = new ArrayList<FlowTimeout>();
@@ -372,6 +447,11 @@ public class FlowStatCache{
 			
 		return flowTimeouts;
 	}
+	
+	/**
+	 * check for expired flows
+	 * @param switchId
+	 */
 	
 	public void checkExpireFlows(Long switchId){
 		List<HashMap<Long, Slicer>> slices = parent.getSlices();
@@ -393,15 +473,26 @@ public class FlowStatCache{
 	 */
 	public synchronized List <OFStatistics> getSwitchFlowStats(Long switchId){
 		log.debug("Looking for switch stats: " + switchId);
-		return cache.get(switchId);
+		return flowStats.get(switchId);
 	}
 	
 	public synchronized List <OFStatistics> getSlicedFlowStats(Long switchId, String sliceName){
 		log.debug("Getting sliced stats for switch: " + switchId + " and slice " + sliceName);
-		if(slicedCache.containsKey(switchId)){
-			HashMap<String, List<OFStatistics>> tmpStats = slicedCache.get(switchId);
+		if(sliced.containsKey(switchId)){
+			HashMap<String, List<OFStatistics>> tmpStats = sliced.get(switchId);
 			if(tmpStats.containsKey(sliceName)){				
+				//create a copy of the array so we can manipulate it
 				List<OFStatistics> stats = new ArrayList<OFStatistics>(tmpStats.get(sliceName));
+
+				//we only want verified flows to appear
+				Iterator<OFStatistics> it = stats.iterator();
+				while(it.hasNext()){
+					FSFWOFFlowStatisticsReply flowStat = (FSFWOFFlowStatisticsReply)it.next();
+					if(flowStat.toBeDeleted() || !flowStat.isVerified()){
+						it.remove();
+					}
+				}
+				
 				log.debug("Returning " + stats.size() + " flow stats");
 				return stats;
 			}
@@ -412,17 +503,18 @@ public class FlowStatCache{
 		return new ArrayList<OFStatistics>();
 	}
 	
+	
 	public synchronized void setPortCache(Long switchId, HashMap<Short, OFStatistics> stats){
-		portStatsCache.put(switchId, stats);
+		portStats.put(switchId, stats);
 	}
 	
 	public synchronized OFStatistics getPortStats(Long switchId, short portId){
-		HashMap<Short, OFStatistics> nodeStats = portStatsCache.get(switchId);
+		HashMap<Short, OFStatistics> nodeStats = portStats.get(switchId);
 		return nodeStats.get(portId);
 	}
 	
 	public synchronized HashMap<Short, OFStatistics> getPortStats(Long switchId){
-		return portStatsCache.get(switchId);
+		return portStats.get(switchId);
 	}
 	
 	

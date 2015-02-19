@@ -638,7 +638,7 @@ public class VLANSlicer implements Slicer{
 	public List <OFFlowMod> managedFlows(OFFlowMod flowMod){
 		log.debug("Attempting to put flow: " + flowMod.toString() + " into flowspace");
 		List<OFFlowMod> flows = new ArrayList<OFFlowMod>();
-		OFMatch match = flowMod.getMatch();
+		OFMatch match = flowMod.getMatch().clone();
 		
 		if(match == null){
 			return flows;
