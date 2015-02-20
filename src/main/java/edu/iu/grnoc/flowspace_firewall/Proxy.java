@@ -366,7 +366,8 @@ public class Proxy {
 			}
 		}
 		
-		if(tmpFlow.getCommand() == OFFlowMod.OFPFC_ADD){
+		if(tmpFlow.getCommand() == OFFlowMod.OFPFC_ADD || tmpFlow.getCommand() == OFFlowMod.OFPFF_CHECK_OVERLAP 
+				|| tmpFlow.getCommand() == OFFlowMod.OFPFC_MODIFY || tmpFlow.getCommand() == OFFlowMod.OFPFC_MODIFY_STRICT){
 			this.parent.addFlowCache(this.mySwitch.getId(), this.mySlicer.getSliceName(), tmpFlow);
 		}
 		if(tmpFlow.getCommand() == OFFlowMod.OFPFC_DELETE || tmpFlow.getCommand() == OFFlowMod.OFPFC_DELETE_STRICT){
@@ -430,7 +431,6 @@ public class Proxy {
 						flow.setHardTimeout((short)0);
 					}
 				}
-				this.parent.addFlowCache(this.mySwitch.getId(), this.mySlicer.getSliceName(), (OFFlowMod)msg);
 				this.updateFlowCount(1);
 				break;
 			case OFFlowMod.OFPFC_DELETE:
@@ -672,9 +672,6 @@ public class Proxy {
 				stat.getMatch().setDataLayerVirtualLan((short)0);
 				stat.getMatch().setWildcards(stat.getMatch().getWildcardObj().wildcard(Wildcards.Flag.DL_VLAN));
 				List<OFAction> newActions = new ArrayList<OFAction>();
-				if(stat.getMatch().getInputPort() == 0){
-					stat.getMatch().setWildcards(stat.getMatch().getWildcardObj().wildcard(Wildcards.Flag.IN_PORT));
-				}
 				short actLength = 0;
 				List<OFAction> actions = stat.getActions();
 				Iterator<OFAction> actIt = actions.iterator();

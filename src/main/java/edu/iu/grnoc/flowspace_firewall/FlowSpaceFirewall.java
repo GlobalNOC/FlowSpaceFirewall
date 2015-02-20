@@ -342,6 +342,9 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 		} catch(XPathExpressionException e){
 			logger.error(e.getMessage());
 			return false;
+		} catch(InvalidConfigException e){
+			logger.error(e.getMsg());
+			return false;
 		}
         logger.debug("Number of slices after reload: "+this.slices.size());
 		return true;
@@ -424,6 +427,8 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 			logger.error(e.getMessage());
 		} catch(XPathExpressionException e){
 			logger.error(e.getMessage());
+		}catch(InvalidConfigException e){
+			logger.error(e.getMsg());
 		}
 
 		if(this.slices.size() == 0){
