@@ -195,7 +195,7 @@
 		<fail if="junit.failure" message="Unit test(s) failed.  See reports!"/>
 	</target>
 	
-    <target name="dist" depends="build-project,compile-test">
+    <target name="dist" depends="clean,build-project,compile-test">
         <jar destfile="bin/flowspace_firewall.jar" filesetmanifest="mergewithoutmain">
             <fileset dir="bin/"/>
         	<zipgroupfileset dir="lib/">

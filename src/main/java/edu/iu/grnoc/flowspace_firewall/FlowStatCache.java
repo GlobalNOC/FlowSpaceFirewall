@@ -349,7 +349,7 @@ public class FlowStatCache{
 					flowMod.setHardTimeout(flowStat.getHardTimeout());
 					flowMod.setCookie(flowStat.getCookie());
 					flowMod.setPriority(flowStat.getPriority());
-					flowMod.setCommand(OFFlowMod.OFPFC_DELETE);
+					flowMod.setCommand(OFFlowMod.OFPFC_DELETE_STRICT);
 					flowMod.setLengthU(OFFlowMod.MINIMUM_LENGTH);
 					flowMod.setXid(sw.getNextTransactionId());
 
