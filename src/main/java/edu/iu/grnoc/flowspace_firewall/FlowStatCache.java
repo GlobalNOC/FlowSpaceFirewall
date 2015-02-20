@@ -33,6 +33,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.openflow.protocol.OFFlowMod;
 import org.openflow.protocol.OFMatch;
+import org.openflow.protocol.OFMessage;
 import org.openflow.protocol.Wildcards;
 
 /**
@@ -98,6 +99,7 @@ public class FlowStatCache{
 			}
 		} catch (ClassNotFoundException e) {
 			// TODO Auto-generated catch block
+			log.error("Error reading in cache file!  Starting from clean cache!");
 			e.printStackTrace();
 		}
 	}
@@ -236,7 +238,7 @@ public class FlowStatCache{
 	
 	private OFFlowMod buildFlowMod(OFFlowStatisticsReply flowStat){
 		OFFlowMod flowMod = new OFFlowMod();
-		flowMod.setMatch(flowStat.getMatch());
+		flowMod.setMatch(flowStat.getMatch().clone());
 		flowMod.setActions(flowStat.getActions());
 		flowMod.setPriority(flowStat.getPriority());
 		flowMod.setCookie(flowStat.getCookie());
@@ -332,13 +334,36 @@ public class FlowStatCache{
 		//just update it 
 		if(stat != null){
 			log.debug("Updating Flow Stat");
-			flowMap.put(flowStat.getMatch(), (OFStatistics)stat);
+			flowMap.put(flowStat.getMatch().clone(), (OFStatistics)stat);
 			log.debug("Map size: " + flowMap.size());
 			this.updateFlowStatData(stat, flowStat);
 		}else{ 
 			log.error("Error finding/adding flow stat to the cache!  This flow is not a part of any Slice!" + flowStat.toString());
 			//remove flow
-			
+			List<IOFSwitch> switches = getSwitches();
+			for(IOFSwitch sw : switches){
+				if(sw.getId() == switchId){
+					OFFlowMod flowMod = new OFFlowMod();
+					flowMod.setMatch(flowStat.getMatch().clone());
+					flowMod.setIdleTimeout(flowStat.getIdleTimeout());
+					flowMod.setHardTimeout(flowStat.getHardTimeout());
+					flowMod.setCookie(flowStat.getCookie());
+					flowMod.setPriority(flowStat.getPriority());
+					flowMod.setCommand(OFFlowMod.OFPFC_DELETE);
+					flowMod.setLengthU(OFFlowMod.MINIMUM_LENGTH);
+					flowMod.setXid(sw.getNextTransactionId());
+
+					List<OFMessage> msgs = new ArrayList<OFMessage>();
+					msgs.add((OFMessage)flowMod);
+					
+					try {
+						sw.write(msgs, null);
+					} catch (IOException e) {
+						log.error("Error attempting to send flow delete for flow that fits in NO flowspace");
+						e.printStackTrace();
+					}
+				}
+			}
 		}
 	}
 	
@@ -391,7 +416,7 @@ public class FlowStatCache{
 					OFStatistics stat = (OFStatistics)itStat.next();
 					FSFWOFFlowStatisticsReply flowStat = (FSFWOFFlowStatisticsReply)stat;
 					if(flowStat.lastSeen() < timeToRemove){
-						log.error("Removing flowStat: " + stat.toString());
+						log.debug("Removing flowStat: " + stat.toString());
 						itStat.remove();
 							//have to also find all flows that point to this flow :(
 						this.removeMappedCache(switchId, flowStat);

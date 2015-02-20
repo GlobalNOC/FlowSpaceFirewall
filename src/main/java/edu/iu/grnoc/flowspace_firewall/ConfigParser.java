@@ -70,7 +70,6 @@ public final class ConfigParser {
 						Slicer otherConfig = otherSlice.get(dpid);
 						if(otherConfig.getSliceName() != config.getSliceName()){
 							if(config.hasOverlap(otherConfig)){
-								//TODO: Log config has overlap here!
 								log.warn("Overlap detected between slice "+config.getSliceName()+" and slice "
 								+otherConfig.getSliceName()+" will not load this configuration");
 								return false;
@@ -85,7 +84,7 @@ public final class ConfigParser {
 	}
 	
 	//the only method we need here
-	public static ArrayList<HashMap<Long, Slicer>> parseConfig(String xmlFile) throws IOException, SAXException, ParserConfigurationException,XPathExpressionException{
+	public static ArrayList<HashMap<Long, Slicer>> parseConfig(String xmlFile) throws IOException, SAXException, ParserConfigurationException,XPathExpressionException, InvalidConfigException{
 		ArrayList<HashMap<Long, Slicer>> newSlices = new ArrayList<HashMap<Long, Slicer>>();
 		Document document;
     	try {
@@ -247,8 +246,7 @@ public final class ConfigParser {
     		return newSlices;
     	}else{
     		log.error("Problem with configuration.  Unable to load config");
-    		newSlices.clear();
-    		return newSlices;
+    		throw new InvalidConfigException("Configuration is not valid!");
     	}
 	}
 	
