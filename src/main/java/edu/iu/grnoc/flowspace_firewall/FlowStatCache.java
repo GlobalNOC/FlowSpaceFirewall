@@ -73,7 +73,7 @@ public class FlowStatCache{
 	
 	
 	//lets us write out object to disk
-	public void writeObject(ObjectOutputStream aOutputStream) throws IOException{
+	public synchronized void writeObject(ObjectOutputStream aOutputStream) throws IOException{
 		//need to clone it so that we can make changes while serializing
 		aOutputStream.writeObject(sliced.clone());
 	}
@@ -104,7 +104,7 @@ public class FlowStatCache{
 		}
 	}
 	
-	public void delFlowMod(long dpid, String sliceName, OFFlowMod flow){
+	public synchronized void delFlowMod(long dpid, String sliceName, OFFlowMod flow){
 		FSFWOFFlowStatisticsReply flowStat = (FSFWOFFlowStatisticsReply) this.findCachedStat(dpid, flow.getMatch(), sliceName);
 		if(flowStat != null){
 			log.error("Setting flow mod to be deleted");
@@ -114,7 +114,7 @@ public class FlowStatCache{
 		log.error("Flow mod was not found could not be deleted");
 	}
 	
-	public void addFlowMod(Long dpid, String sliceName, OFFlowMod flow){
+	public synchronized void addFlowMod(Long dpid, String sliceName, OFFlowMod flow){
 		//create a flow stat reply and set the cache to it
 		FSFWOFFlowStatisticsReply flowStat = new FSFWOFFlowStatisticsReply();
 		flowStat.setMatch(flow.getMatch());
