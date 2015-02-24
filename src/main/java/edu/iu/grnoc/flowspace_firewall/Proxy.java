@@ -667,10 +667,22 @@ public class Proxy {
 		while(it2.hasNext()){
 			//TODO: implement the filter capabilities of FLowStats Request
 			OFFlowStatisticsReply stat = (OFFlowStatisticsReply) it2.next();
+			
 			if(this.mySlicer.getTagManagement()){
+				OFFlowStatisticsReply newStat = new OFFlowStatisticsReply();
 				//in managed tag mode... remove the vlan tag from the match and any set vlan actions
-				stat.getMatch().setDataLayerVirtualLan((short)0);
-				stat.getMatch().setWildcards(stat.getMatch().getWildcardObj().wildcard(Wildcards.Flag.DL_VLAN));
+				newStat.setMatch(stat.getMatch().clone());
+				newStat.setPriority(stat.getPriority());
+				newStat.setIdleTimeout(stat.getIdleTimeout());
+				newStat.setHardTimeout(stat.getHardTimeout());
+				newStat.setPacketCount(stat.getPacketCount());
+				newStat.setByteCount(stat.getByteCount());
+				newStat.setDurationNanoseconds(stat.getDurationNanoseconds());
+				newStat.setDurationSeconds(stat.getDurationSeconds());
+				newStat.setTableId(stat.getTableId());
+				newStat.setCookie(stat.getCookie());
+				newStat.getMatch().setDataLayerVirtualLan((short)0);
+				newStat.getMatch().setWildcards(newStat.getMatch().getWildcardObj().wildcard(Wildcards.Flag.DL_VLAN));
 				List<OFAction> newActions = new ArrayList<OFAction>();
 				short actLength = 0;
 				List<OFAction> actions = stat.getActions();
@@ -690,8 +702,9 @@ public class Proxy {
 						break;
 					}
 				}
-				stat.setActions(newActions);
-				stat.setLength((short)(OFFlowStatisticsReply.MINIMUM_LENGTH + actLength));
+				newStat.setActions(newActions);
+				newStat.setLength((short)(OFFlowStatisticsReply.MINIMUM_LENGTH + actLength));
+				stat = newStat;
 			}
 						
 			length += stat.getLength();

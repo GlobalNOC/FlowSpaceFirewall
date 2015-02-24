@@ -41,6 +41,8 @@ import org.openflow.protocol.action.OFAction;
 import org.openflow.protocol.action.OFActionOutput;
 import org.openflow.protocol.action.OFActionType;
 import org.openflow.protocol.action.OFActionVirtualLanIdentifier;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class VLANSlicerTest {
 
@@ -51,6 +53,8 @@ public class VLANSlicerTest {
 	PortConfig pConfig3;
 	PortConfig pConfig5;
 	PortConfig pConfig6;
+	
+	protected static Logger log = LoggerFactory.getLogger(VLANSlicerTest.class);
 	
 	@Before
 	public void setup(){
@@ -796,7 +800,8 @@ public class VLANSlicerTest {
 		Ethernet pkt = new Ethernet();
 		pkt.setDestinationMACAddress("aa:bb:cc:dd:ee:ff");
 		pkt.setSourceMACAddress("ff:ee:dd:cc:bb:aa");
-		pkt.setEtherType((short)35020);
+		pkt.setEtherType((short)35021);
+		pkt.setPad(true);
 		out.setPacketData(pkt.serialize());
 		slicer.setTagManagement(true);
 		pConfig = new PortConfig();
@@ -810,12 +815,13 @@ public class VLANSlicerTest {
 		assertTrue("OutPacket size is correct, expected 1 got " + outPackets.size(), outPackets.size() == 1);
 		OFPacketOut managedPacket = (OFPacketOut) outPackets.get(0);
 		List<OFAction> acts = managedPacket.getActions();
-		assertTrue("Action list size is 2!!",acts.size() == 2);
-		assertTrue("first action is set vlan id",acts.get(0).getType() == OFActionType.SET_VLAN_ID);
-		OFActionVirtualLanIdentifier set_vlan_vid = (OFActionVirtualLanIdentifier) acts.get(0);
-		assertTrue("VLAN Tag set is correct",set_vlan_vid.getVirtualLanIdentifier() == 101);
-		assertTrue("Second action type is OUTPUT", acts.get(1).getType() == OFActionType.OUTPUT);
-		OFActionOutput outPort = (OFActionOutput) acts.get(1);
+		assertTrue("Action list size is 1!!",acts.size() == 1);
+
+		Ethernet managedEthernet = new Ethernet();
+		managedEthernet.deserialize(managedPacket.getPacketData(), 0, managedPacket.getPacketData().length);
+		assertTrue("VLAN Tag set is correct",managedEthernet.getVlanID() == 101);
+		assertTrue("Second action type is OUTPUT", acts.get(0).getType() == OFActionType.OUTPUT);
+		OFActionOutput outPort = (OFActionOutput) acts.get(0);
 		assertTrue("output port is 1", outPort.getPort() == 1);
 		
 		pkt.setVlanID((short)2000);
@@ -841,7 +847,8 @@ public class VLANSlicerTest {
 		Ethernet pkt = new Ethernet();
 		pkt.setDestinationMACAddress("aa:bb:cc:dd:ee:ff");
 		pkt.setSourceMACAddress("ff:ee:dd:cc:bb:aa");
-		pkt.setEtherType((short)35020);
+		pkt.setEtherType((short)35021);
+		pkt.setPad(true);
 		out.setPacketData(pkt.serialize());
 		
 		slicer.setTagManagement(true);
@@ -855,6 +862,34 @@ public class VLANSlicerTest {
 		List<OFMessage> outPackets = slicer.managedPacketOut(out);
 		assertTrue("OutPacket size is correct, expected 5 got " + outPackets.size(), outPackets.size() == 5);
 		//TODO: need to verify the packet outs are what we want		
+		
+		//log.error(outPackets.toString());
+		
+		OFPacketOut pktOut = (OFPacketOut) outPackets.get(0);
+		Ethernet newPkt = new Ethernet();
+		newPkt.deserialize(pktOut.getPacketData(), 0, pktOut.getPacketData().length);
+		log.error("First packet: " + newPkt.getVlanID());
+		assertTrue("first packet has right vlan tag set", newPkt.getVlanID() == 105);
+		
+		pktOut = (OFPacketOut) outPackets.get(1);
+		newPkt.deserialize(pktOut.getPacketData(), 0, pktOut.getPacketData().length);
+		log.error("Second packet: " + newPkt.getVlanID());
+		assertTrue("second packet has right vlan tag set", newPkt.getVlanID() == 103);
+		
+		pktOut = (OFPacketOut) outPackets.get(2);
+		newPkt.deserialize(pktOut.getPacketData(), 0, pktOut.getPacketData().length);
+		log.error("Third packet: " + newPkt.getVlanID());
+		assertTrue("third packet has right vlan tag set", newPkt.getVlanID() == 102);
+		
+		pktOut = (OFPacketOut) outPackets.get(3);
+		newPkt.deserialize(pktOut.getPacketData(), 0, pktOut.getPacketData().length);
+		log.error("Foruth packet: " + newPkt.getVlanID());
+		assertTrue("fourth packet has right vlan tag set", newPkt.getVlanID() == 101);
+		
+		pktOut = (OFPacketOut) outPackets.get(4);
+		newPkt.deserialize(pktOut.getPacketData(), 0, pktOut.getPacketData().length);
+		log.error("Fifth packet: " + newPkt.getVlanID());
+		assertTrue("fifth packet has right vlan tag set", newPkt.getVlanID() == 105);
 		
 		pkt.setVlanID((short)2000);
 		out.setPacketData(pkt.serialize());

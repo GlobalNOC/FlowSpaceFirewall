@@ -18,6 +18,7 @@ package edu.iu.grnoc.flowspace_firewall;
 import static org.easymock.EasyMock.createMock;
 import static org.easymock.EasyMock.expect;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -27,6 +28,7 @@ import org.easymock.*;
 
 import static org.junit.Assert.*;
 
+import net.floodlightcontroller.core.FloodlightContext;
 import net.floodlightcontroller.core.IOFSwitch;
 import net.floodlightcontroller.core.ImmutablePort;
 import org.junit.Test;
@@ -765,8 +767,9 @@ public class FlowStatSlicerTest {
 		
 	}
 	
+	@SuppressWarnings("unchecked")
 	@Before
-	public void buildSlicer(){
+	public void buildSlicer() throws IOException{
 		ArrayList <ImmutablePort> ports = new ArrayList <ImmutablePort>();
 		
 		ImmutablePort p = createMock(ImmutablePort.class);
@@ -810,6 +813,9 @@ public class FlowStatSlicerTest {
 		expect(sw.getPort((short)100)).andReturn(null).anyTimes();
 		expect(sw.getPort((short)-1)).andReturn(null).anyTimes();
         expect(sw.getPorts()).andReturn((Collection <ImmutablePort>) ports).anyTimes();
+        expect(sw.getNextTransactionId()).andReturn(1).anyTimes();
+    	sw.write(EasyMock.anyObject(List.class), (FloodlightContext)EasyMock.anyObject());
+	    EasyMock.expectLastCall().anyTimes();
         EasyMock.replay(sw);
         
         assertNotNull("switch id is not null", sw.getId());
@@ -956,7 +962,10 @@ public class FlowStatSlicerTest {
 		tmp.add(tmpMap);
 		
 		fsfw = createMock(FlowSpaceFirewall.class);
+		List<IOFSwitch> switches = new ArrayList<IOFSwitch>();
+		switches.add(sw);
 		expect(fsfw.getSlices()).andReturn(tmp).anyTimes();
+		expect(fsfw.getSwitches()).andReturn(switches).anyTimes();
 		EasyMock.replay(fsfw);
 		
 		
