@@ -165,9 +165,6 @@ public class FlowStatCache{
 	
 	public synchronized void clearFlowCache(Long switchId){
 		
-		flowStats.remove(switchId);
-		map.remove(switchId);
-		//sliced.remove(switchId);
 		
 	}
 	
@@ -223,7 +220,7 @@ public class FlowStatCache{
 				List <OFStatistics> expectedStats = new ArrayList<OFStatistics>(sliced.get(switchId).get(sliceName));
 				for(OFStatistics expectedOFStat: expectedStats){
 					FSFWOFFlowStatisticsReply expectedFlowStat = (FSFWOFFlowStatisticsReply) expectedOFStat;
-					log.debug("Comparing to match: " + expectedFlowStat.getMatch());
+					
 					if(expectedFlowStat.getMatch().equals(match)){
 						//found it
 						log.debug("found the expected flow match!");
@@ -324,8 +321,17 @@ public class FlowStatCache{
 				if(stat == null){
 					log.error("Switch: " + switchId + ", Unable to find a flow that matches this flow in my cache, adding it");
 					log.debug(flowStat.toString());
-					this.addFlowMod(switchId, slice.getSliceName(), flowMod);
-					stat = this.findCachedStat(switchId,  flowMod.getMatch());
+					if(slice.getTagManagement()){
+						OFMatch match = flowStat.getMatch().clone();
+						match.setDataLayerVirtualLan((short)0);
+						match.setWildcards(match.getWildcardObj().wildcard(Wildcards.Flag.DL_VLAN));
+						flowMod.setMatch(match);
+						this.addFlowMod(switchId, slice.getSliceName(), flowMod);
+						stat = this.findCachedStat(switchId,  flowMod.getMatch());
+					}else{
+						this.addFlowMod(switchId, slice.getSliceName(), flowMod);
+						stat = this.findCachedStat(switchId,  flowMod.getMatch());
+					}
 				}
 			}
 		}
