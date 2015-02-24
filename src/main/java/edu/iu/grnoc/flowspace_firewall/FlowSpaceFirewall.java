@@ -68,7 +68,7 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
     private Timer controllerConnectTimer;
     
     private ArrayList<HashMap<Long, Slicer>> slices;
-    private ArrayList<IOFSwitch> switches;
+    private List<IOFSwitch> switches;
     private FlowStatCacher statsCacher;
     private ControllerConnector controllerConnector;
     protected IRestApiService restApi;
@@ -293,7 +293,7 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 				
 				if(!updated){
 					logger.warn("Slice "
-							+p.getSlicer().getSliceName()+":" + p.getSwitch().getStringId() +" was not found, removing");
+							+p.getSlicer().getSliceName()+":" + p.getSlicer().getSwitchName() +" was not found, removing");
 					p.disconnect();
 					toBeRemoved.add(p);
 				}
@@ -371,7 +371,7 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 				logger.debug("slice disabled... skipping");
 			}else{
 				try{
-					logger.debug("attempting to send " + msg.toString() + " to slice: " + p.getSlicer().getSliceName() + " from switch: " + sw.getStringId());
+					logger.debug("attempting to send " + msg.toString() + " to slice: " + p.getSlicer().getSliceName() + " from switch: " + p.getSlicer().getSwitchName());
 					p.toController(msg,cntx);
 				}catch (Exception e){
 					//don't die please... just keep going and error the stack trace
@@ -450,7 +450,7 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 		floodlightProvider.addOFMessageListener(OFType.PORT_STATUS, this);
 		floodlightProvider.addOFMessageListener(OFType.ERROR,this);
 		floodlightProvider.addOFMessageListener(OFType.FLOW_REMOVED, this);
-		switches = new ArrayList<IOFSwitch>();
+		switches = Collections.synchronizedList(new ArrayList<IOFSwitch>());
 		//start up the stats collector timer
 		statsTimer = new Timer("StatsTimer");
 		statsCacher = new FlowStatCacher(this);

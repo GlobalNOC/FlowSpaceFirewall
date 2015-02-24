@@ -473,7 +473,11 @@ public class FlowStatCache{
 				//switch not part of this slice
 				continue;
 			}
-			flowTimeouts.addAll( this.parent.getProxy(switchId, tmpSlices.get(switchId).getSliceName()).getTimeouts());
+			Proxy proxy = this.parent.getProxy(switchId, tmpSlices.get(switchId).getSliceName());
+			if(proxy == null){
+				return flowTimeouts;
+			}
+			flowTimeouts.addAll( proxy.getTimeouts());
 		}
 			
 		return flowTimeouts;
@@ -492,7 +496,11 @@ public class FlowStatCache{
 				//switch not part of this slice
 				continue;
 			}
-			this.parent.getProxy(switchId, tmpSlices.get(switchId).getSliceName()).checkExpiredFlows();
+			Proxy p = this.parent.getProxy(switchId, tmpSlices.get(switchId).getSliceName());
+			if(p == null){
+				return;
+			}
+			p.checkExpiredFlows();
 		}
 	}
 	

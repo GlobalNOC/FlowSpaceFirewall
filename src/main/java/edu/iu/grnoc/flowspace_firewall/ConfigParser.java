@@ -23,6 +23,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
+import javax.xml.XMLConstants;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
@@ -88,8 +89,15 @@ public final class ConfigParser {
 		ArrayList<HashMap<Long, Slicer>> newSlices = new ArrayList<HashMap<Long, Slicer>>();
 		Document document;
     	try {
-    		DocumentBuilder parser = DocumentBuilderFactory.newInstance().newDocumentBuilder();
-    		
+    		DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+    		//these enable the proper security to prevent
+    		//XML entity expansion injection (http://www.hpenterprisesecurity.com/vulncat/en/vulncat/dotnet/xee_injection.html)
+    		//XML External Entity Injection (https://www.owasp.org/index.php/XML_External_Entity_(XXE)_Processing)
+    		dbf.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
+    		dbf.setExpandEntityReferences(false);
+    		dbf.setFeature("http://xml.org/sax/features/external-general-entities", false);
+    		dbf.setFeature("http://xml.org/sax/features/external-parameter-entities", false);
+    		DocumentBuilder parser = dbf.newDocumentBuilder();
     		document = parser.parse(new File(xmlFile));
     	
 	        // create a SchemaFactory capable of understanding WXS schemas
@@ -101,7 +109,7 @@ public final class ConfigParser {
 	        
 	        // create a Validator instance, which can be used to validate an instance document
 			Validator validator = schema.newValidator();
-	       
+	        
 	        // validate the DOM tree
 	        validator.validate(new DOMSource(document));
     	
@@ -153,6 +161,7 @@ public final class ConfigParser {
 	        				if(tag_mgmt != null){
 	        					tag_management = Boolean.parseBoolean(switchConfig.getAttributes().getNamedItem("tag_management").getTextContent());
 	        				}
+	        				slicer.setSwitchName(switchConfig.getAttributes().getNamedItem("name").getTextContent());
 	        				slicer.setTagManagement(tag_management);
 	        				slicer.setFlushRulesOnConnect(flush_on_connect);
 	        				int numberOfFlows = Integer.parseInt(switchConfig.getAttributes().getNamedItem("max_flows").getTextContent());
