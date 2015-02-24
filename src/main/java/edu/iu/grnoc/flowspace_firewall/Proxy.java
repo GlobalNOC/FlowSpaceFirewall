@@ -672,6 +672,15 @@ public class Proxy {
 				OFFlowStatisticsReply newStat = new OFFlowStatisticsReply();
 				//in managed tag mode... remove the vlan tag from the match and any set vlan actions
 				newStat.setMatch(stat.getMatch().clone());
+				newStat.setPriority(stat.getPriority());
+				newStat.setIdleTimeout(stat.getIdleTimeout());
+				newStat.setHardTimeout(stat.getHardTimeout());
+				newStat.setPacketCount(stat.getPacketCount());
+				newStat.setByteCount(stat.getByteCount());
+				newStat.setDurationNanoseconds(stat.getDurationNanoseconds());
+				newStat.setDurationSeconds(stat.getDurationSeconds());
+				newStat.setTableId(stat.getTableId());
+				newStat.setCookie(stat.getCookie());
 				newStat.getMatch().setDataLayerVirtualLan((short)0);
 				newStat.getMatch().setWildcards(newStat.getMatch().getWildcardObj().wildcard(Wildcards.Flag.DL_VLAN));
 				List<OFAction> newActions = new ArrayList<OFAction>();
