@@ -35,7 +35,6 @@ import org.junit.Test;
 import org.junit.Before;
 import org.openflow.protocol.OFFlowMod;
 import org.openflow.protocol.OFMatch;
-import org.openflow.protocol.OFMessage;
 import org.openflow.protocol.Wildcards.Flag;
 import org.openflow.protocol.action.OFAction;
 import org.openflow.protocol.action.OFActionOutput;
@@ -768,6 +767,7 @@ public class FlowStatSlicerTest {
 		
 	}
 	
+	@SuppressWarnings("unchecked")
 	@Before
 	public void buildSlicer() throws IOException{
 		ArrayList <ImmutablePort> ports = new ArrayList <ImmutablePort>();
