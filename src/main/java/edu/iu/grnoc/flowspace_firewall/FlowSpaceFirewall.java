@@ -41,6 +41,7 @@ import net.floodlightcontroller.core.module.IFloodlightModule;
 import net.floodlightcontroller.core.module.IFloodlightService;
 import net.floodlightcontroller.restserver.IRestApiService;
 
+import org.openflow.protocol.OFFlowMod;
 import org.openflow.protocol.OFMessage;
 import org.openflow.protocol.OFType;
 import org.openflow.protocol.statistics.OFStatistics;
@@ -108,6 +109,14 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
         		controllerConnector.addProxy(switchId, new Proxy(sw, vlanSlicer, this));
         	}
         }
+	}
+	
+	public void addFlowCache(long switchId, String sliceName, OFFlowMod flowMod){
+		this.statsCacher.addFlowCache(switchId, sliceName,flowMod);
+	}
+	
+	public void delFlowCache(long switchId, String sliceName, OFFlowMod flowMod){
+		this.statsCacher.delFlowCache(switchId, sliceName, flowMod);
 	}
 	
 	public List<IOFSwitch> getSwitches(){
@@ -333,6 +342,9 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 		} catch(XPathExpressionException e){
 			logger.error(e.getMessage());
 			return false;
+		} catch(InvalidConfigException e){
+			logger.error(e.getMsg());
+			return false;
 		}
         logger.debug("Number of slices after reload: "+this.slices.size());
 		return true;
@@ -415,6 +427,8 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 			logger.error(e.getMessage());
 		} catch(XPathExpressionException e){
 			logger.error(e.getMessage());
+		}catch(InvalidConfigException e){
+			logger.error(e.getMsg());
 		}
 
 		if(this.slices.size() == 0){
@@ -440,6 +454,7 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 		//start up the stats collector timer
 		statsTimer = new Timer("StatsTimer");
 		statsCacher = new FlowStatCacher(this);
+		this.statsCacher.loadCache();
 		statsTimer.scheduleAtFixedRate(statsCacher, 0, 10 * 1000);
 		
 		//start up the controller connector timer

@@ -324,6 +324,11 @@ public class ProxyTest {
 				return null;
 			}
 		}).anyTimes();
+		fsfw.addFlowCache(EasyMock.anyLong(), EasyMock.anyObject(String.class), EasyMock.anyObject(OFFlowMod.class));
+		EasyMock.expectLastCall().anyTimes();
+		fsfw.delFlowCache(EasyMock.anyLong(), EasyMock.anyObject(String.class), EasyMock.anyObject(OFFlowMod.class));
+		EasyMock.expectLastCall().anyTimes();
+		
 		EasyMock.replay(fsfw);
 	}
 	

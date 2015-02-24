@@ -37,7 +37,7 @@ public class ConfigParserTest {
 	 * @throws XPathExpressionException 
 	 */
 	@Test
-	public void testInvalidXML() throws IOException, SAXException, XPathExpressionException, ParserConfigurationException {
+	public void testInvalidXML() throws IOException, SAXException, XPathExpressionException, ParserConfigurationException, InvalidConfigException {
 		thrown.expect(SAXException.class);
 		ConfigParser.parseConfig("src/test/resources/invalid.xml");
 	}
@@ -48,7 +48,7 @@ public class ConfigParserTest {
 	 * @throws XPathExpressionException 
 	 */
 	@Test
-	public void testNoFile() throws IOException, SAXException, XPathExpressionException, ParserConfigurationException {
+	public void testNoFile() throws IOException, SAXException, XPathExpressionException, ParserConfigurationException, InvalidConfigException{
 		thrown.expect(FileNotFoundException.class);
 		thrown.expectMessage("/no/file/here.xml (No such file or directory)");
 		ConfigParser.parseConfig("/no/file/here.xml");
@@ -60,27 +60,27 @@ public class ConfigParserTest {
 	 * @throws XPathExpressionException 
 	 */
 	@Test
-	public void testNoValidation() throws IOException, SAXException, XPathExpressionException, ParserConfigurationException {
+	public void testNoValidation() throws IOException, SAXException, XPathExpressionException, ParserConfigurationException, InvalidConfigException {
 		thrown.expect(SAXException.class);
 		thrown.expectMessage("cvc-complex-type.2.4.a: Invalid content was found starting with element 'switchfoo'. One of '{switch}' is expected");
 		ConfigParser.parseConfig("src/test/resources/validxml_not_valid_schema.xml");
 	}
 	
 	@Test
-	public void testOverlappingFlowSpace() throws IOException, SAXException, XPathExpressionException, ParserConfigurationException{
+	public void testOverlappingFlowSpace() throws IOException, SAXException, XPathExpressionException, ParserConfigurationException, InvalidConfigException{
+		thrown.expect(InvalidConfigException.class);
 		ArrayList<HashMap<Long, Slicer>> slices = ConfigParser.parseConfig("src/test/resources/overlapping_flowspace.xml");
-		
 		assertTrue("config has overlapping flowspace, slice should be empty was " + slices.size(), slices.size() == 0);
 	}
 	
 	@Test
-	public void testNonOverlappingFlowSpaceValidConfig() throws IOException, SAXException, XPathExpressionException, ParserConfigurationException{
+	public void testNonOverlappingFlowSpaceValidConfig() throws IOException, SAXException, XPathExpressionException, ParserConfigurationException, InvalidConfigException{
 		ArrayList<HashMap<Long, Slicer>> slices = ConfigParser.parseConfig("src/test/resources/good_config.xml");
 		assertTrue("config is valid!", slices.size() == 2);
 	}
 	
 	@Test
-	public void testConfigLoadedProperly() throws IOException, SAXException, XPathExpressionException, ParserConfigurationException{
+	public void testConfigLoadedProperly() throws IOException, SAXException, XPathExpressionException, ParserConfigurationException, InvalidConfigException{
 		ArrayList<HashMap<Long, Slicer>> slices = ConfigParser.parseConfig("src/test/resources/good_config.xml");
 		assertTrue("Number of Slices is correct at " + slices.size(), slices.size() == 2);
 		HashMap<Long,Slicer> slice = slices.get(0);
@@ -115,7 +115,7 @@ public class ConfigParserTest {
 	}
 	
 	@Test
-	public void testTagManagedConfigLoadedProperly() throws IOException, SAXException, XPathExpressionException, ParserConfigurationException{
+	public void testTagManagedConfigLoadedProperly() throws IOException, SAXException, XPathExpressionException, ParserConfigurationException, InvalidConfigException{
 		ArrayList<HashMap<Long, Slicer>> slices = ConfigParser.parseConfig("src/test/resources/good_tag_managed_config.xml");
 		assertTrue("Number of Slices is correct at " + slices.size(), slices.size() == 2);
 		HashMap<Long,Slicer> slice = slices.get(0);
@@ -127,7 +127,7 @@ public class ConfigParserTest {
 	}
 	
 	@Test
-	public void testTagManagedConfigInvalid() throws IOException, SAXException, XPathExpressionException, ParserConfigurationException{
+	public void testTagManagedConfigInvalid() throws IOException, SAXException, XPathExpressionException, ParserConfigurationException, InvalidConfigException{
 		ArrayList<HashMap<Long, Slicer>> slices = ConfigParser.parseConfig("src/test/resources/bad_tag_managed_config.xml");
 		assertTrue(slices.size() == 0);
 		
