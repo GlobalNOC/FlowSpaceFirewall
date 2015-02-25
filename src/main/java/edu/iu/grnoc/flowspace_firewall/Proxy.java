@@ -490,9 +490,9 @@ public class Proxy {
 		
 		//List<OFStatistics> stats = this.parent.getStats(mySwitch.getId());
 		List<OFStatistics> results = this.parent.getSlicedFlowStats(this.mySwitch.getId(), this.mySlicer.getSliceName());
-		
+
 		if(results == null){
-			log.debug("Slicing failed!");
+			//slicing didn't fail we just haven't polled the switch yet
 			return;
 		}
 		
