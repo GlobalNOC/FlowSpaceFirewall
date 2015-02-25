@@ -410,7 +410,7 @@ public class FlowStatCache{
 		}
 		
 		//are there any flows that need to go away (ie... we didn't see them since the last poll cycle)		
-		long timeToRemove = time - 15000;
+		long timeToRemove = time - 60000;
 		if(this.sliced.containsKey(switchId)){
 			HashMap<String, List<OFStatistics>> sliceStats = this.sliced.get(switchId);
 			Iterator<String> it = sliceStats.keySet().iterator();
