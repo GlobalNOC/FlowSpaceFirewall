@@ -164,8 +164,7 @@ public class FlowStatCache{
 	
 	
 	public synchronized void clearFlowCache(Long switchId){
-		
-		
+		flowStats.remove(switchId);
 	}
 	
 	/**
@@ -174,15 +173,18 @@ public class FlowStatCache{
 	 * @param newStat
 	 */
 	
-	private void updateFlowStatData(OFStatistics cachedStat, OFFlowStatisticsReply newStat){
+	private boolean updateFlowStatData(OFStatistics cachedStat, OFFlowStatisticsReply newStat){
 		FSFWOFFlowStatisticsReply cachedFlowStat = (FSFWOFFlowStatisticsReply) cachedStat;
 		if(cachedFlowStat.toBeDeleted()){
-			return;
+			return false;
 		}
 		cachedFlowStat.setByteCount(cachedFlowStat.getByteCount() + newStat.getByteCount());
 		cachedFlowStat.setPacketCount(cachedFlowStat.getPacketCount() + newStat.getPacketCount());
+		cachedFlowStat.setDurationNanoseconds(newStat.getDurationNanoseconds());
+		cachedFlowStat.setDurationSeconds(newStat.getDurationSeconds());
 		cachedFlowStat.setLastSeen(System.currentTimeMillis());
 		cachedFlowStat.setVerified(true);
+		return true;
 	}
 	
 	/**
@@ -203,7 +205,11 @@ public class FlowStatCache{
 					if(expectedFlowStat.getMatch().equals(match)){
 						//found it
 						log.debug("found the expected flow match!");
-						return expectedFlowStat;
+						if(expectedFlowStat.toBeDeleted()){
+							continue;
+						}else{
+							return expectedFlowStat;
+						}
 					}
 				}
 			}
@@ -275,8 +281,12 @@ public class FlowStatCache{
 		
 		if(flowMap.containsKey(flowStat.getMatch())){
 			log.debug("Found the flow rule in our mapping");
-			this.updateFlowStatData(flowMap.get(flowStat.getMatch()), flowStat);
-			return;
+			if(this.updateFlowStatData(flowMap.get(flowStat.getMatch()), flowStat)){
+				return;
+			}else{
+				//uh oh this was set to be deleted...
+				log.debug("I just tried to update a flow I thought was deleted!!!");
+			}
 		}
 		log.debug("didn't find the flow rule in our mapping must be new");
 		//the flow mapping wasn't found... so now we must try a few things
@@ -381,7 +391,6 @@ public class FlowStatCache{
 	 */
 	public synchronized void setFlowCache(Long switchId, List <OFStatistics> stats){
 		flowStats.put(switchId, stats);
-	
 		log.debug("Setting Flow Cache! Switch: " + switchId + " Total Stats: " + stats.size());
 		
 		//first thing is to set all counters for all stats to 0
@@ -517,6 +526,9 @@ public class FlowStatCache{
 	
 	public synchronized List <OFStatistics> getSlicedFlowStats(Long switchId, String sliceName){
 		log.debug("Getting sliced stats for switch: " + switchId + " and slice " + sliceName);
+		if(!flowStats.containsKey(switchId)){
+			return null;
+		}
 		if(sliced.containsKey(switchId)){
 			HashMap<String, List<OFStatistics>> tmpStats = sliced.get(switchId);
 			if(tmpStats.containsKey(sliceName)){				
