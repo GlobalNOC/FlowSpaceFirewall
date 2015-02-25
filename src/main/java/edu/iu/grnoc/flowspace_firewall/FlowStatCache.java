@@ -286,7 +286,7 @@ public class FlowStatCache{
 				return;
 			}else{
 				//uh oh this was set to be deleted...
-				log.error("I just tried to update a flow I thought was deleted!!!");
+				log.debug("I just tried to update a flow I thought was deleted!!!");
 			}
 		}
 		log.debug("didn't find the flow rule in our mapping must be new");
@@ -433,7 +433,7 @@ public class FlowStatCache{
 					OFStatistics stat = (OFStatistics)itStat.next();
 					FSFWOFFlowStatisticsReply flowStat = (FSFWOFFlowStatisticsReply)stat;
 					if(flowStat.lastSeen() < timeToRemove){
-						log.error("Removing flowStat: " + stat.toString());
+						log.debug("Removing flowStat: " + stat.toString());
 						itStat.remove();
 							//have to also find all flows that point to this flow :(
 						this.removeMappedCache(switchId, flowStat);
