@@ -186,7 +186,7 @@ public class FlowStatCacher extends TimerTask{
         try {
         	future = sw.queryStatistics(req);
         	log.debug(future.toString());
-        	values = future.get(20, TimeUnit.SECONDS);
+        	values = future.get(10, TimeUnit.SECONDS);
         	log.debug(values.toString());
         	if(values != null){
             	for(OFStatistics stat : values){
