@@ -164,8 +164,7 @@ public class FlowStatCache{
 	
 	
 	public synchronized void clearFlowCache(Long switchId){
-		
-		
+		flowStats.remove(switchId);
 	}
 	
 	/**
@@ -392,7 +391,6 @@ public class FlowStatCache{
 	 */
 	public synchronized void setFlowCache(Long switchId, List <OFStatistics> stats){
 		flowStats.put(switchId, stats);
-	
 		log.debug("Setting Flow Cache! Switch: " + switchId + " Total Stats: " + stats.size());
 		
 		//first thing is to set all counters for all stats to 0
@@ -528,6 +526,9 @@ public class FlowStatCache{
 	
 	public synchronized List <OFStatistics> getSlicedFlowStats(Long switchId, String sliceName){
 		log.debug("Getting sliced stats for switch: " + switchId + " and slice " + sliceName);
+		if(!flowStats.containsKey(switchId)){
+			return null;
+		}
 		if(sliced.containsKey(switchId)){
 			HashMap<String, List<OFStatistics>> tmpStats = sliced.get(switchId);
 			if(tmpStats.containsKey(sliceName)){				
