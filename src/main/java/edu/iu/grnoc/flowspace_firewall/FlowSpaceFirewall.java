@@ -99,6 +99,14 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
         logger.info("Switch " + switchId + " has joined");
         IOFSwitch sw = floodlightProvider.getSwitch(switchId);
         
+        //belts and suspenders here
+        //we don't want there to be a lot of switches with this
+        for(IOFSwitch tmpSw : this.switches){
+        	if(tmpSw.getId() == switchId){
+        		logger.error("Switch is already listed as connected!  Removing!");
+        		this.switchRemoved(switchId);
+        	}
+        }
         this.switches.add(sw);
         //loop through all slices
         for(HashMap<Long, Slicer> slice: slices){
@@ -182,20 +190,20 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 		List <Proxy> proxies = controllerConnector.getSwitchProxies(switchId);
 		Iterator <Proxy> it = proxies.iterator();
 
-		while(it.hasNext()){
-			Proxy p = it.next();
-			p.disconnect();
-			it.remove();
-		}
-		
-		this.statsCacher.clearCache(switchId);
-		
 		Iterator <IOFSwitch> switchIt = this.switches.iterator();
 		while(switchIt.hasNext()){
 			IOFSwitch tmpSwitch = switchIt.next();
 			if(tmpSwitch.getId() == switchId){
 				switchIt.remove();
 			}
+		}
+				
+		this.statsCacher.clearCache(switchId);
+		
+		while(it.hasNext()){
+			Proxy p = it.next();
+			p.disconnect();
+			it.remove();
 		}
 				
 	}
@@ -430,8 +438,8 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 		}catch(InvalidConfigException e){
 			logger.error(e.getMsg());
 		}
-
-		if(this.slices.size() == 0){
+		
+		if(this.slices == null || this.slices.size() == 0){
 			logger.error("Problem with the configuration file!");
 			throw new FloodlightModuleException("Problem with the Config!");
 		}
