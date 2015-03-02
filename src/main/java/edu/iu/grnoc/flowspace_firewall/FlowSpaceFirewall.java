@@ -101,7 +101,12 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
         
         //belts and suspenders here
         //we don't want there to be a lot of switches with this
-        this.switchRemoved(switchId);
+        for(IOFSwitch tmpSw : this.switches){
+        	if(tmpSw.getId() == switchId){
+        		logger.error("Switch is already listed as connected!  Removing!");
+        		this.switchRemoved(switchId);
+        	}
+        }
         this.switches.add(sw);
         //loop through all slices
         for(HashMap<Long, Slicer> slice: slices){
@@ -192,17 +197,12 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 				switchIt.remove();
 			}
 		}
-		
-		
+				
 		this.statsCacher.clearCache(switchId);
 		
 		while(it.hasNext()){
 			Proxy p = it.next();
-			try{
-				p.disconnect();
-			}catch(Exception e){
-				logger.error("Error Occured while disconnecting proxy!");
-			}
+			p.disconnect();
 			it.remove();
 		}
 				
