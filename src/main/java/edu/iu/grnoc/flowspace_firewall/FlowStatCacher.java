@@ -80,7 +80,7 @@ public class FlowStatCacher extends TimerTask{
 		
 		while(it.hasNext()){
 			IOFSwitch sw = it.next();
-			log.debug("Getting stats for switch: " + sw.getId());
+			log.debug("Getting stats for switch: " + sw.getStringId() );
 			List<OFStatistics> statsReply = getFlowStatsForSwitch(sw);
 			statsCache.setFlowCache(sw.getId(), statsReply);
 			HashMap<Short, OFStatistics> portStatsReply = getPortStatsForSwitch(sw);
@@ -218,7 +218,7 @@ public class FlowStatCacher extends TimerTask{
         try {
         	future = sw.queryStatistics(req);
         	log.debug(future.toString());
-        	values = future.get(20, TimeUnit.SECONDS);
+        	values = future.get(10, TimeUnit.SECONDS);
         	log.debug(values.toString());
         	if(values != null){
             	for(OFStatistics stat : values){
