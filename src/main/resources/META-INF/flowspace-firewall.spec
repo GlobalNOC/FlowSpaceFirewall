@@ -33,6 +33,7 @@ rm -rf $RPM_BUILD_ROOT
 %{__install} -d -p %{buildroot}/etc/init.d/
 %{__install} -d -p %{buildroot}/var/lib/floodlight/
 %{__install} -d -p %{buildroot}/var/log/floodlight/
+%{__install} -d -p %{buildroot}/var/run/fsfw
 
 %{__install} jars/*.jar %{buildroot}//usr/share/fsfw/
 %{__install} conf/*.xml %{buildroot}/etc/fsfw/
@@ -52,6 +53,7 @@ rm -rf $RPM_BUILD_ROOT
 /usr/share/fsfw/floodlight.jar
 /usr/share/fsfw/flowspace_firewall.jar
 /var/lib/floodlight
+/var/run/fsfw
 
 %defattr(755, root, root, -)
 /etc/init.d/fsfw
