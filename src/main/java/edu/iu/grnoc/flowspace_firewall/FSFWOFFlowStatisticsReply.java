@@ -11,6 +11,7 @@ public class FSFWOFFlowStatisticsReply extends OFFlowStatisticsReply{
 	private long lastSeen = 0;
 	private boolean verified = false;
 	private boolean flaggedForDelete = false;
+	private String sliceName;
 	
 	public boolean isVerified(){
 		return verified;
@@ -34,6 +35,14 @@ public class FSFWOFFlowStatisticsReply extends OFFlowStatisticsReply{
 	
 	public void setToBeDeleted(boolean status){
 		flaggedForDelete = status;
+	}
+	
+	public void setSliceName(String slice){
+		this.sliceName = slice;
+	}
+	
+	public String getSliceName(){
+		return this.sliceName;
 	}
 	
 }
