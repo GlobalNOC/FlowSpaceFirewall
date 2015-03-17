@@ -431,6 +431,11 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 			logger.error(e.getMsg());
 		}
 
+		if(this.slices == null){
+			logger.error("Problem with the configuration unable to start!");
+			throw new FloodlightModuleException("Problem with the config!");
+		}
+		
 		if(this.slices.size() == 0){
 			logger.error("Problem with the configuration file!");
 			throw new FloodlightModuleException("Problem with the Config!");
