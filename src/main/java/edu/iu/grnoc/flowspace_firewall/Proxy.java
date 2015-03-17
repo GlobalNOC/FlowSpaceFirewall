@@ -646,7 +646,6 @@ public class Proxy {
 		 * Some rules might get errors or replace others, and tracking that is very difficult. 
 		 * So every time we slice the stats we should set the actual number of flows from that slice.
 		*/
-		this.flowCount = results.size();		
 		
 		//if no results... just short circuit
 		if(results.size() <= 0){
