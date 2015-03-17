@@ -125,6 +125,7 @@ public class FlowStatCache{
 		flowStat.setCookie(flow.getCookie());
 		flowStat.setHardTimeout(flow.getHardTimeout());
 		flowStat.setIdleTimeout(flow.getIdleTimeout());
+		flowStat.setSliceName(sliceName);
 		short length = 0;
 		for(OFAction act : flowStat.getActions()){
 			length += act.getLengthU();
@@ -173,7 +174,7 @@ public class FlowStatCache{
 	 * @param newStat
 	 */
 	
-	private boolean updateFlowStatData(OFStatistics cachedStat, OFFlowStatisticsReply newStat){
+	private boolean updateFlowStatData(OFStatistics cachedStat, OFFlowStatisticsReply newStat, HashMap<String, Integer> flowCount){
 		FSFWOFFlowStatisticsReply cachedFlowStat = (FSFWOFFlowStatisticsReply) cachedStat;
 		if(cachedFlowStat.toBeDeleted()){
 			return false;
@@ -184,6 +185,15 @@ public class FlowStatCache{
 		cachedFlowStat.setDurationSeconds(newStat.getDurationSeconds());
 		cachedFlowStat.setLastSeen(System.currentTimeMillis());
 		cachedFlowStat.setVerified(true);
+		
+		String sliceName = ((FSFWOFFlowStatisticsReply) cachedStat).getSliceName();
+		if(flowCount.containsKey(sliceName)){
+			flowCount.put(sliceName, (flowCount.get(sliceName) + 1));
+		}else{
+			flowCount.put(sliceName,1);
+		}
+		
+		
 		return true;
 	}
 	
@@ -270,7 +280,7 @@ public class FlowStatCache{
 		return null;
 	}
 	
-	private void processFlow(Long switchId, OFFlowStatisticsReply flowStat, long time){
+	private void processFlow(Long switchId, OFFlowStatisticsReply flowStat, long time, HashMap<String, Integer> flowCount){
 		
 		if(!map.containsKey(switchId)){
 			HashMap<OFMatch, OFStatistics> tmpMap = new HashMap<OFMatch, OFStatistics>();
@@ -281,7 +291,8 @@ public class FlowStatCache{
 		
 		if(flowMap.containsKey(flowStat.getMatch())){
 			log.debug("Found the flow rule in our mapping");
-			if(this.updateFlowStatData(flowMap.get(flowStat.getMatch()), flowStat)){
+			OFFlowStatisticsReply cachedStat = (OFFlowStatisticsReply) flowMap.get(flowStat.getMatch());
+			if(this.updateFlowStatData(cachedStat, flowStat, flowCount)){
 				return;
 			}else{
 				//uh oh this was set to be deleted...
@@ -352,7 +363,7 @@ public class FlowStatCache{
 			log.debug("Updating Flow Stat");
 			flowMap.put(flowStat.getMatch().clone(), (OFStatistics)stat);
 			log.debug("Map size: " + flowMap.size());
-			this.updateFlowStatData(stat, flowStat);
+			this.updateFlowStatData(stat, flowStat, flowCount);
 		}else{ 
 			log.error("Error finding/adding flow stat to the cache!  This flow is not a part of any Slice!" + flowStat.toString());
 			//remove flow
@@ -408,14 +419,14 @@ public class FlowStatCache{
 			}
 		}
 		
-		
+		HashMap <String, Integer> flowCounts = new HashMap<String, Integer>();
 		//now update process all the flows find their mapping and cache them
 		long time = System.currentTimeMillis();
 		//loop through all stats
 		for(OFStatistics stat : stats){
 			OFFlowStatisticsReply flowStat = (OFFlowStatisticsReply) stat;
 			log.debug("Processing Flow: " + flowStat.toString());
-			this.processFlow(switchId, flowStat, time);
+			this.processFlow(switchId, flowStat, time, flowCounts);
 		}
 		
 		//are there any flows that need to go away (ie... we didn't see them since the last poll cycle)		
@@ -437,6 +448,26 @@ public class FlowStatCache{
 						this.removeMappedCache(switchId, flowStat);
 					}
 				}
+			}
+		}
+		
+		//update all proxies for this switch so that they have the proper flow count
+		//ISSUE=10641
+		List<HashMap<Long, Slicer>> slices = parent.getSlices();
+
+		for(HashMap<Long,Slicer> tmpSlices : slices){
+			if(!tmpSlices.containsKey(switchId)){
+				//switch not part of this slice
+				continue;
+			}
+			Proxy p = this.parent.getProxy(switchId, tmpSlices.get(switchId).getSliceName());
+			if(p == null){
+				continue;
+			}
+			if(flowCounts.containsKey(p.getSlicer().getSliceName())){
+				p.setFlowCount(flowCounts.get(p.getSlicer().getSliceName()));
+			}else{
+				log.error("Problem updating flow counts for slice: " + p.getSlicer().getSwitchName() + ":" + p.getSlicer().getSliceName());
 			}
 		}
 	}
@@ -524,6 +555,7 @@ public class FlowStatCache{
 		return flowStats.get(switchId);
 	}
 	
+
 	public synchronized List <OFStatistics> getSlicedFlowStats(Long switchId, String sliceName){
 		log.debug("Getting sliced stats for switch: " + switchId + " and slice " + sliceName);
 		if(!flowStats.containsKey(switchId)){
