@@ -961,11 +961,18 @@ public class FlowStatSlicerTest {
 		tmpMap.put(sw.getId(), managedExpandedSlicer);
 		tmp.add(tmpMap);
 		
+		Proxy proxy = createMock(Proxy.class);
+		expect(proxy.getSlicer()).andReturn(slicer).anyTimes();
+		proxy.setFlowCount(EasyMock.anyInt());
+		EasyMock.expectLastCall().anyTimes();
+		EasyMock.replay(proxy);
+		
 		fsfw = createMock(FlowSpaceFirewall.class);
 		List<IOFSwitch> switches = new ArrayList<IOFSwitch>();
 		switches.add(sw);
 		expect(fsfw.getSlices()).andReturn(tmp).anyTimes();
 		expect(fsfw.getSwitches()).andReturn(switches).anyTimes();
+		expect(fsfw.getProxy(EasyMock.anyLong(), EasyMock.anyObject(String.class))).andReturn(proxy).anyTimes();
 		EasyMock.replay(fsfw);
 		
 		
