@@ -128,8 +128,8 @@ public class ConfigParserTest {
 	
 	@Test
 	public void testTagManagedConfigInvalid() throws IOException, SAXException, XPathExpressionException, ParserConfigurationException, InvalidConfigException{
+		thrown.expect(InvalidConfigException.class);
 		ArrayList<HashMap<Long, Slicer>> slices = ConfigParser.parseConfig("src/test/resources/bad_tag_managed_config.xml");
-		assertTrue(slices.size() == 0);
 		
 	}
 }
