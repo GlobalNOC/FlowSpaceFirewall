@@ -122,25 +122,25 @@ public class FlowStatCache{
 	public synchronized void delFlowMod(long dpid, String sliceName, OFFlowMod flow,List<OFFlowMod> flows){
 		log.error("Deleting flow " + flow.toString());
 		if(!map.containsKey(dpid)){
-			log.error("No map exists!");
+			log.debug("No map exists!");
 			return;
 		}
 				
 		HashMap<OFMatch, FSFWOFFlowStatisticsReply> flowMap = map.get(dpid);
-		log.error("Total Flows: " + flows.size());
+		log.debug("Total Flows: " + flows.size());
 		for(OFFlowMod sent_flow : flows){
-			log.error("attempting to delete flow we sent: " + sent_flow.toString());
+			log.debug("attempting to delete flow we sent: " + sent_flow.toString());
 			if(flowMap.containsKey(sent_flow.getMatch())){
 				FSFWOFFlowStatisticsReply stat = flowMap.get(sent_flow.getMatch());
 				if(stat.hasParent()){
-					log.error("Setting parent to deleted");
+					log.debug("Setting parent to deleted");
 					stat.getParentStat().setToBeDeleted(true);
 				}
 				stat.setToBeDeleted(true);
-				log.error("Setting flow mod and parent to be deleted");
+				log.debug("Setting flow mod and parent to be deleted");
 			}else{
 				//already gone nothing to do!
-				log.error("Flow mod was not found could not be deleted");
+				log.debug("Flow mod was not found could not be deleted");
 			}
 		}
 		
@@ -152,7 +152,6 @@ public class FlowStatCache{
 				for(OFStatistics stat : stats){
 					FSFWOFFlowStatisticsReply fsfwStat = (FSFWOFFlowStatisticsReply) stat;
 					if(fsfwStat.getMatch().equals(flow.getMatch())){
-						log.error("Removing the parent!");
 						fsfwStat.setToBeDeleted(true);
 					}
 				}
@@ -214,7 +213,6 @@ public class FlowStatCache{
 			List<OFStatistics> stats = new ArrayList<OFStatistics>();
 			sliceStats.put(sliceName, stats);
 			stats.add(flowStat);
-			log.error("Adding flow to the cache, switch didn't exist");
 			sliced.put(dpid, sliceStats);
 		}
 		//need to update last seen
@@ -399,14 +397,12 @@ public class FlowStatCache{
 				log.error(flowStat.toString());
 				FSFWOFFlowStatisticsReply parentStat = cachedStat.getParentStat();
 				OFFlowMod flow = this.buildFlowMod(parentStat);
-				Slicer slice = this.parent.getProxy(switchId, parentStat.getSliceName()).getSlicer();
+				Slicer slice = this.parent.getSlice(parentStat.getSliceName()).get(switchId);
 				//get a list of all flows that this will invalidate
 				List<OFFlowMod> flows;
 				if(slice.getTagManagement()){
-					log.error("Managed Flows");
 					flows = slice.managedFlows(flow);
 				}else{
-					log.error("Allowed Flows!'");
 					flows = slice.allowedFlows(flow);
 				}
 				this.delFlowMod(switchId, slice.getSliceName(),flow, flows);
@@ -453,14 +449,12 @@ public class FlowStatCache{
 						newFlow.setActions(newActions);
 						newFlow.setLength((short)(OFFlowMod.MINIMUM_LENGTH + length));
 						this.addFlowMod(switchId, slice.getSliceName(), newFlow, flows);
-						log.error("added flow mod!" + newFlow.toString());
 					} catch (CloneNotSupportedException e) {
 						log.error("Unable to clone flowMod!");
 						return;
 					}
 				}else{
 					flows.add(flow);
-					log.error("added flow mod! " + flow.toString());
 					this.addFlowMod(switchId, slice.getSliceName(), flow, flows);
 				}
 				//ok we added it to our cache now update the flows

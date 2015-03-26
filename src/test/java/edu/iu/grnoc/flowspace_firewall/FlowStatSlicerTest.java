@@ -1130,6 +1130,9 @@ public class FlowStatSlicerTest {
 		expect(fsfw.getSlices()).andReturn(tmp).anyTimes();
 		expect(fsfw.getSwitches()).andReturn(switches).anyTimes();
 		expect(fsfw.getProxy(EasyMock.anyLong(), EasyMock.anyObject(String.class))).andReturn(proxy).anyTimes();
+		HashMap<Long, Slicer> sliceMap = new HashMap<Long, Slicer>();
+		sliceMap.put(sw.getId(), managedExpandedSlicer);
+		expect(fsfw.getSlice(EasyMock.anyObject(String.class))).andReturn(sliceMap).anyTimes();
 		EasyMock.replay(fsfw);
 		
 		cache = new FlowStatCache(fsfw);
