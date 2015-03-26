@@ -119,12 +119,12 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
         }
 	}
 	
-	public void addFlowCache(long switchId, String sliceName, OFFlowMod flowMod){
-		this.statsCacher.addFlowCache(switchId, sliceName,flowMod);
+	public void addFlowCache(long switchId, String sliceName, OFFlowMod flowMod, List<OFFlowMod> flows){
+		this.statsCacher.addFlowCache(switchId, sliceName,flowMod,flows);
 	}
 	
-	public void delFlowCache(long switchId, String sliceName, OFFlowMod flowMod){
-		this.statsCacher.delFlowCache(switchId, sliceName, flowMod);
+	public void delFlowCache(long switchId, String sliceName, OFFlowMod flowMod, List<OFFlowMod> flows){
+		this.statsCacher.delFlowCache(switchId, sliceName, flowMod, flows);
 	}
 	
 	public List<IOFSwitch> getSwitches(){

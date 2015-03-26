@@ -233,11 +233,11 @@ public class FlowStatCacher extends TimerTask{
         log.debug("Stats cached for switch: " + sw.getId() + ". Total ports stats cached: " + statsReply.size());
         return statsReply;
 	}
-	public void addFlowCache(long switchId, String sliceName, OFFlowMod flowMod) {
-		this.statsCache.addFlowMod(switchId, sliceName, flowMod);
+	public void addFlowCache(long switchId, String sliceName, OFFlowMod flowMod, List<OFFlowMod> flows) {
+		this.statsCache.addFlowMod(switchId, sliceName, flowMod,flows);
 	}
-	public void delFlowCache(long switchId, String sliceName, OFFlowMod flowMod){
-		this.statsCache.delFlowMod(switchId,  sliceName, flowMod);
+	public void delFlowCache(long switchId, String sliceName, OFFlowMod flowMod, List<OFFlowMod> flows){
+		this.statsCache.delFlowMod(switchId,  sliceName, flowMod, flows);
 	}
 	
 	//load the cache from disk
