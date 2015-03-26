@@ -602,7 +602,7 @@ public class VLANSlicerTest {
 		pConfig6.setVLANRange(range);
 		otherSlicer.setPortConfig("foo6", pConfig6);
 		
-		assertFalse(slicer.hasOverlap(otherSlicer));
+		assertNull(slicer.hasOverlap(otherSlicer));
 		
 		pConfig = new PortConfig();
 		pConfig.setPortName("foo");
@@ -611,7 +611,7 @@ public class VLANSlicerTest {
 		range.setVlanAvail((short)1000,true);
 		pConfig.setVLANRange(range);
 		otherSlicer.setPortConfig("foo", pConfig);
-		assertTrue(slicer.hasOverlap(otherSlicer));
+		assertNotNull(slicer.hasOverlap(otherSlicer));
 	}
 	
 	/*

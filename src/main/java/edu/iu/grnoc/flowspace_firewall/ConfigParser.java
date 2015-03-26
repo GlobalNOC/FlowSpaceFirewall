@@ -70,9 +70,10 @@ public final class ConfigParser {
 					if(otherSlice.containsKey(dpid)){
 						Slicer otherConfig = otherSlice.get(dpid);
 						if(otherConfig.getSliceName() != config.getSliceName()){
-							if(config.hasOverlap(otherConfig)){
+							if(config.hasOverlap(otherConfig) != null){
 								log.warn("Overlap detected between slice "+config.getSliceName()+" and slice "
 								+otherConfig.getSliceName()+" will not load this configuration");
+								log.warn(config.hasOverlap(otherConfig)); //hasOverlap returns the details of the overlap.
 								return false;
 							}
 						}
@@ -199,8 +200,7 @@ public final class ConfigParser {
 		        					}
 		        					if(tag_management && Short.parseShort(range.getAttributes().getNamedItem("start").getTextContent()) != Short.parseShort(range.getAttributes().getNamedItem("end").getTextContent())){
 		        						log.error("Tag Mangement can only be used on a single VLAN, please fix config and try again");
-		        						newSlices.clear();
-		        						return newSlices;
+		        						throw new InvalidConfigException("Configuration is not valid!");
 		        					}
 		        					for(short m = Short.parseShort(range.getAttributes().getNamedItem("start").getTextContent()); 
 		        							m <= Short.parseShort(range.getAttributes().getNamedItem("end").getTextContent()); m++){
@@ -213,8 +213,7 @@ public final class ConfigParser {
 		        				slicer.setPortConfig(pConfig.getPortName(), pConfig);
 		        				if(tag_management == true && myRange.getAvailableTags().length > 1){
 		        					log.error("Tag Management can only be used on a single VLAN, please fix config and try again");
-		        					newSlices.clear();
-		        					return newSlices;
+		        					throw new InvalidConfigException("Configuration is not valid!");
 		        				}
 		        			}
 	        				//add the slicer to the whole slice container (all switches)

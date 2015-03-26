@@ -1106,16 +1106,17 @@ public class VLANSlicer implements Slicer{
 		this.name = name;
 	}
 	
-	public boolean hasOverlap(Slicer otherSlicer){
+	public String hasOverlap(Slicer otherSlicer){
+		String error_detail = null;
 		for(String portName : this.portList.keySet()){
 			if(otherSlicer.isPortPartOfSlice(portName)){
 				if(this.getPortConfig(portName).getVlanRange().rangeOverlap(otherSlicer.getPortConfig(portName).getVlanRange())){
 					log.error(""+this.name+" "+this.getSliceName()+"port range: "+this.getPortConfig(portName).getVlanRange().toString()+ "overlaps with slice: "+otherSlicer.getSliceName()+" port-range: "+otherSlicer.getPortConfig(portName).getVlanRange().toString());
-					return true;
+					return ""+this.name+" "+this.getSliceName()+"port range: "+this.getPortConfig(portName).getVlanRange().toString()+ "overlaps with slice: "+otherSlicer.getSliceName()+" port-range: "+otherSlicer.getPortConfig(portName).getVlanRange().toString();
 				}
 			}
 		}
-		return false;
+		return error_detail;
 	}
 
 	public IOFSwitch getSwitch(){
