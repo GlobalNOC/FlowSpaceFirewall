@@ -248,6 +248,33 @@ public class FlowStatCache{
 	
 	public synchronized void clearFlowCache(Long switchId){
 		flowStats.remove(switchId);
+		
+		if(this.sliced.containsKey(switchId)){
+			HashMap<String, List<OFStatistics>> sliceStats = this.sliced.get(switchId);
+			Iterator<String> it = sliceStats.keySet().iterator();
+			while(it.hasNext()){
+				String slice = (String)it.next();
+				List<OFStatistics> ofStats = this.sliced.get(switchId).get(slice);
+				Iterator<OFStatistics> itStat = ofStats.iterator();
+				while(itStat.hasNext()){
+					OFStatistics stat = (OFStatistics)itStat.next();
+					FSFWOFFlowStatisticsReply flowStat = (FSFWOFFlowStatisticsReply)stat;
+					flowStat.setVerified(false);
+					flowStat.setLastSeen(System.currentTimeMillis());
+				}
+			}
+		}
+		
+		if(this.map.containsKey(switchId)){
+			HashMap<OFMatch, FSFWOFFlowStatisticsReply> flowMap = this.map.get(switchId);
+			Iterator<OFMatch> it = flowMap.keySet().iterator();
+			while(it.hasNext()){
+				FSFWOFFlowStatisticsReply stat = flowMap.get(it.next());
+				stat.setVerified(false);
+				stat.setLastSeen(System.currentTimeMillis());
+			}
+		}
+		
 	}
 	
 	/**
