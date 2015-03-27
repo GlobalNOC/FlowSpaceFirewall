@@ -229,8 +229,8 @@ public class FlowStatCache{
 			FSFWOFFlowStatisticsReply sentFlowStat = buildFlowStatFromFlowMod(sent_flow);
 			sentFlowStat.setSliceName(sliceName);
 			sentFlowStat.setParentStat(flowStat);
-			switchMap.put(sentFlowStat.getMatch(), sentFlowStat);
 			sentFlowStat.setLastSeen(System.currentTimeMillis());
+			switchMap.put(sentFlowStat.getMatch(), sentFlowStat);
 		}
 	}	
 	
@@ -520,7 +520,24 @@ public class FlowStatCache{
 						itStat.remove();
 							//have to also find all flows that point to this flow :(
 						this.removeMappedCache(switchId, flowStat);
+					}else if(flowStat.toBeDeleted()){
+						itStat.remove();
+						this.removeMappedCache(switchId, flowStat);
 					}
+				}
+			}
+		}
+		
+		if(this.map.containsKey(switchId)){
+			HashMap<OFMatch, FSFWOFFlowStatisticsReply> flowMap = this.map.get(switchId);
+			Iterator<OFMatch> it = flowMap.keySet().iterator();
+			while(it.hasNext()){
+				FSFWOFFlowStatisticsReply stat = flowMap.get(it.next());
+				if(stat.lastSeen() < timeToRemove){
+					log.debug("Removing mapping flowStat: " + stat.toString());
+					it.remove();
+				}else if(stat.toBeDeleted()){
+					it.remove();
 				}
 			}
 		}
@@ -558,12 +575,12 @@ public class FlowStatCache{
 	private void removeMappedCache(long switchId, OFStatistics stat){
 		if(map.containsKey(switchId)){
 			HashMap<OFMatch, FSFWOFFlowStatisticsReply> switchMap = map.get(switchId);
-			if(switchMap.containsValue(stat)){
-				//well crap no easy way to do this...
-				Iterator<Entry<OFMatch, FSFWOFFlowStatisticsReply>> it = switchMap.entrySet().iterator();
-				while(it.hasNext()){
-					Entry<OFMatch, FSFWOFFlowStatisticsReply> entry = (Entry<OFMatch, FSFWOFFlowStatisticsReply>) it.next();
-					if(entry.getValue().equals(stat)){
+			//well crap no easy way to do this...
+			Iterator<Entry<OFMatch, FSFWOFFlowStatisticsReply>> it = switchMap.entrySet().iterator();
+			while(it.hasNext()){
+				Entry<OFMatch, FSFWOFFlowStatisticsReply> entry = (Entry<OFMatch, FSFWOFFlowStatisticsReply>) it.next();
+				if(entry.getValue().hasParent()){
+					if(entry.getValue().getParentStat().equals(stat)){
 						it.remove();
 					}
 				}
