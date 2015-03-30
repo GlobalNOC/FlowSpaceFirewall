@@ -360,6 +360,9 @@ public class FlowStatSlicerTest {
 		List<OFAction> actions = new ArrayList<OFAction>();
 		OFActionOutput output = new OFActionOutput();
 		output.setPort((short)1);
+		OFActionVirtualLanIdentifier set_vlan_vid = new OFActionVirtualLanIdentifier();
+		set_vlan_vid.setVirtualLanIdentifier((short)400);
+		actions.add(set_vlan_vid);
 		actions.add(output);
 		
 		OFMatch match = new OFMatch();
@@ -697,7 +700,7 @@ public class FlowStatSlicerTest {
 		actions.add(output);
 		match = new OFMatch();
 		match.setInputPort((short)3);
-		match.setDataLayerVirtualLan((short)103);
+		match.setDataLayerVirtualLan((short)1000);
 		match.setWildcards(match.getWildcardObj().matchOn(Flag.DL_VLAN));
 		match.setWildcards(match.getWildcardObj().matchOn(Flag.IN_PORT));
 		stat = new OFFlowStatisticsReply();
@@ -712,7 +715,7 @@ public class FlowStatSlicerTest {
 		actions.add(output);
 		match = new OFMatch();
 		match.setInputPort((short)5);
-		match.setDataLayerVirtualLan((short)105);
+		match.setDataLayerVirtualLan((short)1000);
 		match.setWildcards(match.getWildcardObj().matchOn(Flag.DL_VLAN));
 		match.setWildcards(match.getWildcardObj().matchOn(Flag.IN_PORT));
 		stat = new OFFlowStatisticsReply();
@@ -727,7 +730,7 @@ public class FlowStatSlicerTest {
 		actions.add(output);
 		match = new OFMatch();
 		match.setInputPort((short)5);
-		match.setDataLayerVirtualLan((short)105);
+		match.setDataLayerVirtualLan((short)1001);
 		match.setWildcards(match.getWildcardObj().matchOn(Flag.DL_VLAN));
 		match.setWildcards(match.getWildcardObj().matchOn(Flag.IN_PORT));
 		stat = new OFFlowStatisticsReply();
@@ -742,7 +745,7 @@ public class FlowStatSlicerTest {
 		actions.add(output);
 		match = new OFMatch();
 		match.setInputPort((short)4);
-		match.setDataLayerVirtualLan((short)105);
+		match.setDataLayerVirtualLan((short)1001);
 		match.setWildcards(match.getWildcardObj().matchOn(Flag.DL_VLAN));
 		match.setWildcards(match.getWildcardObj().matchOn(Flag.IN_PORT));
 		
@@ -991,7 +994,7 @@ public class FlowStatSlicerTest {
 		cache = new FlowStatCache(fsfw);
 		cache.setFlowCache(sw.getId(), mixedStats);
 		List<OFStatistics> slicedStats = cache.getSlicedFlowStats(sw.getId(), slicer.getSliceName());		
-		assertEquals("Number of sliced stat is same as number of total stats",  allowedStats.size(),slicedStats.size());
+		assertEquals("Number of sliced stat is same as number of total stats",  4,slicedStats.size());
 	}
 	
 	@Test
@@ -1046,7 +1049,8 @@ public class FlowStatSlicerTest {
 		actions.add(output);
 		mod.setActions(actions);
 		
-		cache.addFlowMod(sw.getId(), slicerExpanded.getSliceName(), mod);
+		List<OFFlowMod> mods = slicerExpanded.allowedFlows(mod);
+		cache.addFlowMod(sw.getId(), slicerExpanded.getSliceName(), mod, mods);
 		log.error("Sending: " + expandedStats.size() + " flow stats!");
 		cache.setFlowCache(sw.getId(), expandedStats);
 		List<OFStatistics> slicedStats = cache.getSlicedFlowStats(sw.getId(), slicerExpanded.getSliceName());	
@@ -1066,27 +1070,112 @@ public class FlowStatSlicerTest {
 		
 		OFFlowMod mod = new OFFlowMod();
 		OFMatch match = new OFMatch();
-		match.setWildcards(match.getWildcardObj().matchOn(Flag.DL_VLAN));
+
 		match.setWildcards(match.getWildcardObj().matchOn(Flag.DL_DST));
 		match.setDataLayerDestination("78:2B:CB:48:FF:73");
-		match.setDataLayerVirtualLan((short)400);
+
 
 		mod.setMatch(match);
 		List<OFAction> actions = new ArrayList<OFAction>();
 		OFActionOutput output = new OFActionOutput();
-		output.setPort((short)65533);
+		output.setPort((short)1);
 		actions.add(output);
 		mod.setActions(actions);
+		mod.setLength((short)(OFFlowMod.MINIMUM_LENGTH + output.getLength()));
 		
-		cache.addFlowMod(sw.getId(), managedExpandedSlicer.getSliceName(), mod);
+		List<OFFlowMod> mods = managedExpandedSlicer.managedFlows(mod);
+		assertEquals("Proper number of total flow mods", 4,mods.size());
+		cache.addFlowMod(sw.getId(), managedExpandedSlicer.getSliceName(), mod, mods);
 		cache.setFlowCache(sw.getId(), expandedManagedStats);
 		List<OFStatistics> slicedStats = cache.getSlicedFlowStats(sw.getId(), managedExpandedSlicer.getSliceName());	
 		assertNotNull("Sliced Stats with no allowed stats returend ok", slicedStats);
+		for(OFStatistics stat : slicedStats){
+			log.error(stat.toString());
+		}
 		assertEquals("Sliced stats", 6, slicedStats.size());
 		log.error(slicedStats.get(0).toString());
 		OFFlowStatisticsReply flowStat = (OFFlowStatisticsReply) slicedStats.get(0);
 		assertEquals("flowStat byte count is correct", 4L,flowStat.getByteCount());
 		assertEquals("flowStat packet count is correct", 4L,flowStat.getPacketCount());
+	}
+	
+	@Test
+	public void testBrokenStats(){
+		List<HashMap<Long, Slicer>> tmp = new ArrayList<HashMap<Long, Slicer>>();
+		HashMap<Long, Slicer> tmpMap = new HashMap<Long, Slicer>();
+		tmpMap.put(sw.getId(), slicer);
+		tmp.add(tmpMap);
+		
+		tmpMap = new HashMap<Long, Slicer>();
+		tmpMap.put(sw.getId(), managedSlicer);
+		tmp.add(tmpMap);
+		
+		tmpMap = new HashMap<Long, Slicer>();
+		tmpMap.put(sw.getId(), slicerExpanded);
+		tmp.add(tmpMap);
+		
+		tmpMap = new HashMap<Long, Slicer>();
+		tmpMap.put(sw.getId(), managedExpandedSlicer);
+		tmp.add(tmpMap);
+		
+		Proxy proxy = createMock(Proxy.class);
+		expect(proxy.getSlicer()).andReturn(managedExpandedSlicer).anyTimes();
+		proxy.setFlowCount(EasyMock.anyInt());
+		EasyMock.expectLastCall().anyTimes();
+		EasyMock.replay(proxy);
+		
+		fsfw = createMock(FlowSpaceFirewall.class);
+		List<IOFSwitch> switches = new ArrayList<IOFSwitch>();
+		switches.add(sw);
+		expect(fsfw.getSlices()).andReturn(tmp).anyTimes();
+		expect(fsfw.getSwitches()).andReturn(switches).anyTimes();
+		expect(fsfw.getProxy(EasyMock.anyLong(), EasyMock.anyObject(String.class))).andReturn(proxy).anyTimes();
+		HashMap<Long, Slicer> sliceMap = new HashMap<Long, Slicer>();
+		sliceMap.put(sw.getId(), managedExpandedSlicer);
+		expect(fsfw.getSlice(EasyMock.anyObject(String.class))).andReturn(sliceMap).anyTimes();
+		EasyMock.replay(fsfw);
+		
+		cache = new FlowStatCache(fsfw);
+		
+		OFFlowMod mod = new OFFlowMod();
+		OFMatch match = new OFMatch();
+
+		match.setWildcards(match.getWildcardObj().matchOn(Flag.DL_DST));
+		match.setDataLayerDestination("78:2B:CB:48:FF:73");
+
+
+		mod.setMatch(match);
+		List<OFAction> actions = new ArrayList<OFAction>();
+		OFActionOutput output = new OFActionOutput();
+		output.setPort((short)1);
+		actions.add(output);
+		mod.setActions(actions);
+		mod.setLength((short)(OFFlowMod.MINIMUM_LENGTH + output.getLength()));
+
+		List<OFStatistics>bustedExpandedManagedStats = new ArrayList<OFStatistics>(expandedManagedStats);
+		OFFlowStatisticsReply stat = (OFFlowStatisticsReply) bustedExpandedManagedStats.get(5);
+		OFActionVirtualLanIdentifier set_vlan_vid = new OFActionVirtualLanIdentifier();
+		set_vlan_vid.setVirtualLanIdentifier((short)500);
+		List<OFAction> newActs = new ArrayList<OFAction>();
+		newActs.add(set_vlan_vid);
+		newActs.add(output);
+		stat.setActions(newActs);
+		bustedExpandedManagedStats.set(5, stat);
+		
+		List<OFFlowMod> mods = managedExpandedSlicer.managedFlows(mod);
+		assertEquals("Proper number of total flow mods", 4,mods.size());
+		cache.addFlowMod(sw.getId(), managedExpandedSlicer.getSliceName(), mod, mods);
+		cache.setFlowCache(sw.getId(), expandedManagedStats);
+		
+		List<OFStatistics> slicedStats = cache.getSlicedFlowStats(sw.getId(), managedExpandedSlicer.getSliceName());	
+		assertNotNull("Sliced Stats with no allowed stats returned ok", slicedStats);
+		assertEquals("Sliced stats", 5, slicedStats.size());
+		
+		log.error(slicedStats.get(0).toString());
+		OFFlowStatisticsReply flowStat = (OFFlowStatisticsReply) slicedStats.get(0);
+		assertEquals("flowStat byte count is correct", 1L,flowStat.getByteCount());
+		assertEquals("flowStat packet count is correct", 1L,flowStat.getPacketCount());
+		
 	}
 
 }
