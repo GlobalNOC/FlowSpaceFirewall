@@ -202,6 +202,14 @@ public final class ConfigParser {
 		        						newSlices.clear();
 		        						return newSlices;
 		        					}
+		        					if(Short.parseShort(range.getAttributes().getNamedItem("start").getTextContent()) > Short.parseShort(range.getAttributes().getNamedItem("end").getTextContent())){
+		        						InvalidConfigException Exception = new InvalidConfigException(
+		        								"Start VLAN higher than end VLAN for Slice: " + slicer.getSliceName() +
+		        								", Switch: " + slicer.getSwitchName() +
+		        								", Port: " + pConfig.getPortName()
+		        								);
+		        						throw Exception;
+		        					}
 		        					for(short m = Short.parseShort(range.getAttributes().getNamedItem("start").getTextContent()); 
 		        							m <= Short.parseShort(range.getAttributes().getNamedItem("end").getTextContent()); m++){
 		        						myRange.setVlanAvail(m, true);
