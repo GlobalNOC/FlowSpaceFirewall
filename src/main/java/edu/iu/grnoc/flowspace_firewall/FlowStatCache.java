@@ -82,7 +82,7 @@ public class FlowStatCache{
 	
 	//lets us read our object from disk
 	@SuppressWarnings("unchecked")
-	public void readObject(ObjectInputStream aInputStream) throws IOException{
+	public synchronized void readObject(ObjectInputStream aInputStream) throws IOException{
 		HashMap<Long, HashMap<String, List<OFStatistics>>> cache;
 		HashMap<Long,HashMap<OFMatch,FSFWOFFlowStatisticsReply>> tmpMap;
 		try {
@@ -571,7 +571,7 @@ public class FlowStatCache{
 		
 		//update all proxies for this switch so that they have the proper flow count
 		//ISSUE=10641
-		List<HashMap<Long, Slicer>> slices = parent.getSlices();
+		List<HashMap<Long, Slicer>> slices = new ArrayList<HashMap<Long,Slicer>>(parent.getSlices());
 
 		for(HashMap<Long,Slicer> tmpSlices : slices){
 			if(!tmpSlices.containsKey(switchId)){
@@ -622,9 +622,9 @@ public class FlowStatCache{
 	 * @return
 	 */
 	
-	public List<FlowTimeout> getPossibleExpiredFlows(Long switchId){
+	public synchronized List<FlowTimeout> getPossibleExpiredFlows(Long switchId){
 		List<FlowTimeout> flowTimeouts = new ArrayList<FlowTimeout>();
-		List<HashMap<Long, Slicer>> slices = parent.getSlices();
+		List<HashMap<Long, Slicer>> slices = new ArrayList<HashMap<Long,Slicer>>(parent.getSlices());
 
 		for(HashMap<Long,Slicer> tmpSlices : slices){
 			if(!tmpSlices.containsKey(switchId)){
@@ -647,7 +647,7 @@ public class FlowStatCache{
 	 */
 	
 	public void checkExpireFlows(Long switchId){
-		List<HashMap<Long, Slicer>> slices = parent.getSlices();
+		List<HashMap<Long, Slicer>> slices = new ArrayList<HashMap<Long,Slicer>>(parent.getSlices());
 
 		for(HashMap<Long,Slicer> tmpSlices : slices){
 			if(!tmpSlices.containsKey(switchId)){

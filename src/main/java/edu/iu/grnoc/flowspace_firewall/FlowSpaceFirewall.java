@@ -127,7 +127,7 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 		this.statsCacher.delFlowCache(switchId, sliceName, flowMod, flows);
 	}
 	
-	public List<IOFSwitch> getSwitches(){
+	public synchronized List<IOFSwitch> getSwitches(){
 		return this.switches;
 	}
 
@@ -259,7 +259,7 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 	 * this is only called via the web-service
 	 */
 	
-	public boolean reloadConfig(){
+	public synchronized boolean reloadConfig(){
 		ArrayList<HashMap<Long, Slicer>> newSlices;
 		ArrayList<Proxy> toBeRemoved = new ArrayList<Proxy>();
 		//have our new configuration
@@ -473,7 +473,7 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 		
 	}
 	
-	public boolean setSliceAdminState(Long dpid, String sliceName, boolean state){
+	public synchronized boolean setSliceAdminState(Long dpid, String sliceName, boolean state){
 		
 		List<Proxy> proxies = this.controllerConnector.getSwitchProxies(dpid);
 		for(Proxy p: proxies){
@@ -487,7 +487,7 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 		return false;
 	}
 
-	public Proxy getProxy(Long dpid, String sliceName){
+	public synchronized Proxy getProxy(Long dpid, String sliceName){
 		List<Proxy> proxies = this.controllerConnector.getSwitchProxies(dpid);
 		for(Proxy p: proxies){
 			if(p.getSlicer().getSliceName().equals(sliceName)){
