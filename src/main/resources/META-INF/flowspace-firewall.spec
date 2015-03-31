@@ -1,5 +1,5 @@
 Name: flowspace-firewall
-Version: 1.0.4a
+Version: 1.0.4b
 Release: 1%{?dist}
 Summary: Flowspace Firewall
 License: CHECK(Distributable)
