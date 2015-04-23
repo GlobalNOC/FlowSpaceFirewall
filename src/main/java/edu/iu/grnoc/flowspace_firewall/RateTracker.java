@@ -55,6 +55,10 @@ public class RateTracker {
 	}
 	
 	
+	public CircularFifoQueue<Date> getFifo(){
+		return this.myFifo;
+	}
+	
 	private synchronized double get_rate_helper(Date now){
 		if(myFifo.size() <= myFifo.maxSize() / 10){
 			log.debug("circular queue is too small, returning 0");
@@ -70,7 +74,7 @@ public class RateTracker {
 		}
 		
 		long start = myFifo.get(0).getTime();
-		log.debug("#packets = " + myFifo.size() + " / end = " + end + " start = " + start);
+		//log.error("#packets = " + myFifo.size() + " / end = " + end + " start = " + start);
 
 		if(end - start <= 0){
 			//this means that our entire circular queue has the same ms
