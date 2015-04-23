@@ -201,6 +201,14 @@ public final class ConfigParser {
 		        						log.error("Tag Mangement can only be used on a single VLAN, please fix config and try again");
 		        						throw new InvalidConfigException("Configuration is not valid!");
 		        					}
+		        					if(Short.parseShort(range.getAttributes().getNamedItem("start").getTextContent()) > Short.parseShort(range.getAttributes().getNamedItem("end").getTextContent())){
+		        						InvalidConfigException Exception = new InvalidConfigException(
+		        								"Start VLAN higher than end VLAN for Slice: " + slicer.getSliceName() +
+		        								", Switch: " + slicer.getSwitchName() +
+		        								", Port: " + pConfig.getPortName()
+		        								);
+		        						throw Exception;
+		        					}
 		        					for(short m = Short.parseShort(range.getAttributes().getNamedItem("start").getTextContent()); 
 		        							m <= Short.parseShort(range.getAttributes().getNamedItem("end").getTextContent()); m++){
 		        						myRange.setVlanAvail(m, true);

@@ -132,4 +132,11 @@ public class ConfigParserTest {
 		ArrayList<HashMap<Long, Slicer>> slices = ConfigParser.parseConfig("src/test/resources/bad_tag_managed_config.xml");
 		
 	}
+	
+	@Test
+	public void testStartGreaterThanEnd() throws IOException, SAXException, XPathExpressionException, ParserConfigurationException, InvalidConfigException {
+		thrown.expect(InvalidConfigException.class);
+		thrown.expectMessage("Start VLAN higher than end VLAN for Slice: Slice1, Switch: foo2, Port: s2-eth1");
+		ConfigParser.parseConfig("src/test/resources/start_after_end.xml");
+	}
 }
