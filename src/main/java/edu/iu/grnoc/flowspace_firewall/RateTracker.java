@@ -64,7 +64,7 @@ public class RateTracker {
 		
 		long end;
 		if(now == null){
-			end = myFifo.get(myFifo.size()).getTime();
+			end = myFifo.get(myFifo.size()-1).getTime();
 		}else{
 			end = now.getTime();
 		}
