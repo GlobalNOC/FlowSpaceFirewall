@@ -72,7 +72,7 @@ public class VLANSlicer implements Slicer{
 	
 	public VLANSlicer(HashMap <String, PortConfig> ports, 
 			InetSocketAddress controllerAddress, int rate, String name, boolean flushOnConnect, boolean tagMgmt, boolean doTimeouts){
-		myRateTracker = new RateTracker(10,100);
+		myRateTracker = new RateTracker(10000,100);
 		portList = ports;
 		this.name = name;
 		this.adminState = true;

@@ -90,7 +90,7 @@ public class Proxy {
 		flowCount = 0;
 		xidMap = new XidMap();
 		adminStatus = mySlicer.getAdminState();
-		packetInRate = new RateTracker(100,slicer.getPacketInRate());
+		packetInRate = new RateTracker(10000,slicer.getPacketInRate());
 		timeouts = Collections.synchronizedList( new ArrayList<FlowTimeout>());
 		
 	}
