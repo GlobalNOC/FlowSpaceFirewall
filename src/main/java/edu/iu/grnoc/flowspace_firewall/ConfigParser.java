@@ -198,9 +198,10 @@ public final class ConfigParser {
 		        						continue;
 		        					}
 		        					if(tag_management && Short.parseShort(range.getAttributes().getNamedItem("start").getTextContent()) != Short.parseShort(range.getAttributes().getNamedItem("end").getTextContent())){
-		        						log.error("Tag Mangement can only be used on a single VLAN, please fix config and try again");
-		        						newSlices.clear();
-		        						return newSlices;
+		        						InvalidConfigException Exception = new InvalidConfigException(
+		        								"Tag Mangement can only be used on a single VLAN, please fix config and try again."
+		        								);
+		        						throw Exception;
 		        					}
 		        					if(Short.parseShort(range.getAttributes().getNamedItem("start").getTextContent()) > Short.parseShort(range.getAttributes().getNamedItem("end").getTextContent())){
 		        						InvalidConfigException Exception = new InvalidConfigException(
@@ -220,9 +221,10 @@ public final class ConfigParser {
 		        				//add the port config to the slicer
 		        				slicer.setPortConfig(pConfig.getPortName(), pConfig);
 		        				if(tag_management == true && myRange.getAvailableTags().length > 1){
-		        					log.error("Tag Management can only be used on a single VLAN, please fix config and try again");
-		        					newSlices.clear();
-		        					return newSlices;
+		        					InvalidConfigException Exception = new InvalidConfigException(
+	        								"Tag Mangement can only be used on a single VLAN, please fix config and try again."
+	        								);
+	        						throw Exception;
 		        				}
 		        			}
 	        				//add the slicer to the whole slice container (all switches)
