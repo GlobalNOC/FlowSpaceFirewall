@@ -128,8 +128,9 @@ public class ConfigParserTest {
 	
 	@Test
 	public void testTagManagedConfigInvalid() throws IOException, SAXException, XPathExpressionException, ParserConfigurationException, InvalidConfigException{
-		ArrayList<HashMap<Long, Slicer>> slices = ConfigParser.parseConfig("src/test/resources/bad_tag_managed_config.xml");
-		assertTrue(slices.size() == 0);
+		thrown.expect(InvalidConfigException.class);
+		thrown.expectMessage("Tag Mangement can only be used on a single VLAN, please fix config and try again.");
+		ConfigParser.parseConfig("src/test/resources/bad_tag_managed_config.xml");
 		
 	}
 	

@@ -23,6 +23,7 @@ JVM_OPTS="$JVM_OPTS -Dpython.security.respectJavaAccessibility=false"
 
 echo
 CMD="java ${JVM_OPTS} -Dlogback.configurationFile=${FL_LOGBACK} -cp ${FL_HOME}/floodlight.jar:${FL_HOME}/flowspace_firewall.jar net.floodlightcontroller.core.Main"
+CONFIG_TEST_CMD="java -jar ${FL_HOME}/config_test.jar -c /etc/fsfw/fsfw.xml"
 
 pid_status() {
     pid=
@@ -89,6 +90,12 @@ reload(){
     RETVLAN=$?
     echo
 }
+
+configtest(){
+    echo -n $"Running config test on /etc/fsfw/fsfw.xml: "
+    $CONFIG_TEST_CMD
+}
+
 #handle arguments
 ERROR=0
 ARGV="$@"
@@ -118,16 +125,20 @@ do
     reload)
 	reload
         ;;
+    configtest)
+	configtest
+        ;;
     *)
-        echo "usage: $0 (start|stop|restart|help)"
+        echo "usage: $0 (start|stop|restart|reload|status|configtest|help)"
         cat <<EOF
 
-start      - start FlowSpace Firewall
-stop       - stop FlowSpace Firewall
-restart    - restart FlowSpace Firewall if running
-reload     - reload FSFs config
-status     - status of FlowSpace Firewall
-help       - this screen
+start       - start FlowSpace Firewall
+stop        - stop FlowSpace Firewall
+restart     - restart FlowSpace Firewall if running
+reload      - reload FSFs config
+status      - status of FlowSpace Firewall
+configtest  - Test the config file for errors
+help        - this screen
 
 EOF
         ERROR=2
