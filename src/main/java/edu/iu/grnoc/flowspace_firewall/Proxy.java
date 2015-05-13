@@ -904,7 +904,13 @@ public class Proxy {
 					newPkt.deserialize(pktData,0,pktData.length);
 					newPkt.setEtherType(newPkt.getEtherType());
 					newPkt.setVlanID(Ethernet.VLAN_UNTAGGED);
-					pcktIn.setPacketData(newPkt.serialize());
+					
+					//Set the packet data based on the length of the serialize function's returned
+					//value.  Do it this way because serialize() might remove a number of padding bytes,
+					//so we cannot just assume the number of bytes removed will be 4.
+					byte[] newPktData = newPkt.serialize();
+					pcktIn.setPacketData(newPktData);
+					pcktIn.setTotalLength((short) newPktData.length);
 				}
 				break;
 			}else{
