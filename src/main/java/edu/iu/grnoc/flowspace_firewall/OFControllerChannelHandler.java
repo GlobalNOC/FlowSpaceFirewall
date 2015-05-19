@@ -336,6 +336,7 @@ class OFControllerChannelHandler
         	OFGetConfigReply response = (OFGetConfigReply) BasicFactory.getInstance().getMessage(OFType.GET_CONFIG_REPLY);
         	response.setFlags((short)0);
         	response.setMissSendLength((short)65535);
+            response.setXid(m.getXid());
         	h.sendMessage(response);
         }
         
