@@ -426,37 +426,43 @@ public class VLANSlicer implements Slicer{
 						log.info("output to ALL expanding");
 						
 						for(Map.Entry<String, PortConfig> port : this.portList.entrySet()){
-							PortConfig myPortCfg = this.getPortConfig(port.getValue().getPortId());
-							if(myPortCfg == null){
-								log.info("output packet disallowed to port:" + port.getValue().getPortId());
-								packets.clear();
-								return packets;
+							//its possible the interface specified is not on the device
+							//if it is not 0 then we can go on
+							if(port.getValue().getPortId() != 0){
+								PortConfig myPortCfg = this.getPortConfig(port.getValue().getPortId());
+								if(myPortCfg == null){
+									log.info("output packet disallowed to port:" + port.getValue().getPortId());
+									packets.clear();
+									return packets;
+								}
+								List<OFAction> actualActions = new ArrayList<OFAction>();
+								actualActions.addAll(newActions);
+								OFPacketOut newOut = this.clonePacketOut(outPacket);
+								OFActionOutput newOutput = new OFActionOutput();
+								newOutput.setMaxLength(Short.MAX_VALUE);
+								newOutput.setType(OFActionType.OUTPUT);
+								newOutput.setLength((short)OFActionOutput.MINIMUM_LENGTH);
+								newOutput.setPort(port.getValue().getPortId());
+	
+								Ethernet pkt =  (Ethernet) new Ethernet().deserialize(outPacket.getPacketData(), 
+																					  0, outPacket.getPacketData().length);
+								
+								pkt.setVlanID(myPortCfg.getVlanRange().getAvailableTags()[0]);
+								newOut.setPacketData(pkt.serialize());
+								
+								actualActions.add(newOutput);
+								newOut.setActions(actualActions);
+								int size = 0;
+								for(OFAction act : actualActions){
+									log.error("Packet Out Action: " + act.getType());
+									size = size + act.getLengthU();
+								}
+								newOut.setActionsLength((short)size);
+								newOut.setLength((short)(OFPacketOut.MINIMUM_LENGTH + newOut.getPacketData().length + size));
+								packets.add(newOut);
+							}else{
+								log.debug("skipping port: " + port.getKey() + " because it does not exist on device");
 							}
-							List<OFAction> actualActions = new ArrayList<OFAction>();
-							actualActions.addAll(newActions);
-							OFPacketOut newOut = this.clonePacketOut(outPacket);
-							OFActionOutput newOutput = new OFActionOutput();
-							newOutput.setMaxLength(Short.MAX_VALUE);
-							newOutput.setType(OFActionType.OUTPUT);
-							newOutput.setLength((short)OFActionOutput.MINIMUM_LENGTH);
-							newOutput.setPort(port.getValue().getPortId());
-
-							Ethernet pkt =  (Ethernet) new Ethernet().deserialize(outPacket.getPacketData(), 
-																				  0, outPacket.getPacketData().length);
-							
-							pkt.setVlanID(myPortCfg.getVlanRange().getAvailableTags()[0]);
-							newOut.setPacketData(pkt.serialize());
-							
-							actualActions.add(newOutput);
-							newOut.setActions(actualActions);
-							int size = 0;
-							for(OFAction act : actualActions){
-								log.error("Packet Out Action: " + act.getType());
-								size = size + act.getLengthU();
-							}
-							newOut.setActionsLength((short)size);
-							newOut.setLength((short)(OFPacketOut.MINIMUM_LENGTH + newOut.getPacketData().length + size));
-							packets.add(newOut);
 						}
 						
 					}else if(output.getPort() == OFPort.OFPP_FLOOD.getValue()){
