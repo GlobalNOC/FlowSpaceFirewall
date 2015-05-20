@@ -71,6 +71,7 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
     private List<IOFSwitch> switches;
     private FlowStatCacher statsCacher;
     private ControllerConnector controllerConnector;
+    private HashMap<Long, SwitchConfig> switchConfigs;
     protected IRestApiService restApi;
     
     
@@ -107,6 +108,36 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
         		this.switchRemoved(switchId);
         	}
         }
+        
+        if(this.switchConfigs.containsKey(switchId)){
+        	SwitchConfig swConf = this.switchConfigs.get(switchId);
+        	logger.info("Switch: " + swConf.getName()+ " has joined");
+        	if(swConf.getFlushRulesOnConnect()){
+        		logger.info("Switch: " + swConf.getName() + " Sending delete all flows");
+        		OFFlowMod mod = new OFFlowMod();
+        		mod.setCommand(OFFlowMod.OFPFC_DELETE);
+        		try {
+					sw.write(mod, null);
+				} catch (IOException e) {
+					logger.error("Error sending delete all rules to switch: " + swConf.getName());
+					e.printStackTrace();
+				}
+        	}
+        	
+        	if(swConf.getInstallDefaultDrop()){
+        		logger.info("Switch: " + swConf.getName() + " Sending default drop rule");
+        		OFFlowMod mod = new OFFlowMod();
+        		mod.setPriority((short)1);
+        		mod.setCommand(OFFlowMod.OFPFC_ADD);
+        		try {
+					sw.write(mod, null);
+				} catch (IOException e) {
+					logger.error("Error sending default drop rule to switch: " + swConf.getName());
+					e.printStackTrace();
+				}
+        	}
+        }
+        
         this.switches.add(sw);
         //loop through all slices
         for(HashMap<Long, Slicer> slice: slices){
@@ -235,6 +266,9 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 	@Override
 	public void switchActivated(long switchId) {
 		logger.debug("Switch Activated");
+		//if we are suppose to clear the flows send delete all
+		//if we are suppose to install default drop install default drop
+		
 	}
 	
 	public void removeProxy(Long switchId, Proxy p){
@@ -443,7 +477,25 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 			logger.error("Problem with the configuration file!");
 			throw new FloodlightModuleException("Problem with the Config!");
 		}
+		
+		try{
+			this.switchConfigs = ConfigParser.parseSwitchConfig(configFile);
+		}catch (SAXException e){
+			logger.error("Problems parsing " + configFile + ": " + e.getMessage());
+		}catch (IOException e){
+			logger.error("Problems parsing " + configFile + ": " + e.getMessage());
+		} catch(ParserConfigurationException e){
+			logger.error(e.getMessage());
+		} catch(XPathExpressionException e){
+			logger.error(e.getMessage());
+		}catch(InvalidConfigException e){
+			logger.error(e.getMsg());
+		}
 
+		if(this.switchConfigs == null || this.slices.size() ==0){
+			logger.error("Problem with the configuration file!");
+			throw new FloodlightModuleException("Problem with the Config!");
+		}
         
 	}
 
@@ -498,15 +550,4 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 		return null;
 	}
 	
-/*	@Override
-	public List<OFStatistics> getSliceFlows(String sliceName, Long dpid) {
-		return this.statsCacher.getSlicedFlowStats(dpid, sliceName));
-	}
-*/
-/*	@Override
-	public HashMap<String, Object> getSliceStatus(String sliceName, Long dpid) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-	*/
 }
