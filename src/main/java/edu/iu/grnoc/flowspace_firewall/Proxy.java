@@ -995,6 +995,29 @@ public class Proxy {
 			if(flows.size() == 0){
 				return;
 			}
+			
+			if(mySlicer.getTagManagement()){
+				mod.getMatch().setDataLayerVirtualLan((short)0);
+				mod.getMatch().getWildcardObj().wildcard(Wildcards.Flag.DL_VLAN);
+				List<OFAction> acts = mod.getActions();
+				List<OFAction> newActs = new ArrayList<OFAction>();
+				int length = 0;
+				for(OFAction act: acts){
+					switch(act.getType()){
+						case SET_VLAN_ID:
+							break;
+						case STRIP_VLAN:
+							break;
+						default:
+							newActs.add(act);
+							length += act.getLengthU();
+					}
+				}
+				mod.setActions(newActs);
+				mod.setLength((short)( OFFlowMod.MINIMUM_LENGTH + length));
+				msg = mod;
+			}
+			
 			this.flowCount--;
 			break;
 		case BARRIER_REPLY:
