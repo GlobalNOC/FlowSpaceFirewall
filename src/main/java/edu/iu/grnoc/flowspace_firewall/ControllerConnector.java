@@ -101,7 +101,7 @@ public class ControllerConnector extends TimerTask {
 				Proxy p = proxyIt.next();
 				log.debug("Proxy for " + p.getSwitch().getStringId() + " " + p.getSlicer().getControllerAddress().toString() + " is connected: " + p.connected());
 				if(!p.connected() && p.getAdminStatus()){
-					log.warn("Creating new Channel to " + p.getSlicer().getControllerAddress().toString() + " for switch: " + p.getSwitch().getStringId());
+					log.debug("Creating new Channel to " + p.getSlicer().getControllerAddress().toString() + " for switch: " + p.getSwitch().getStringId());
 					SocketChannel controller_channel = channelCreator.newChannel(getPipeline());
 					p.connect(controller_channel);
 				}

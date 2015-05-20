@@ -264,7 +264,7 @@ public class VLANSlicer implements Slicer{
 		ImmutablePort thisPort = this.sw.getPort(portId);
 		
 		if(thisPort == null){
-			log.warn("Port: " + portId + " was not found on this switch... sorry");
+			log.info("Port: " + portId + " was not found on this switch.");
 			return null;
 		}
 		log.debug("Looking for PORT: " + thisPort.getName());
@@ -451,7 +451,7 @@ public class VLANSlicer implements Slicer{
 							newOut.setActions(actualActions);
 							int size = 0;
 							for(OFAction act : actualActions){
-								log.error("Packet Out Action: " + act.getType());
+								log.debug("Packet Out Action: " + act.getType());
 								size = size + act.getLengthU();
 							}
 							newOut.setActionsLength((short)size);
@@ -460,13 +460,13 @@ public class VLANSlicer implements Slicer{
 						}
 						
 					}else if(output.getPort() == OFPort.OFPP_FLOOD.getValue()){
-						log.info("output to flood not supported");
+						log.debug("output to flood not supported");
 						packets.clear();
 						return packets;
 					}else{
 						PortConfig myPortCfg = this.getPortConfig(output.getPort());
 						if(myPortCfg == null){
-							log.info("output packet disallowed to port:" + output.getPort());
+							log.debug("output packet disallowed to port:" + output.getPort());
 							packets.clear();
 							return packets;
 						}
@@ -561,18 +561,18 @@ public class VLANSlicer implements Slicer{
 					//if its an output, verify that the 
 					OFActionOutput output = (OFActionOutput)action;
 					if(output.getPort() == OFPort.OFPP_ALL.getValue()){
-						log.info("output to ALL expanding");
+						log.debug("output to ALL expanding");
 
 						
 						for(Map.Entry<String, PortConfig> port : this.portList.entrySet()){
 							PortConfig myPortCfg = this.getPortConfig(port.getValue().getPortId());
 							if(myPortCfg == null){
-								log.info("output packet disallowed to port:" + port.getValue().getPortId());
+								log.debug("output packet disallowed to port:" + port.getValue().getPortId());
 								packets.clear();
 								return packets;
 							}
 							if(!myPortCfg.vlanAllowed(curVlan)){
-								log.info("Output packet disallowed for port:" + port.getValue().getPortId() + " and vlan: " + curVlan);
+								log.debug("Output packet disallowed for port:" + port.getValue().getPortId() + " and vlan: " + curVlan);
 								packets.clear();
 								return packets;
 							}
@@ -597,13 +597,13 @@ public class VLANSlicer implements Slicer{
 						}
 						
 					}else if(output.getPort() == OFPort.OFPP_FLOOD.getValue()){
-						log.info("output to flood not supported");
+						log.debug("output to flood not supported");
 						packets.clear();
 						return packets;
 					}else{
 						PortConfig myPortCfg = this.getPortConfig(output.getPort());
 						if(myPortCfg == null){
-							log.info("output packet disallowed to port:" + output.getPort());
+							log.debug("output packet disallowed to port:" + output.getPort());
 							packets.clear();
 							return packets;
 						}
@@ -611,7 +611,7 @@ public class VLANSlicer implements Slicer{
 						//only return false if we fail
 						//need to continue looping through on true case
 						if(!myPortCfg.vlanAllowed(curVlan)){
-							log.info("Output packet disallowed for port:" + output.getPort() + " and vlan: " + curVlan);
+							log.debug("Output packet disallowed for port:" + output.getPort() + " and vlan: " + curVlan);
 							packets.clear();
 							return packets;
 						}
@@ -786,12 +786,12 @@ public class VLANSlicer implements Slicer{
 					break;
 				case SET_VLAN_ID:
 					//sorry you are DENIED!!
-					log.error("Flow Denied because managed tag mode and SET_VLAN_ID set");
+					log.info("Flow Denied because managed tag mode and SET_VLAN_ID set");
 					newFlows.clear();
 					return newFlows;
 				case STRIP_VLAN:
 					//sorry you are DENIED!!
-					log.error("FLow Denied because managed tag mode and STRIP_VLAN set");
+					log.info("FLow Denied because managed tag mode and STRIP_VLAN set");
 					newFlows.clear();
 					return newFlows;
 				default:
@@ -861,7 +861,7 @@ public class VLANSlicer implements Slicer{
 						OFFlowMod expandedFlow = this.expandActions(newFlow);
 						
 						if(expandedFlow == null){
-							log.warn("Error expanding actions for flow:" + newFlow.toString());
+							log.debug("Error expanding actions for flow:" + newFlow.toString());
 							flowMods.clear();
 							return flowMods;
 						}
@@ -899,7 +899,7 @@ public class VLANSlicer implements Slicer{
 			OFFlowMod expandedFlow = this.expandActions(flowMod);
 			
 			if(expandedFlow == null){
-				log.warn("Error expanding actions for flow:" + flowMod.toString());
+				log.debug("Error expanding actions for flow:" + flowMod.toString());
 				flowMods.clear();
 				return flowMods;
 			}
@@ -1010,13 +1010,13 @@ public class VLANSlicer implements Slicer{
 						//only return false if we fail
 						//need to continue looping through on true case
 						if(!myPortCfg.vlanAllowed(curVlan)){
-							log.warn("FlowMod not allowed for port: " + output.getPort() + " and vlan: " + curVlan);
+							log.debug("FlowMod not allowed for port: " + output.getPort() + " and vlan: " + curVlan);
 							return false;
 						}
 						break;
 					
 					case STRIP_VLAN:
-						log.info("Doing a strip vlan");
+						log.debug("Doing a strip vlan");
 						
 						//if the output port allows -1, we should permit this flow otherwise deny. 
 						//OUTPUT case now determines allow/deny.
@@ -1110,7 +1110,7 @@ public class VLANSlicer implements Slicer{
 		for(String portName : this.portList.keySet()){
 			if(otherSlicer.isPortPartOfSlice(portName)){
 				if(this.getPortConfig(portName).getVlanRange().rangeOverlap(otherSlicer.getPortConfig(portName).getVlanRange())){
-					log.error(""+this.name+" "+this.getSliceName()+"port range: "+this.getPortConfig(portName).getVlanRange().toString()+ "overlaps with slice: "+otherSlicer.getSliceName()+" port-range: "+otherSlicer.getPortConfig(portName).getVlanRange().toString());
+					log.info(""+this.name+" "+this.getSliceName()+"port range: "+this.getPortConfig(portName).getVlanRange().toString()+ "overlaps with slice: "+otherSlicer.getSliceName()+" port-range: "+otherSlicer.getPortConfig(portName).getVlanRange().toString());
 					return true;
 				}
 			}

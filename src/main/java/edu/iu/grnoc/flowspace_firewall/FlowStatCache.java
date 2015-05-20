@@ -107,11 +107,11 @@ public class FlowStatCache{
 	public synchronized void delFlowMod(long dpid, String sliceName, OFFlowMod flow){
 		FSFWOFFlowStatisticsReply flowStat = (FSFWOFFlowStatisticsReply) this.findCachedStat(dpid, flow.getMatch(), sliceName);
 		if(flowStat != null){
-			log.error("Setting flow mod to be deleted");
+			log.debug("Setting flow mod to be deleted");
 			flowStat.setToBeDeleted(true);
 			return;
 		}
-		log.error("Flow mod was not found could not be deleted");
+		log.info("Flow mod was not found and could not be deleted");
 	}
 	
 	public synchronized void addFlowMod(Long dpid, String sliceName, OFFlowMod flow){
@@ -329,7 +329,7 @@ public class FlowStatCache{
 				}
 				
 				if(stat == null){
-					log.error("Switch: " + switchId + ", Unable to find a flow that matches this flow in my cache, adding it");
+					log.debug("Switch: " + switchId + ", Unable to find a flow that matches this flow in my cache, adding it");
 					log.debug(flowStat.toString());
 					if(slice.getTagManagement()){
 						OFMatch match = flowStat.getMatch().clone();

@@ -571,7 +571,7 @@ class OFControllerChannelHandler
             this.proxy.getSlicer().getControllerAddress().toString() + "failed to complete handshake");           
             ctx.getChannel().close();
         } else if (e.getCause() instanceof ClosedChannelException) {
-            log.debug("Channel for controller already closed");
+            log.error("Channel for controller already closed");
         } else if (e.getCause() instanceof IOException) {
             log.error("Disconnecting  slice "+ this.proxy.getSlicer().getSliceName()+" controller "+
             this.proxy.getSlicer().getControllerAddress().toString() + " due to IO Error: {}", e.getCause().getMessage());
@@ -603,7 +603,7 @@ class OFControllerChannelHandler
                       e.getCause());
             //this.controller.terminate();
         } else if (e.getCause() instanceof RejectedExecutionException) {
-            log.warn("Could not process message: queue full");
+            log.error("Could not process message: queue full");
             
         } else {
         	try{
@@ -708,7 +708,7 @@ class OFControllerChannelHandler
     	if(channel != null && channel.isConnected()){
     		channel.write(Collections.singletonList(m));
     	}else{
-    		log.error("Channel is not connected can not send message!!!");
+    		log.debug("Channel is not connected can not send message!!!");
     	}
     }
     
