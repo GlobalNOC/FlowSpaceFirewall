@@ -3,19 +3,18 @@ package edu.iu.grnoc.flowspace_firewall;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.xpath.XPathExpressionException;
 
-
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.xml.sax.SAXException;
+import org.xml.sax.SAXParseException;
 
 import static org.junit.Assert.*;
 
@@ -139,5 +138,24 @@ public class ConfigParserTest {
 		thrown.expect(InvalidConfigException.class);
 		thrown.expectMessage("Start VLAN higher than end VLAN for Slice: Slice1, Switch: foo2, Port: s2-eth1");
 		ConfigParser.parseConfig("src/test/resources/start_after_end.xml");
+	}
+	
+	@Test
+	public void testBadPollInterval() throws IOException, SAXException, XPathExpressionException, ParserConfigurationException, InvalidConfigException, NumberFormatException {
+		thrown.expect(SAXParseException.class);
+		thrown.expectMessage("'lol' is not a valid value for 'integer'.");
+		ConfigParser.parseFlowSpaceFirewallParams("src/test/resources/bad_poll_interval.xml");
+	}
+	
+	@Test
+	public void testGoodPollInterval() throws IOException, SAXException, XPathExpressionException, ParserConfigurationException, InvalidConfigException, NumberFormatException {
+		FlowSpaceFirewallParams params = ConfigParser.parseFlowSpaceFirewallParams("src/test/resources/good_poll_interval.xml");
+		assertEquals("Got 5 for stats poll interval", params.getStatsPollInterval(), 5);
+	}
+	
+	@Test
+	public void testNoPollInterval() throws IOException, SAXException, XPathExpressionException, ParserConfigurationException, InvalidConfigException, NumberFormatException {
+		FlowSpaceFirewallParams params = ConfigParser.parseFlowSpaceFirewallParams("src/test/resources/no_poll_interval.xml");
+		assertEquals("Got default value 10 for stats poll interval", params.getStatsPollInterval(), 10);
 	}
 }

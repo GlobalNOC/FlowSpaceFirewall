@@ -17,7 +17,6 @@ package edu.iu.grnoc.flowspace_firewall;
 
 import java.io.File;
 import java.io.IOException;
-
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -84,6 +83,66 @@ public final class ConfigParser {
 		return true;
 	}
 	
+	public static FlowSpaceFirewallParams parseFlowSpaceFirewallParams(String xmlFile) throws IOException, SAXException, ParserConfigurationException, InvalidConfigException, XPathExpressionException, NumberFormatException{
+		FlowSpaceFirewallParams flowSpaceFirewallParams = new FlowSpaceFirewallParams();
+		
+		Document document;
+		try{
+			DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+    		//these enable the proper security to prevent
+    		//XML entity expansion injection (http://www.hpenterprisesecurity.com/vulncat/en/vulncat/dotnet/xee_injection.html)
+    		//XML External Entity Injection (https://www.owasp.org/index.php/XML_External_Entity_(XXE)_Processing)
+    		dbf.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
+    		dbf.setExpandEntityReferences(false);
+    		dbf.setFeature("http://xml.org/sax/features/external-general-entities", false);
+    		dbf.setFeature("http://xml.org/sax/features/external-parameter-entities", false);
+    		DocumentBuilder parser = dbf.newDocumentBuilder();
+    		document = parser.parse(new File(xmlFile));
+    	
+	        // create a SchemaFactory capable of understanding WXS schemas
+	        SchemaFactory factory = SchemaFactory.newInstance("http://www.w3.org/2001/XMLSchema");
+	
+	        // load a WXS schema, represented by a Schema instance
+	        Source schemaFile = new StreamSource(new File("/etc/fsfw/fsfw.xsd"));
+	        Schema schema = factory.newSchema(schemaFile);
+	        
+	        // create a Validator instance, which can be used to validate an instance document
+			Validator validator = schema.newValidator();
+	        
+	        // validate the DOM tree
+	        validator.validate(new DOMSource(document));
+    	
+	        //get a list of all switches and slices
+	        XPath xPath = XPathFactory.newInstance().newXPath();
+	        String fsfwExpression = "/flowspace_firewall";
+	        Node fsfwNode = (Node) xPath.compile(fsfwExpression).evaluate(document,XPathConstants.NODE);
+	        
+	        int statsPollInterval;
+	        
+	        if(fsfwNode.getAttributes().getNamedItem("stats_poll_interval") != null){
+	        	try{
+	        		statsPollInterval = Integer.parseInt(fsfwNode.getAttributes().getNamedItem("stats_poll_interval").getTextContent());
+	        	}
+	        	catch (NumberFormatException e){
+	        		log.error("Problem parsing " + xmlFile + ": " + e.getMessage());
+	        		throw e;
+	        	}
+	        
+	        	flowSpaceFirewallParams.setStatsPollInterval(statsPollInterval);
+	        }
+		}catch (SAXException e) {
+			log.error("Problems parsing " + xmlFile + ": " + e.getMessage());
+			throw e;
+		}catch (ParserConfigurationException e){
+			log.error("Problems parsing " + xmlFile + ": " + e.getMessage());
+			throw e;
+		}catch (XPathExpressionException e){
+			log.error("Problems parsing " + xmlFile + ": " + e.getMessage());
+			throw e;
+		}
+		
+		return flowSpaceFirewallParams;
+	}
 	
 	public static HashMap<Long, SwitchConfig> parseSwitchConfig(String xmlFile) throws IOException, SAXException, ParserConfigurationException,XPathExpressionException, InvalidConfigException{
 		HashMap<Long, SwitchConfig> switchHash = new HashMap<Long, SwitchConfig>();

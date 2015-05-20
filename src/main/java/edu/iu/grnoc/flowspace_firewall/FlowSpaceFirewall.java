@@ -72,6 +72,7 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
     private FlowStatCacher statsCacher;
     private ControllerConnector controllerConnector;
     private HashMap<Long, SwitchConfig> switchConfigs;
+    private FlowSpaceFirewallParams flowSpaceFirewallParams;
     protected IRestApiService restApi;
     
     
@@ -497,6 +498,25 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 			throw new FloodlightModuleException("Problem with the Config!");
 		}
         
+		try{
+			this.flowSpaceFirewallParams = ConfigParser.parseFlowSpaceFirewallParams(configFile);
+		}catch (SAXException e){
+			logger.error("Problems parsing " + configFile + ": " + e.getMessage());
+		}catch (IOException e){
+			logger.error("Problems parsing " + configFile + ": " + e.getMessage());
+		} catch(ParserConfigurationException e){
+			logger.error(e.getMessage());
+		} catch(XPathExpressionException e){
+			logger.error(e.getMessage());
+		}catch(InvalidConfigException e){
+			logger.error(e.getMsg());
+		}
+
+		if(this.flowSpaceFirewallParams == null){
+			logger.error("Problem with the configuration file!");
+			throw new FloodlightModuleException("Problem with the Config!");
+		}
+		
 	}
 
 	@Override
@@ -515,7 +535,7 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 		statsTimer = new Timer("StatsTimer");
 		statsCacher = new FlowStatCacher(this);
 		this.statsCacher.loadCache();
-		statsTimer.scheduleAtFixedRate(statsCacher, 0, 10 * 1000);
+		statsTimer.scheduleAtFixedRate(statsCacher, 0, this.flowSpaceFirewallParams.getStatsPollInterval() * 1000);
 		
 		//start up the controller connector timer
 		controllerConnectTimer = new Timer("ControllerConnectionTimer");
