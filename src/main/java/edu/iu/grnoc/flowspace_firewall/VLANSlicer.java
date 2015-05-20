@@ -426,15 +426,14 @@ public class VLANSlicer implements Slicer{
 						log.info("output to ALL expanding");
 						
 						for(Map.Entry<String, PortConfig> port : this.portList.entrySet()){
-							//its possible the interface specified is not on the device
-							//if it is not 0 then we can go on
-							if(port.getValue().getPortId() != 0){
-								PortConfig myPortCfg = this.getPortConfig(port.getValue().getPortId());
-								if(myPortCfg == null){
-									log.info("output packet disallowed to port:" + port.getValue().getPortId());
-									packets.clear();
-									return packets;
-								}
+							PortConfig myPortCfg = this.getPortConfig(port.getValue().getPortId());
+							//so in managed tag mode there should be no way for us in an OUTPUT: ALL case to find a port
+							//we don't have permission to output too.  
+							//If we can't find a port config then that interface is not on the device and so we should 
+							//just go on.  
+							if(myPortCfg == null){
+								log.info("Unable to find port " + port.getKey() + " probably not on device");
+							}else{
 								List<OFAction> actualActions = new ArrayList<OFAction>();
 								actualActions.addAll(newActions);
 								OFPacketOut newOut = this.clonePacketOut(outPacket);
@@ -460,8 +459,6 @@ public class VLANSlicer implements Slicer{
 								newOut.setActionsLength((short)size);
 								newOut.setLength((short)(OFPacketOut.MINIMUM_LENGTH + newOut.getPacketData().length + size));
 								packets.add(newOut);
-							}else{
-								log.debug("skipping port: " + port.getKey() + " because it does not exist on device");
 							}
 						}
 						
