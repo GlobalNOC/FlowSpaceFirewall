@@ -84,6 +84,76 @@ public final class ConfigParser {
 		return true;
 	}
 	
+	
+	public static HashMap<Long, SwitchConfig> parseSwitchConfig(String xmlFile) throws IOException, SAXException, ParserConfigurationException,XPathExpressionException, InvalidConfigException{
+		HashMap<Long, SwitchConfig> switchHash = new HashMap<Long, SwitchConfig>();
+		
+		Document document;
+    	try {
+    		DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+    		//these enable the proper security to prevent
+    		//XML entity expansion injection (http://www.hpenterprisesecurity.com/vulncat/en/vulncat/dotnet/xee_injection.html)
+    		//XML External Entity Injection (https://www.owasp.org/index.php/XML_External_Entity_(XXE)_Processing)
+    		dbf.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
+    		dbf.setExpandEntityReferences(false);
+    		dbf.setFeature("http://xml.org/sax/features/external-general-entities", false);
+    		dbf.setFeature("http://xml.org/sax/features/external-parameter-entities", false);
+    		DocumentBuilder parser = dbf.newDocumentBuilder();
+    		document = parser.parse(new File(xmlFile));
+    	
+	        // create a SchemaFactory capable of understanding WXS schemas
+	        SchemaFactory factory = SchemaFactory.newInstance("http://www.w3.org/2001/XMLSchema");
+	
+	        // load a WXS schema, represented by a Schema instance
+	        Source schemaFile = new StreamSource(new File("/etc/fsfw/fsfw.xsd"));
+	        Schema schema = factory.newSchema(schemaFile);
+	        
+	        // create a Validator instance, which can be used to validate an instance document
+			Validator validator = schema.newValidator();
+	        
+	        // validate the DOM tree
+	        validator.validate(new DOMSource(document));
+    	
+	        //get a list of all switches and slices
+	        XPath xPath = XPathFactory.newInstance().newXPath();
+	        XPathExpression switchExpression = xPath.compile("/flowspace_firewall/switch");
+	        NodeList switches = (NodeList) switchExpression.evaluate(document,XPathConstants.NODESET);
+	        
+	        for(int i=0;i<switches.getLength();i++){
+	        	SwitchConfig swConf = new SwitchConfig();
+	        	Node mySwitch = switches.item(i);
+	        	String dpidStr = (String) mySwitch.getAttributes().getNamedItem("dpid").getTextContent();
+	        	Long DPID = HexString.toLong(dpidStr);
+	        	swConf.setDPID(DPID);
+	        	swConf.setName(mySwitch.getAttributes().getNamedItem("name").getTextContent());
+	        	String default_drop = mySwitch.getAttributes().getNamedItem("install_default_drop").getTextContent();
+	        	if(default_drop != null){
+	        		if(default_drop == "true"){
+	        			swConf.setInstallDefaultDrop(true);
+	        		}
+	        	}
+	        	String flush_rules = mySwitch.getAttributes().getNamedItem("flush_rules_on_connect").getTextContent();
+	        	if(flush_rules != null){
+	        		if(flush_rules == "true"){
+	        			swConf.setFlushRulesOnConnect(true);
+	        		}
+	        	}
+	        	switchHash.put(DPID, swConf);
+	        }
+    	}catch (SAXException e) {
+    		log.error("Problems parsing " + xmlFile + ": " + e.getMessage());
+    		throw e;
+        }catch (ParserConfigurationException e){
+        	log.error("Problems parsing " + xmlFile + ": " + e.getMessage());
+        	throw e;
+        }catch (XPathExpressionException e){
+        	log.error("Problems parsing " + xmlFile + ": " + e.getMessage());
+        	throw e;
+        }
+    	
+    	return switchHash;
+	}
+	
 	//the only method we need here
 	public static ArrayList<HashMap<Long, Slicer>> parseConfig(String xmlFile) throws IOException, SAXException, ParserConfigurationException,XPathExpressionException, InvalidConfigException{
 		ArrayList<HashMap<Long, Slicer>> newSlices = new ArrayList<HashMap<Long, Slicer>>();
