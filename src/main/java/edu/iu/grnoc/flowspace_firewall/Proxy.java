@@ -99,10 +99,10 @@ public class Proxy {
 		this.adminStatus = status;
 		this.mySlicer.setAdminState(status);
 		if(status){
-			log.warn("Slice: "+ this.mySlicer.getSliceName() +" is re-enabled");
+			log.info("Slice: "+ this.mySlicer.getSliceName() +" is re-enabled");
 		}else{
 
-			log.error("Disabling Slice:"+this.mySlicer.getSliceName() );
+			log.warn("Disabling Slice:"+this.mySlicer.getSliceName() );
 			if(this.connected()){
 				this.removeFlows();
 				this.disconnect();
@@ -347,7 +347,7 @@ public class Proxy {
 		if(this.mySlicer.getTagManagement()){
 			flows = this.mySlicer.managedFlows(tmpFlow);
 			if(flows.size() ==0){
-				log.error("Slice: " + this.mySlicer.getSliceName() + ":" + this.getSlicer().getSwitchName() + " denied flow: " + ((OFFlowMod)msg).toString());
+				log.warn("Slice: " + this.mySlicer.getSliceName() + ":" + this.getSlicer().getSwitchName() + " denied flow: " + ((OFFlowMod)msg).toString());
 				OFError error = new OFError(OFError.OFErrorType.OFPET_BAD_REQUEST);
 				error.setErrorCode(OFBadRequestCode.OFPBRC_EPERM);
 				this.sendError((OFMessage)msg,error );
@@ -359,7 +359,7 @@ public class Proxy {
 			flows = this.mySlicer.allowedFlows(tmpFlow);
 			if(flows.size() == 0){
 				//really we need to send a perm error
-				log.error("Slice: " + this.mySlicer.getSliceName() + ":" + this.getSlicer().getSwitchName() + " denied flow: " + ((OFFlowMod)msg).toString());
+				log.warn("Slice: " + this.mySlicer.getSliceName() + ":" + this.getSlicer().getSwitchName() + " denied flow: " + ((OFFlowMod)msg).toString());
 				OFError error = new OFError(OFError.OFErrorType.OFPET_BAD_REQUEST);
 				error.setErrorCode(OFBadRequestCode.OFPBRC_EPERM);
 				this.sendError((OFMessage)msg,error);
@@ -770,7 +770,7 @@ public class Proxy {
 					List<OFMessage> allowed = this.mySlicer.managedPacketOut((OFPacketOut)msg);
 					if(allowed.isEmpty()){
 						//really we need to send a perm error
-						log.info("PacketOut is not allowed");
+						log.debug("PacketOut is not allowed");
 						OFError error = new OFError(OFError.OFErrorType.OFPET_BAD_REQUEST);
 						error.setErrorCode(OFBadRequestCode.OFPBRC_EPERM);
 						this.sendError((OFMessage)msg,error);
@@ -789,7 +789,7 @@ public class Proxy {
 					List<OFMessage> allowed = this.mySlicer.allowedPacketOut((OFPacketOut)msg);
 					if(allowed.isEmpty()){
 						//really we need to send a perm error
-						log.info("PacketOut is not allowed");
+						log.debug("PacketOut is not allowed");
 						OFError error = new OFError(OFError.OFErrorType.OFPET_BAD_REQUEST);
 						error.setErrorCode(OFBadRequestCode.OFPBRC_EPERM);
 						this.sendError((OFMessage)msg,error);
@@ -830,7 +830,7 @@ public class Proxy {
 		if(!this.valid_header(msg)){
 			//invalid packet don't send it back so we cant send an error
 			//just log and drop it
-			log.error("Slice " + this.getSlicer().getSliceName() + " to switch " + this.mySlicer.getSwitchName() + "  Invalid Header Rejecting!");
+			log.info("Slice " + this.getSlicer().getSliceName() + " to switch " + this.mySlicer.getSwitchName() + "  Invalid Header Rejecting!");
 			return;
 		}
 		
@@ -915,7 +915,7 @@ public class Proxy {
 				}
 				break;
 			}else{
-				log.error("Packet in Rate for Slice: " +
+				log.warn("Packet in Rate for Slice: " +
 							this.getSlicer().getSliceName() + ":" + this.getSlicer().getSwitchName() +
 							" has passed the packet in rate limit Disabling slice!!!!");
 				this.setAdminStatus(false);
