@@ -185,9 +185,10 @@ public final class ConfigParser {
 	        	Long DPID = HexString.toLong(dpidStr);
 	        	swConf.setDPID(DPID);
 	        	swConf.setName(mySwitch.getAttributes().getNamedItem("name").getTextContent());
-	        	String default_drop = mySwitch.getAttributes().getNamedItem("install_default_drop").getTextContent();
+	        	Node default_drop = mySwitch.getAttributes().getNamedItem("install_default_drop");
 	        	if(default_drop != null){
-	        		if(default_drop == "true"){
+	        		String default_drop_str = mySwitch.getAttributes().getNamedItem("install_default_drop").getTextContent();
+	        		if(default_drop_str == "true"){
 	        			swConf.setInstallDefaultDrop(true);
 	        		}
 	        	}

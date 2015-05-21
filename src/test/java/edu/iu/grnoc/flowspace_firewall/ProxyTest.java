@@ -470,6 +470,7 @@ public class ProxyTest {
 		messagesSentToSwitch.clear();
 		messagesSentToController.clear();
 		slicer.setMaxFlows(4);
+		slicer.setFlowRate(1000);
 		Proxy proxy = new Proxy(sw, slicer, fsfw);
 		expect(channel.isConnected()).andReturn(true).anyTimes();
 		expect(handler.isHandshakeComplete()).andReturn(true).anyTimes();
@@ -635,7 +636,7 @@ public class ProxyTest {
 		out.setLengthU(out.getPacketData().length + 40);
 		slicer.setFlowRate(2);
 		
-		for(int i=0;i<10;i++){
+		for(int i=0;i<1000;i++){
 			try {
 				Thread.sleep(250);
 			} catch (InterruptedException e) {
@@ -644,8 +645,8 @@ public class ProxyTest {
 			proxy.toSwitch(out, cntx);
 		}
 		//verify some of the rules got pushed through and some got rejected
-		assertTrue("Message to Switch actual = " + messagesSentToSwitch.size(), messagesSentToSwitch.size() > 1 && messagesSentToSwitch.size() < 8);
-		assertTrue("Message to Controller actual = " + messagesSentToController.size(), messagesSentToController.size() > 1 && messagesSentToController.size() < 8);
+		assertTrue("Message to Switch actual = " + messagesSentToSwitch.size(), messagesSentToSwitch.size() > 100 && messagesSentToSwitch.size() < 700);
+		assertTrue("Message to Controller actual = " + messagesSentToController.size(), messagesSentToController.size() > 100 && messagesSentToController.size() < 700);
 		
 	}
 	
@@ -1027,6 +1028,7 @@ public class ProxyTest {
 		setupSlicer();
 		messagesSentToSwitch.clear();
 		messagesSentToController.clear();
+		slicer.setFlowRate(1000);
 		Proxy proxy = new Proxy(sw, slicer, fsfw);
 		proxies.add(proxy);
 		
@@ -1050,7 +1052,7 @@ public class ProxyTest {
 		
 		packetIn.setPacketData(pkt.serialize());
 		
-		for(int i=0;i<100;i++){
+		for(int i=0;i<10000;i++){
 			try {
 				Thread.sleep(10);
 			} catch (InterruptedException e) {
@@ -1059,7 +1061,7 @@ public class ProxyTest {
 			log.debug("sending packet out");
 			proxy.toController(packetIn, cntx);
 		}
-		assertTrue("message was sent to controller sent a total of " + messagesSentToController.size(), messagesSentToController.size() > 1 && messagesSentToController.size() < 99);
+		assertTrue("message was sent to controller sent a total of " + messagesSentToController.size(), messagesSentToController.size() > 1000 && messagesSentToController.size() < 5000);
 		assertFalse("Slice is now disabled", proxy.getAdminStatus());
 		assertFalse("Slice is now disconnected", proxy.connected());
 	}
