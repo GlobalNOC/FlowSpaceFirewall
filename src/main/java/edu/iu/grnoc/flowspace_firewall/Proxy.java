@@ -371,10 +371,10 @@ public class Proxy {
 		
 		if(tmpFlow.getCommand() == OFFlowMod.OFPFC_ADD || tmpFlow.getCommand() == OFFlowMod.OFPFF_CHECK_OVERLAP 
 				|| tmpFlow.getCommand() == OFFlowMod.OFPFC_MODIFY || tmpFlow.getCommand() == OFFlowMod.OFPFC_MODIFY_STRICT){
-			this.parent.addFlowCache(this.mySwitch.getId(), this.mySlicer.getSliceName(), tmpFlow);
+			this.parent.addFlowCache(this.mySwitch.getId(), this.mySlicer.getSliceName(), tmpFlow, flows);
 		}
 		if(tmpFlow.getCommand() == OFFlowMod.OFPFC_DELETE || tmpFlow.getCommand() == OFFlowMod.OFPFC_DELETE_STRICT){
-			this.parent.delFlowCache(this.mySwitch.getId(), this.mySlicer.getSliceName(), tmpFlow);
+			this.parent.delFlowCache(this.mySwitch.getId(), this.mySlicer.getSliceName(), tmpFlow, flows);
 		}
 		List <OFMessage> messages = new ArrayList<OFMessage>();
 		//count the total number of flowMods
@@ -646,7 +646,6 @@ public class Proxy {
 		 * Some rules might get errors or replace others, and tracking that is very difficult. 
 		 * So every time we slice the stats we should set the actual number of flows from that slice.
 		*/
-		this.flowCount = results.size();		
 		
 		//if no results... just short circuit
 		if(results.size() <= 0){

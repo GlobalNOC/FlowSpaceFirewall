@@ -328,7 +328,7 @@ public final class ConfigParser {
 		        						continue;
 		        					}
 		        					if(tag_management && Short.parseShort(range.getAttributes().getNamedItem("start").getTextContent()) != Short.parseShort(range.getAttributes().getNamedItem("end").getTextContent())){
-		        						InvalidConfigException Exception = new InvalidConfigException(
+								    InvalidConfigException Exception = new InvalidConfigException(
 		        								"Tag Mangement can only be used on a single VLAN, please fix config and try again."
 		        								);
 		        						throw Exception;

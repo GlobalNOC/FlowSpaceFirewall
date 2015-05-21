@@ -77,20 +77,31 @@ public class FlowStatCacher extends TimerTask{
 		
 		List<IOFSwitch> switches = new ArrayList<IOFSwitch>(this.statsCache.getSwitches());
 		Iterator <IOFSwitch> it = switches.iterator();
-		
 		while(it.hasNext()){
 			IOFSwitch sw = it.next();
-			log.debug("Getting stats for switch: " + sw.getStringId() );
-			List<OFStatistics> statsReply = getFlowStatsForSwitch(sw);
-			statsCache.setFlowCache(sw.getId(), statsReply);
-			HashMap<Short, OFStatistics> portStatsReply = getPortStatsForSwitch(sw);
-			statsCache.setPortCache(sw.getId(), portStatsReply);
-			
-			//check for anything that has expired
-			List<FlowTimeout> timeouts = statsCache.getPossibleExpiredFlows(sw.getId());
-			this.updateExpire(timeouts, sw.getId());
-			statsCache.checkExpireFlows(sw.getId());
-		}
+			try{
+				
+				log.debug("Getting stats for switch: " + sw.getStringId() );
+				List<OFStatistics> statsReply = getFlowStatsForSwitch(sw);
+				statsCache.setFlowCache(sw.getId(), statsReply);
+				HashMap<Short, OFStatistics> portStatsReply = getPortStatsForSwitch(sw);
+				statsCache.setPortCache(sw.getId(), portStatsReply);
+				
+				//check for anything that has expired
+				List<FlowTimeout> timeouts = statsCache.getPossibleExpiredFlows(sw.getId());
+				this.updateExpire(timeouts, sw.getId());
+				statsCache.checkExpireFlows(sw.getId());
+			}catch(Exception e){
+				log.error("Exception thrown in Stat collection handler...");
+				log.error(e.getMessage());
+				StackTraceElement[] trace = e.getStackTrace();
+				for(int i=0; i< trace.length; i++){
+					log.error(trace[i].toString());
+				}
+				statsCache.clearFlowCache(sw.getId());
+			}
+
+		}	
 		
 		
 		//write our cache to disk!
@@ -233,11 +244,11 @@ public class FlowStatCacher extends TimerTask{
         log.debug("Stats cached for switch: " + sw.getId() + ". Total ports stats cached: " + statsReply.size());
         return statsReply;
 	}
-	public void addFlowCache(long switchId, String sliceName, OFFlowMod flowMod) {
-		this.statsCache.addFlowMod(switchId, sliceName, flowMod);
+	public void addFlowCache(long switchId, String sliceName, OFFlowMod flowMod, List<OFFlowMod> flows) {
+		this.statsCache.addFlowMod(switchId, sliceName, flowMod,flows);
 	}
-	public void delFlowCache(long switchId, String sliceName, OFFlowMod flowMod){
-		this.statsCache.delFlowMod(switchId,  sliceName, flowMod);
+	public void delFlowCache(long switchId, String sliceName, OFFlowMod flowMod, List<OFFlowMod> flows){
+		this.statsCache.delFlowMod(switchId,  sliceName, flowMod, flows);
 	}
 	
 	//load the cache from disk

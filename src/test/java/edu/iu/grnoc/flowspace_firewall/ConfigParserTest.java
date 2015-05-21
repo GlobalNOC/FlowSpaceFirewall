@@ -130,7 +130,6 @@ public class ConfigParserTest {
 		thrown.expect(InvalidConfigException.class);
 		thrown.expectMessage("Tag Mangement can only be used on a single VLAN, please fix config and try again.");
 		ConfigParser.parseConfig("src/test/resources/bad_tag_managed_config.xml");
-		
 	}
 	
 	@Test

@@ -151,15 +151,15 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
         }
 	}
 	
-	public void addFlowCache(long switchId, String sliceName, OFFlowMod flowMod){
-		this.statsCacher.addFlowCache(switchId, sliceName,flowMod);
+	public void addFlowCache(long switchId, String sliceName, OFFlowMod flowMod, List<OFFlowMod> flows){
+		this.statsCacher.addFlowCache(switchId, sliceName,flowMod,flows);
 	}
 	
-	public void delFlowCache(long switchId, String sliceName, OFFlowMod flowMod){
-		this.statsCacher.delFlowCache(switchId, sliceName, flowMod);
+	public void delFlowCache(long switchId, String sliceName, OFFlowMod flowMod, List<OFFlowMod> flows){
+		this.statsCacher.delFlowCache(switchId, sliceName, flowMod, flows);
 	}
 	
-	public List<IOFSwitch> getSwitches(){
+	public synchronized List<IOFSwitch> getSwitches(){
 		return this.switches;
 	}
 
@@ -294,7 +294,7 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 	 * this is only called via the web-service
 	 */
 	
-	public boolean reloadConfig(){
+	public synchronized boolean reloadConfig(){
 		ArrayList<HashMap<Long, Slicer>> newSlices;
 		ArrayList<Proxy> toBeRemoved = new ArrayList<Proxy>();
 		//have our new configuration
@@ -473,7 +473,6 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 		}catch(InvalidConfigException e){
 			logger.error(e.getMsg());
 		}
-		
 		if(this.slices == null || this.slices.size() == 0){
 			logger.error("Problem with the configuration file!");
 			throw new FloodlightModuleException("Problem with the Config!");
@@ -546,7 +545,7 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 		
 	}
 	
-	public boolean setSliceAdminState(Long dpid, String sliceName, boolean state){
+	public synchronized boolean setSliceAdminState(Long dpid, String sliceName, boolean state){
 		
 		List<Proxy> proxies = this.controllerConnector.getSwitchProxies(dpid);
 		for(Proxy p: proxies){
@@ -560,7 +559,7 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 		return false;
 	}
 
-	public Proxy getProxy(Long dpid, String sliceName){
+	public synchronized Proxy getProxy(Long dpid, String sliceName){
 		List<Proxy> proxies = this.controllerConnector.getSwitchProxies(dpid);
 		for(Proxy p: proxies){
 			if(p.getSlicer().getSliceName().equals(sliceName)){
