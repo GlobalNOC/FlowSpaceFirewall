@@ -333,9 +333,10 @@ class OFControllerChannelHandler
         }
         
         void processOFQueueGetRequest(OFControllerChannelHandler h, OFMessage m) throws IOException{
-        	OFGetConfigReply response = (OFGetConfigReply) BasicFactory.getInstance().getMessage(OFType.GET_CONFIG_REPLY);
-        	response.setFlags((short)0);
-        	response.setMissSendLength((short)65535);
+        	OFQueueGetConfigRequest message = (OFQueueGetConfigRequest) m;
+        	OFQueueGetConfigReply response = (OFQueueGetConfigReply) BasicFactory.getInstance().getMessage(OFType.QUEUE_GET_CONFIG_REPLY);
+        	response.setLengthU(OFQueueGetConfigReply.MINIMUM_LENGTH);
+        	response.setPortNumber(message.getPortNumber());
             response.setXid(m.getXid());
         	h.sendMessage(response);
         }
