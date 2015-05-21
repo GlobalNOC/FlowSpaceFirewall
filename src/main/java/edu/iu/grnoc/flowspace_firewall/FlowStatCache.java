@@ -446,7 +446,7 @@ public class FlowStatCache{
 			
 			//if it doesn't fit into any slice we need to remove it!
 			if(slice == null){
-				log.error("Error finding/adding flow stat to the cache!  This flow is not a part of any Slice!" + flowStat.toString());
+				log.info("Error finding/adding flow stat to the cache!  This flow is not a part of any Slice!" + flowStat.toString());
 				//remove flow
 				this.deleteFlow(switchId,flowStat);
 			}else{
@@ -479,7 +479,7 @@ public class FlowStatCache{
 						newFlow.setLength((short)(OFFlowMod.MINIMUM_LENGTH + length));
 						this.addFlowMod(switchId, slice.getSliceName(), newFlow, flows);
 					} catch (CloneNotSupportedException e) {
-						log.error("Unable to clone flowMod!");
+						log.warn("Unable to clone flowMod!");
 						return;
 					}
 				}else{
@@ -491,7 +491,7 @@ public class FlowStatCache{
 				if(this.updateFlowStatData(cachedStat, flowStat, flowCount)){
 					return;
 				}else{
-					log.error("error adding a flow we didn't expect to the cache and then updating it");
+					log.warn("error adding a flow we didn't expect to the cache and then updating it");
 				}
 			}
 		}
