@@ -71,7 +71,7 @@ public final class ConfigParser {
 						Slicer otherConfig = otherSlice.get(dpid);
 						if(otherConfig.getSliceName() != config.getSliceName()){
 							if(config.hasOverlap(otherConfig)){
-								log.warn("Overlap detected between slice "+config.getSliceName()+" and slice "
+								log.error("Overlap detected between slice "+config.getSliceName()+" and slice "
 								+otherConfig.getSliceName()+" will not load this configuration");
 								return false;
 							}

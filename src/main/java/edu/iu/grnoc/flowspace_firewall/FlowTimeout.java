@@ -41,7 +41,7 @@ public class FlowTimeout {
 		this.hard = hard;
 		this.context = context;
 		this.expires = new Timestamp( System.currentTimeMillis() + (timeout  * 1000) );
-		log.error("I expire at: " + this.expires.toString());
+		log.debug("I expire at: " + this.expires.toString());
 		this.timeout = timeout;
 		this.packetCount = 0;
 	}
