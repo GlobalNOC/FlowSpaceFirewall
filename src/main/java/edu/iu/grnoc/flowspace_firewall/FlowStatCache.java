@@ -424,43 +424,14 @@ public class FlowStatCache{
 				log.error(flowStat.toString());
 				FSFWOFFlowStatisticsReply parentStat = cachedStat.getParentStat();
 				OFFlowMod flow = this.buildFlowMod(parentStat);
-				Slicer slice = this.parent.getSlice(parentStat.getSliceName()).get(switchId);
+				Slicer slice = this.parent.getProxy(switchId, parentStat.getSliceName()).getSlicer();
 				//get a list of all flows that this will invalidate
 				List<OFFlowMod> flows;
 				if(slice.getTagManagement()){
-					OFMatch match = flowStat.getMatch().clone();
-					match.setDataLayerVirtualLan((short)0);
-					match.setWildcards(match.getWildcardObj().wildcard(Wildcards.Flag.DL_VLAN));
-					stat = this.findCachedStat(switchId, match, slice.getSliceName());
-					
-				}
-				
-				if(stat == null){
-					//ok still didn't match... now to wildcard both the VLAN and IN_PORT
-					OFMatch match = flowStat.getMatch().clone();
-					match.setDataLayerVirtualLan((short)0);
-					match.setWildcards(match.getWildcardObj().wildcard(Wildcards.Flag.DL_VLAN));
-					match.setInputPort((short)0);
-					match.setWildcards(match.getWildcardObj().wildcard(Wildcards.Flag.IN_PORT));
-					stat = this.findCachedStat(switchId, match, slice.getSliceName());
-				}
-				
-				if(stat == null){
-					log.debug("Switch: " + switchId + ", Unable to find a flow that matches this flow in my cache, adding it");
-					log.debug(flowStat.toString());
-					if(slice.getTagManagement()){
-						OFMatch match = flowStat.getMatch().clone();
-						match.setDataLayerVirtualLan((short)0);
-						match.setWildcards(match.getWildcardObj().wildcard(Wildcards.Flag.DL_VLAN));
-						flowMod.setMatch(match);
-						this.addFlowMod(switchId, slice.getSliceName(), flowMod);
-						stat = this.findCachedStat(switchId,  flowMod.getMatch());
-					}else{
-						this.addFlowMod(switchId, slice.getSliceName(), flowMod);
-						stat = this.findCachedStat(switchId,  flowMod.getMatch());
-					}
+					log.error("Managed Flows");
 					flows = slice.managedFlows(flow);
 				}else{
+					log.error("Allowed Flows!'");
 					flows = slice.allowedFlows(flow);
 				}
 				this.delFlowMod(switchId, slice.getSliceName(),flow, flows);
@@ -475,7 +446,7 @@ public class FlowStatCache{
 			
 			//if it doesn't fit into any slice we need to remove it!
 			if(slice == null){
-				log.error("Error finding/adding flow stat to the cache!  This flow is not a part of any Slice!" + flowStat.toString());
+				log.info("Error finding/adding flow stat to the cache!  This flow is not a part of any Slice!" + flowStat.toString());
 				//remove flow
 				this.deleteFlow(switchId,flowStat);
 			}else{
@@ -508,7 +479,7 @@ public class FlowStatCache{
 						newFlow.setLength((short)(OFFlowMod.MINIMUM_LENGTH + length));
 						this.addFlowMod(switchId, slice.getSliceName(), newFlow, flows);
 					} catch (CloneNotSupportedException e) {
-						log.error("Unable to clone flowMod!");
+						log.warn("Unable to clone flowMod!");
 						return;
 					}
 				}else{
@@ -520,7 +491,7 @@ public class FlowStatCache{
 				if(this.updateFlowStatData(cachedStat, flowStat, flowCount)){
 					return;
 				}else{
-					log.error("error adding a flow we didn't expect to the cache and then updating it");
+					log.warn("error adding a flow we didn't expect to the cache and then updating it");
 				}
 			}
 		}
