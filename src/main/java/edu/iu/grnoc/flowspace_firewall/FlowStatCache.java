@@ -428,6 +428,37 @@ public class FlowStatCache{
 				//get a list of all flows that this will invalidate
 				List<OFFlowMod> flows;
 				if(slice.getTagManagement()){
+					OFMatch match = flowStat.getMatch().clone();
+					match.setDataLayerVirtualLan((short)0);
+					match.setWildcards(match.getWildcardObj().wildcard(Wildcards.Flag.DL_VLAN));
+					stat = this.findCachedStat(switchId, match, slice.getSliceName());
+					
+				}
+				
+				if(stat == null){
+					//ok still didn't match... now to wildcard both the VLAN and IN_PORT
+					OFMatch match = flowStat.getMatch().clone();
+					match.setDataLayerVirtualLan((short)0);
+					match.setWildcards(match.getWildcardObj().wildcard(Wildcards.Flag.DL_VLAN));
+					match.setInputPort((short)0);
+					match.setWildcards(match.getWildcardObj().wildcard(Wildcards.Flag.IN_PORT));
+					stat = this.findCachedStat(switchId, match, slice.getSliceName());
+				}
+				
+				if(stat == null){
+					log.debug("Switch: " + switchId + ", Unable to find a flow that matches this flow in my cache, adding it");
+					log.debug(flowStat.toString());
+					if(slice.getTagManagement()){
+						OFMatch match = flowStat.getMatch().clone();
+						match.setDataLayerVirtualLan((short)0);
+						match.setWildcards(match.getWildcardObj().wildcard(Wildcards.Flag.DL_VLAN));
+						flowMod.setMatch(match);
+						this.addFlowMod(switchId, slice.getSliceName(), flowMod);
+						stat = this.findCachedStat(switchId,  flowMod.getMatch());
+					}else{
+						this.addFlowMod(switchId, slice.getSliceName(), flowMod);
+						stat = this.findCachedStat(switchId,  flowMod.getMatch());
+					}
 					flows = slice.managedFlows(flow);
 				}else{
 					flows = slice.allowedFlows(flow);

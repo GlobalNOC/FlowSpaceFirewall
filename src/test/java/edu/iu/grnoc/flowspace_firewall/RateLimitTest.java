@@ -18,8 +18,11 @@ package edu.iu.grnoc.flowspace_firewall;
 
 import static org.junit.Assert.*;
 
+import java.util.Date;
 
 
+
+import org.apache.commons.collections4.queue.CircularFifoQueue;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -73,6 +76,20 @@ public class RateLimitTest {
 		}
 
 		assertTrue("Rate Limit: " + tracker.getRate(), tracker.getRate() >= 9);
+	}
+	
+	@Test
+	public void testRateLimitFast(){
+		RateTracker tracker = new RateTracker(2000,10000);
+	
+		CircularFifoQueue<Date> fifo = tracker.getFifo();
+		Date now = new Date();
+		for(int i =0; i< 1000;i++){
+			fifo.add(now);
+		}
+		
+		assertTrue("Tracker Rate is " + tracker.getRate(), tracker.getRate() == (1000 * 1000));
+		
 	}
 	
 	

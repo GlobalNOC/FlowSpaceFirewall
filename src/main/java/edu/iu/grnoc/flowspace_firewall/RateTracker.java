@@ -46,34 +46,42 @@ public class RateTracker {
 	}
 	
 	
-	public synchronized double getRate(){
-		if(myFifo.size() == 0){
-			log.debug("circular queue is empty, returning 0");
-			return 0;
-		}
-		log.debug("calculating current rate");
-		long end = myFifo.get(myFifo.size() - 1).getTime();
-		long start = myFifo.get(0).getTime();
-		log.debug("#packets = " + myFifo.size() + " / end = " + end + " start = " + start);
-		if(end - start <= 0){
-			return 0;
-		}
-		return (myFifo.size() / ((end - start)/1000.0));
+	public double getRate(){
+		return get_rate_helper(null);
 	}
 	
-	public synchronized double getRate(Date now){
-		if(myFifo.size() == 0){
-			log.debug("circular queue is empty, returning 0");
+	public double getRate(Date now){
+		return get_rate_helper(now);
+	}
+	
+	
+	public CircularFifoQueue<Date> getFifo(){
+		return this.myFifo;
+	}
+	
+	private synchronized double get_rate_helper(Date now){
+		if(myFifo.size() <= myFifo.maxSize() / 10){
+			log.debug("circular queue is too small, returning 0");
 			return 0;
 		}
 		log.debug("calculating current rate");
-		long end = now.getTime() / 1000;
-		long start = myFifo.get(0).getTime() / 1000;
-		log.debug("#packets = " + myFifo.size() + " / end = " + end + " start = " + start);
-		if(end - start <= 0){
-			return 0;
+		
+		long end;
+		if(now == null){
+			end = myFifo.get(myFifo.size()-1).getTime();
+		}else{
+			end = now.getTime();
 		}
-		return (myFifo.size() / (end - start));
+		
+		long start = myFifo.get(0).getTime();
+		//log.error("#packets = " + myFifo.size() + " / end = " + end + " start = " + start);
+
+		if(end - start <= 0){
+			//this means that our entire circular queue has the same ms
+			//so that means our packet rate is fifo size * 1000
+			return myFifo.size() * 1000;
+		}
+		return (myFifo.size() / ((end - start) / 1000.0));
 	}
 	
 	public void setRate(int flowRate){
