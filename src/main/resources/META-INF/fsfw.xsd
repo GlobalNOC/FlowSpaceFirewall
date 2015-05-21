@@ -13,6 +13,7 @@
 	</xs:element>
         <xs:element minOccurs="1" maxOccurs="unbounded" ref="slice"/>
       </xs:sequence>
+      <xs:attribute name="stats_poll_interval" use="optional" type="xs:integer"/>
     </xs:complexType>
   </xs:element>
   <xs:element name="slice">
