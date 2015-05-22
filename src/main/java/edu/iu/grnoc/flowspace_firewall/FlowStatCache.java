@@ -425,6 +425,13 @@ public class FlowStatCache{
 				FSFWOFFlowStatisticsReply parentStat = cachedStat.getParentStat();
 				OFFlowMod flow = this.buildFlowMod(parentStat);
 				Slicer slice = this.parent.getProxy(switchId, parentStat.getSliceName()).getSlicer();
+				if(slice == null){
+					//uh ok so this flow is not a part of any slice
+					//kind of a convoluted situation here
+					//delete the flow
+					this.deleteFlow(switchId, parentStat);
+					return;
+				}
 				//get a list of all flows that this will invalidate
 				List<OFFlowMod> flows;
 				if(slice.getTagManagement()){
