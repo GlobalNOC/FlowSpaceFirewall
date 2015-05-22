@@ -71,6 +71,8 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
     private List<IOFSwitch> switches;
     private FlowStatCacher statsCacher;
     private ControllerConnector controllerConnector;
+    private HashMap<Long, SwitchConfig> switchConfigs;
+    private FlowSpaceFirewallParams flowSpaceFirewallParams;
     protected IRestApiService restApi;
     
     
@@ -103,10 +105,40 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
         //we don't want there to be a lot of switches with this
         for(IOFSwitch tmpSw : this.switches){
         	if(tmpSw.getId() == switchId){
-        		logger.error("Switch is already listed as connected!  Removing!");
+        		logger.info("Switch is already listed as connected!  Removing!");
         		this.switchRemoved(switchId);
         	}
         }
+        
+        if(this.switchConfigs.containsKey(switchId)){
+        	SwitchConfig swConf = this.switchConfigs.get(switchId);
+        	logger.info("Switch: " + swConf.getName()+ " has joined");
+        	if(swConf.getFlushRulesOnConnect()){
+        		logger.info("Switch: " + swConf.getName() + " Sending delete all flows");
+        		OFFlowMod mod = new OFFlowMod();
+        		mod.setCommand(OFFlowMod.OFPFC_DELETE);
+        		try {
+					sw.write(mod, null);
+				} catch (IOException e) {
+					logger.error("Error sending delete all rules to switch: " + swConf.getName());
+					e.printStackTrace();
+				}
+        	}
+        	
+        	if(swConf.getInstallDefaultDrop()){
+        		logger.info("Switch: " + swConf.getName() + " Sending default drop rule");
+        		OFFlowMod mod = new OFFlowMod();
+        		mod.setPriority((short)1);
+        		mod.setCommand(OFFlowMod.OFPFC_ADD);
+        		try {
+					sw.write(mod, null);
+				} catch (IOException e) {
+					logger.error("Error sending default drop rule to switch: " + swConf.getName());
+					e.printStackTrace();
+				}
+        	}
+        }
+        
         this.switches.add(sw);
         //loop through all slices
         for(HashMap<Long, Slicer> slice: slices){
@@ -186,7 +218,7 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 	
 	@Override
 	public void switchRemoved(long switchId) {
-		logger.error("Switch removed!");
+		logger.debug("Switch removed!");
 		List <Proxy> proxies = controllerConnector.getSwitchProxies(switchId);
 		Iterator <Proxy> it = proxies.iterator();
 
@@ -235,6 +267,9 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 	@Override
 	public void switchActivated(long switchId) {
 		logger.debug("Switch Activated");
+		//if we are suppose to clear the flows send delete all
+		//if we are suppose to install default drop install default drop
+		
 	}
 	
 	public void removeProxy(Long switchId, Proxy p){
@@ -284,7 +319,7 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 			
 			List <Proxy> proxies = controllerConnector.getAllProxies();
 							
-			logger.warn("number of proxies " + proxies.size() );
+			logger.debug("number of proxies " + proxies.size() );
 			for(Proxy p : proxies){
 				//we now know the proxy and the switch (so we know the slice name and the switch)
 				//now we need to find the slice in the newSlices variable and set the proxy to it
@@ -293,14 +328,14 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 					logger.debug("number of switches in newslice:"+slice.keySet().size());
 					if(slice.containsKey(p.getSwitch().getId()) && slice.get(p.getSwitch().getId()).getSliceName().equals(p.getSlicer().getSliceName())){
 				  		p.setSlicer(slice.get(p.getSwitch().getId()));
-				        logger.warn("Slice " + p.getSlicer().getSliceName() + " was found, setting updated to true");
+				        logger.debug("Slice " + p.getSlicer().getSliceName() + " was found, setting updated to true");
 					    updated = true;			        		
 					    slice.remove(p.getSwitch().getId());
 					}
 				}
 				
 				if(!updated){
-					logger.warn("Slice "
+					logger.debug("Slice "
 							+p.getSlicer().getSliceName()+":" + p.getSlicer().getSwitchName() +" was not found, removing");
 					p.disconnect();
 					toBeRemoved.add(p);
@@ -310,7 +345,7 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 			//so now we have updated all the ones connected and removed all the ones that are no longer there
 			//we still need to connect up new ones
 			Iterator <HashMap<Long,Slicer>> sliceIt2 = newSlices.iterator();
-			logger.warn("Number of items left in newSlices: " + newSlices.size());
+			logger.debug("Number of items left in newSlices: " + newSlices.size());
 			while(sliceIt2.hasNext()){
 				//iterate over the slices
 				HashMap<Long,Slicer> slice = sliceIt2.next();
@@ -369,7 +404,7 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 		List <Proxy> proxies = controllerConnector.getSwitchProxies(sw.getId());
 		
 		if(proxies == null){
-			logger.warn("No proxies for switch: " + sw.getStringId());
+			logger.debug("No proxies for switch: " + sw.getStringId());
 			return Command.CONTINUE;
 		}
 
@@ -442,8 +477,45 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 			logger.error("Problem with the configuration file!");
 			throw new FloodlightModuleException("Problem with the Config!");
 		}
+		
+		try{
+			this.switchConfigs = ConfigParser.parseSwitchConfig(configFile);
+		}catch (SAXException e){
+			logger.error("Problems parsing " + configFile + ": " + e.getMessage());
+		}catch (IOException e){
+			logger.error("Problems parsing " + configFile + ": " + e.getMessage());
+		} catch(ParserConfigurationException e){
+			logger.error(e.getMessage());
+		} catch(XPathExpressionException e){
+			logger.error(e.getMessage());
+		}catch(InvalidConfigException e){
+			logger.error(e.getMsg());
+		}
 
+		if(this.switchConfigs == null || this.slices.size() ==0){
+			logger.error("Problem with the configuration file!");
+			throw new FloodlightModuleException("Problem with the Config!");
+		}
         
+		try{
+			this.flowSpaceFirewallParams = ConfigParser.parseFlowSpaceFirewallParams(configFile);
+		}catch (SAXException e){
+			logger.error("Problems parsing " + configFile + ": " + e.getMessage());
+		}catch (IOException e){
+			logger.error("Problems parsing " + configFile + ": " + e.getMessage());
+		} catch(ParserConfigurationException e){
+			logger.error(e.getMessage());
+		} catch(XPathExpressionException e){
+			logger.error(e.getMessage());
+		}catch(InvalidConfigException e){
+			logger.error(e.getMsg());
+		}
+
+		if(this.flowSpaceFirewallParams == null){
+			logger.error("Problem with the configuration file!");
+			throw new FloodlightModuleException("Problem with the Config!");
+		}
+		
 	}
 
 	@Override
@@ -462,7 +534,7 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 		statsTimer = new Timer("StatsTimer");
 		statsCacher = new FlowStatCacher(this);
 		this.statsCacher.loadCache();
-		statsTimer.scheduleAtFixedRate(statsCacher, 0, 10 * 1000);
+		statsTimer.scheduleAtFixedRate(statsCacher, 0, this.flowSpaceFirewallParams.getStatsPollInterval() * 1000);
 		
 		//start up the controller connector timer
 		controllerConnectTimer = new Timer("ControllerConnectionTimer");
@@ -497,15 +569,4 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 		return null;
 	}
 	
-/*	@Override
-	public List<OFStatistics> getSliceFlows(String sliceName, Long dpid) {
-		return this.statsCacher.getSlicedFlowStats(dpid, sliceName));
-	}
-*/
-/*	@Override
-	public HashMap<String, Object> getSliceStatus(String sliceName, Long dpid) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-	*/
 }

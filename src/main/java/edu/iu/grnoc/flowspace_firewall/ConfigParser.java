@@ -17,7 +17,6 @@ package edu.iu.grnoc.flowspace_firewall;
 
 import java.io.File;
 import java.io.IOException;
-
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -71,7 +70,7 @@ public final class ConfigParser {
 						Slicer otherConfig = otherSlice.get(dpid);
 						if(otherConfig.getSliceName() != config.getSliceName()){
 							if(config.hasOverlap(otherConfig)){
-								log.warn("Overlap detected between slice "+config.getSliceName()+" and slice "
+								log.error("Overlap detected between slice "+config.getSliceName()+" and slice "
 								+otherConfig.getSliceName()+" will not load this configuration");
 								return false;
 							}
@@ -82,6 +81,137 @@ public final class ConfigParser {
 		}
 		
 		return true;
+	}
+	
+	public static FlowSpaceFirewallParams parseFlowSpaceFirewallParams(String xmlFile) throws IOException, SAXException, ParserConfigurationException, InvalidConfigException, XPathExpressionException, NumberFormatException{
+		FlowSpaceFirewallParams flowSpaceFirewallParams = new FlowSpaceFirewallParams();
+		
+		Document document;
+		try{
+			DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+    		//these enable the proper security to prevent
+    		//XML entity expansion injection (http://www.hpenterprisesecurity.com/vulncat/en/vulncat/dotnet/xee_injection.html)
+    		//XML External Entity Injection (https://www.owasp.org/index.php/XML_External_Entity_(XXE)_Processing)
+    		dbf.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
+    		dbf.setExpandEntityReferences(false);
+    		dbf.setFeature("http://xml.org/sax/features/external-general-entities", false);
+    		dbf.setFeature("http://xml.org/sax/features/external-parameter-entities", false);
+    		DocumentBuilder parser = dbf.newDocumentBuilder();
+    		document = parser.parse(new File(xmlFile));
+    	
+	        // create a SchemaFactory capable of understanding WXS schemas
+	        SchemaFactory factory = SchemaFactory.newInstance("http://www.w3.org/2001/XMLSchema");
+	
+	        // load a WXS schema, represented by a Schema instance
+	        Source schemaFile = new StreamSource(new File("/etc/fsfw/fsfw.xsd"));
+	        Schema schema = factory.newSchema(schemaFile);
+	        
+	        // create a Validator instance, which can be used to validate an instance document
+			Validator validator = schema.newValidator();
+	        
+	        // validate the DOM tree
+	        validator.validate(new DOMSource(document));
+    	
+	        //get a list of all switches and slices
+	        XPath xPath = XPathFactory.newInstance().newXPath();
+	        String fsfwExpression = "/flowspace_firewall";
+	        Node fsfwNode = (Node) xPath.compile(fsfwExpression).evaluate(document,XPathConstants.NODE);
+	        
+	        int statsPollInterval;
+	        
+	        if(fsfwNode.getAttributes().getNamedItem("stats_poll_interval") != null){
+	        	try{
+	        		statsPollInterval = Integer.parseInt(fsfwNode.getAttributes().getNamedItem("stats_poll_interval").getTextContent());
+	        	}
+	        	catch (NumberFormatException e){
+	        		log.error("Problem parsing " + xmlFile + ": " + e.getMessage());
+	        		throw e;
+	        	}
+	        
+	        	flowSpaceFirewallParams.setStatsPollInterval(statsPollInterval);
+	        }
+		}catch (SAXException e) {
+			log.error("Problems parsing " + xmlFile + ": " + e.getMessage());
+			throw e;
+		}catch (ParserConfigurationException e){
+			log.error("Problems parsing " + xmlFile + ": " + e.getMessage());
+			throw e;
+		}catch (XPathExpressionException e){
+			log.error("Problems parsing " + xmlFile + ": " + e.getMessage());
+			throw e;
+		}
+		
+		return flowSpaceFirewallParams;
+	}
+	
+	public static HashMap<Long, SwitchConfig> parseSwitchConfig(String xmlFile) throws IOException, SAXException, ParserConfigurationException,XPathExpressionException, InvalidConfigException{
+		HashMap<Long, SwitchConfig> switchHash = new HashMap<Long, SwitchConfig>();
+		
+		Document document;
+    	try {
+    		DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+    		//these enable the proper security to prevent
+    		//XML entity expansion injection (http://www.hpenterprisesecurity.com/vulncat/en/vulncat/dotnet/xee_injection.html)
+    		//XML External Entity Injection (https://www.owasp.org/index.php/XML_External_Entity_(XXE)_Processing)
+    		dbf.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
+    		dbf.setExpandEntityReferences(false);
+    		dbf.setFeature("http://xml.org/sax/features/external-general-entities", false);
+    		dbf.setFeature("http://xml.org/sax/features/external-parameter-entities", false);
+    		DocumentBuilder parser = dbf.newDocumentBuilder();
+    		document = parser.parse(new File(xmlFile));
+    	
+	        // create a SchemaFactory capable of understanding WXS schemas
+	        SchemaFactory factory = SchemaFactory.newInstance("http://www.w3.org/2001/XMLSchema");
+	
+	        // load a WXS schema, represented by a Schema instance
+	        Source schemaFile = new StreamSource(new File("/etc/fsfw/fsfw.xsd"));
+	        Schema schema = factory.newSchema(schemaFile);
+	        
+	        // create a Validator instance, which can be used to validate an instance document
+			Validator validator = schema.newValidator();
+	        
+	        // validate the DOM tree
+	        validator.validate(new DOMSource(document));
+    	
+	        //get a list of all switches and slices
+	        XPath xPath = XPathFactory.newInstance().newXPath();
+	        XPathExpression switchExpression = xPath.compile("/flowspace_firewall/switch");
+	        NodeList switches = (NodeList) switchExpression.evaluate(document,XPathConstants.NODESET);
+	        
+	        for(int i=0;i<switches.getLength();i++){
+	        	SwitchConfig swConf = new SwitchConfig();
+	        	Node mySwitch = switches.item(i);
+	        	String dpidStr = (String) mySwitch.getAttributes().getNamedItem("dpid").getTextContent();
+	        	Long DPID = HexString.toLong(dpidStr);
+	        	swConf.setDPID(DPID);
+	        	swConf.setName(mySwitch.getAttributes().getNamedItem("name").getTextContent());
+	        	Node default_drop = mySwitch.getAttributes().getNamedItem("install_default_drop");
+	        	if(default_drop != null){
+	        		String default_drop_str = mySwitch.getAttributes().getNamedItem("install_default_drop").getTextContent();
+	        		if(default_drop_str == "true"){
+	        			swConf.setInstallDefaultDrop(true);
+	        		}
+	        	}
+	        	String flush_rules = mySwitch.getAttributes().getNamedItem("flush_rules_on_connect").getTextContent();
+	        	if(flush_rules != null){
+	        		if(flush_rules == "true"){
+	        			swConf.setFlushRulesOnConnect(true);
+	        		}
+	        	}
+	        	switchHash.put(DPID, swConf);
+	        }
+    	}catch (SAXException e) {
+    		log.error("Problems parsing " + xmlFile + ": " + e.getMessage());
+    		throw e;
+        }catch (ParserConfigurationException e){
+        	log.error("Problems parsing " + xmlFile + ": " + e.getMessage());
+        	throw e;
+        }catch (XPathExpressionException e){
+        	log.error("Problems parsing " + xmlFile + ": " + e.getMessage());
+        	throw e;
+        }
+    	
+    	return switchHash;
 	}
 	
 	//the only method we need here
@@ -198,8 +328,18 @@ public final class ConfigParser {
 		        						continue;
 		        					}
 		        					if(tag_management && Short.parseShort(range.getAttributes().getNamedItem("start").getTextContent()) != Short.parseShort(range.getAttributes().getNamedItem("end").getTextContent())){
-		        						log.error("Tag Mangement can only be used on a single VLAN, please fix config and try again");
-		        						throw new InvalidConfigException("Configuration is not valid!");
+								    InvalidConfigException Exception = new InvalidConfigException(
+		        								"Tag Mangement can only be used on a single VLAN, please fix config and try again."
+		        								);
+		        						throw Exception;
+		        					}
+		        					if(Short.parseShort(range.getAttributes().getNamedItem("start").getTextContent()) > Short.parseShort(range.getAttributes().getNamedItem("end").getTextContent())){
+		        						InvalidConfigException Exception = new InvalidConfigException(
+		        								"Start VLAN higher than end VLAN for Slice: " + slicer.getSliceName() +
+		        								", Switch: " + slicer.getSwitchName() +
+		        								", Port: " + pConfig.getPortName()
+		        								);
+		        						throw Exception;
 		        					}
 		        					for(short m = Short.parseShort(range.getAttributes().getNamedItem("start").getTextContent()); 
 		        							m <= Short.parseShort(range.getAttributes().getNamedItem("end").getTextContent()); m++){
@@ -211,8 +351,10 @@ public final class ConfigParser {
 		        				//add the port config to the slicer
 		        				slicer.setPortConfig(pConfig.getPortName(), pConfig);
 		        				if(tag_management == true && myRange.getAvailableTags().length > 1){
-		        					log.error("Tag Management can only be used on a single VLAN, please fix config and try again");
-		        					throw new InvalidConfigException("Configuration is not valid!");
+		        					InvalidConfigException Exception = new InvalidConfigException(
+	        								"Tag Mangement can only be used on a single VLAN, please fix config and try again."
+	        								);
+	        						throw Exception;
 		        				}
 		        			}
 	        				//add the slicer to the whole slice container (all switches)

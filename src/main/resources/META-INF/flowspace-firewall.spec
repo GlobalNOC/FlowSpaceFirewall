@@ -1,5 +1,5 @@
 Name: flowspace-firewall
-Version: 1.0.4b
+Version: 1.0.5
 Release: 1%{?dist}
 Summary: Flowspace Firewall
 License: CHECK(Distributable)
@@ -52,6 +52,7 @@ rm -rf $RPM_BUILD_ROOT
 %defattr(755 ,fsfw, root, -)
 /usr/share/fsfw/floodlight.jar
 /usr/share/fsfw/flowspace_firewall.jar
+/usr/share/fsfw/config_test.jar
 /var/lib/floodlight
 /var/run/fsfw
 

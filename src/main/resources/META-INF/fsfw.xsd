@@ -8,10 +8,12 @@
 	    <xs:attribute name="name" type="xs:string" use="required" />
 	    <xs:attribute name="dpid" type="xs:string" use="required" />
 	    <xs:attribute name="flush_rules_on_connect" type="xs:boolean" use="required" />
+	    <xs:attribute name="install_default_drop" type="xs:boolean" use="optional" />
 	  </xs:complexType>
 	</xs:element>
         <xs:element minOccurs="1" maxOccurs="unbounded" ref="slice"/>
       </xs:sequence>
+      <xs:attribute name="stats_poll_interval" use="optional" type="xs:integer"/>
     </xs:complexType>
   </xs:element>
   <xs:element name="slice">

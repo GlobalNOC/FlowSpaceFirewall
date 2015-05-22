@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<flowspace_firewall stats_poll_interval='10' >
+<flowspace_firewall stats_poll_interval='lol' >
   <switch name="foo" dpid="1" flush_rules_on_connect="false" />
   <switch name="foo1" dpid="2" flush_rules_on_connect="false" />
   <switch name="foo2" dpid="3" flush_rules_on_connect="false" />

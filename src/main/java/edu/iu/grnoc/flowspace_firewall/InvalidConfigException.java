@@ -14,4 +14,7 @@ public class InvalidConfigException extends Exception {
 		return this.msg;
 	}
 	
+	public String getMessage(){
+		return this.msg;
+	}
 }

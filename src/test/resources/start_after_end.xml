@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<flowspace_firewall stats_poll_interval='10' >
+<flowspace_firewall>
   <switch name="foo" dpid="1" flush_rules_on_connect="false" />
   <switch name="foo1" dpid="2" flush_rules_on_connect="false" />
   <switch name="foo2" dpid="3" flush_rules_on_connect="false" />
@@ -24,7 +24,7 @@
 
       <switch name="foo2" max_flows="10" flow_rate="1" packet_in_rate="100"  flush_rules_on_connect="1">
         <port name="s2-eth1">
-          <range start="1" end="2000" />
+          <range start="2001" end="2000" />
         </port>
 
         <port name="s2-eth2">
@@ -78,5 +78,7 @@
       <controller ip_address="140.182.45.45" ssl="false" port="6633" />
 
     </slice>
+
+
 
 </flowspace_firewall>

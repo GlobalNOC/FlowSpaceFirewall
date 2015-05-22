@@ -57,7 +57,7 @@ public class SlicerStatusResource extends ServerResource{
 			
 			Slicer mySlice = slice.get(dpid);
 			results.put("flow_rate", "N/A");
-			results.put("total_flows", 0);
+			results.put("total_flows_per_sec", 0);
 			results.put("max_flows", mySlice.getMaxFlows());
 			results.put("connected",  false);
 			results.put("DPID", dpidStr );
@@ -83,7 +83,7 @@ public class SlicerStatusResource extends ServerResource{
 		
 		results.put("flow_rate", myProxy.getSlicer().getRate() );
 		results.put("total_flows", myProxy.getFlowCount());
-		results.put("max_flows",  myProxy.getSlicer().getMaxFlows());
+		results.put("max_flows_per_sec",  myProxy.getSlicer().getMaxFlows());
 		results.put("connected", myProxy.connected());
 		results.put("DPID", myProxy.getSwitch().getStringId());
 		results.put("max_packet_in_rate",  myProxy.getSlicer().getPacketInRate());
