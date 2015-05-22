@@ -423,7 +423,7 @@ public class VLANSlicer implements Slicer{
 					//if its an output, verify that the 
 					OFActionOutput output = (OFActionOutput)action;
 					if(output.getPort() == OFPort.OFPP_ALL.getValue()){
-						log.info("output to ALL expanding");
+						log.debug("output to ALL expanding");
 						
 						for(Map.Entry<String, PortConfig> port : this.portList.entrySet()){
 							PortConfig myPortCfg = this.getPortConfig(port.getValue().getPortId());
@@ -453,7 +453,7 @@ public class VLANSlicer implements Slicer{
 								newOut.setActions(actualActions);
 								int size = 0;
 								for(OFAction act : actualActions){
-									log.error("Packet Out Action: " + act.getType());
+									log.debug("Packet Out Action: " + act.getType());
 									size = size + act.getLengthU();
 								}
 								newOut.setActionsLength((short)size);
