@@ -451,6 +451,14 @@ public class FlowStatCache{
 			OFFlowMod flow = this.buildFlowMod(flowStat);
 			Slicer slice = this.findSliceForFlow(switchId, flow);
 			
+			//check to see if it is the default drop rule
+			if(flow.getMatch().match(new OFMatch())){
+				if(flow.getActions().size() == 0){
+					//default drop rule... do nothing
+					return;
+				}
+			}
+			
 			//if it doesn't fit into any slice we need to remove it!
 			if(slice == null){
 				log.info("Error finding/adding flow stat to the cache!  This flow is not a part of any Slice!" + flowStat.toString());
