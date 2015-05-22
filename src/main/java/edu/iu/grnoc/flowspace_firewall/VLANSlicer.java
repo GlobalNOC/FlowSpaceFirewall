@@ -690,6 +690,7 @@ public class VLANSlicer implements Slicer{
 					short vlanId;
 					PortConfig pConfig = this.getPortConfig(match.getInputPort());
 					if(pConfig == null){
+						log.warn("Unable to find port config for: " + match.getInputPort());
 						flows.clear();
 						return flows;
 					}else{
@@ -736,6 +737,7 @@ public class VLANSlicer implements Slicer{
 					if(out.getPort() == OFPort.OFPP_ALL.getValue()){
 						//in the case of output all... we need to expand
 						//TODO handle OUTPUT ALL
+						log.debug("Handling OUTPUT: ALL");
 						Iterator<Entry<String, PortConfig>> it = this.portList.entrySet().iterator();
 						while(it.hasNext()){
 							Map.Entry<String, PortConfig> port = (Entry<String, PortConfig>) it.next();
@@ -755,7 +757,7 @@ public class VLANSlicer implements Slicer{
 									additional_length += set_vlan_vid.getLength();
 								}
 								OFActionOutput newOut = new OFActionOutput();
-								out.setPort(port.getValue().getPortId());
+								newOut.setPort(port.getValue().getPortId());
 								newActions.add(newOut);
 								additional_length += newOut.getLength();
 							}
