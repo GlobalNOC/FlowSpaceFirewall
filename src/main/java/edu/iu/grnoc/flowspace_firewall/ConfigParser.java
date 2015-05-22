@@ -187,16 +187,13 @@ public final class ConfigParser {
 	        	swConf.setName(mySwitch.getAttributes().getNamedItem("name").getTextContent());
 	        	Node default_drop = mySwitch.getAttributes().getNamedItem("install_default_drop");
 	        	if(default_drop != null){
-	        		String default_drop_str = mySwitch.getAttributes().getNamedItem("install_default_drop").getTextContent();
-	        		if(default_drop_str == "true"){
-	        			swConf.setInstallDefaultDrop(true);
-	        		}
+	        		Boolean default_drop_value = Boolean.parseBoolean(mySwitch.getAttributes().getNamedItem("install_default_drop").getTextContent());
+        			swConf.setInstallDefaultDrop(default_drop_value);
 	        	}
-	        	String flush_rules = mySwitch.getAttributes().getNamedItem("flush_rules_on_connect").getTextContent();
+	        	Node flush_rules = mySwitch.getAttributes().getNamedItem("flush_rules_on_connect");
 	        	if(flush_rules != null){
-	        		if(flush_rules == "true"){
-	        			swConf.setFlushRulesOnConnect(true);
-	        		}
+	        		Boolean flush_rules_value = Boolean.parseBoolean(mySwitch.getAttributes().getNamedItem("flush_rules_on_connect").getTextContent());
+	        		swConf.setFlushRulesOnConnect(flush_rules_value);
 	        	}
 	        	switchHash.put(DPID, swConf);
 	        }
