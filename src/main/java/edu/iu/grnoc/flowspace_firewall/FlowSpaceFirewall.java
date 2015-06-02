@@ -42,8 +42,10 @@ import net.floodlightcontroller.core.module.IFloodlightService;
 import net.floodlightcontroller.restserver.IRestApiService;
 
 import org.openflow.protocol.OFFlowMod;
+import org.openflow.protocol.OFMatch;
 import org.openflow.protocol.OFMessage;
 import org.openflow.protocol.OFType;
+import org.openflow.protocol.Wildcards;
 import org.openflow.protocol.statistics.OFStatistics;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -113,27 +115,32 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
         if(this.switchConfigs.containsKey(switchId)){
         	SwitchConfig swConf = this.switchConfigs.get(switchId);
         	logger.info("Switch: " + swConf.getName()+ " has joined");
+        	List<OFMessage> msgs = new ArrayList<OFMessage>();
         	if(swConf.getFlushRulesOnConnect()){
         		logger.info("Switch: " + swConf.getName() + " Sending delete all flows");
         		OFFlowMod mod = new OFFlowMod();
+        		OFMatch match = new OFMatch();
+        		mod.setMatch(match);
         		mod.setCommand(OFFlowMod.OFPFC_DELETE);
-        		try {
-					sw.write(mod, null);
-				} catch (IOException e) {
-					logger.error("Error sending delete all rules to switch: " + swConf.getName());
-					e.printStackTrace();
-				}
+        		mod.setLengthU( OFFlowMod.MINIMUM_LENGTH);
+        		msgs.add(mod);
         	}
         	
         	if(swConf.getInstallDefaultDrop()){
         		logger.info("Switch: " + swConf.getName() + " Sending default drop rule");
         		OFFlowMod mod = new OFFlowMod();
+        		OFMatch match = new OFMatch();
+        		mod.setMatch(match);
         		mod.setPriority((short)1);
         		mod.setCommand(OFFlowMod.OFPFC_ADD);
-        		try {
-					sw.write(mod, null);
+        		mod.setLengthU( OFFlowMod.MINIMUM_LENGTH);
+        		msgs.add(mod);
+        	}
+        	if(msgs.size() > 0){
+	    		try {
+					sw.write(msgs, null);
 				} catch (IOException e) {
-					logger.error("Error sending default drop rule to switch: " + swConf.getName());
+					logger.error("Error sending flush or default drop rule to switch: " + swConf.getName());
 					e.printStackTrace();
 				}
         	}
