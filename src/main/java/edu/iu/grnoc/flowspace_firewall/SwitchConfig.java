@@ -29,7 +29,7 @@ public class SwitchConfig {
 	}
 	
 	public boolean getInstallDefaultDrop(){
-		return this.flush_on_connect;
+		return this.install_default_drop;
 	}
 	
 	public void setName(String value){
