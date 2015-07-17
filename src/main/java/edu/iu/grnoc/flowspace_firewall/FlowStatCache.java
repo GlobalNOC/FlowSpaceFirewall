@@ -728,7 +728,10 @@ public class FlowStatCache{
 	
 	public synchronized OFStatistics getPortStats(Long switchId, short portId){
 		HashMap<Short, OFStatistics> nodeStats = portStats.get(switchId);
-		return nodeStats.get(portId);
+		if(nodeStats != null){
+			return nodeStats.get(portId);
+		}
+		return null;
 	}
 	
 	public synchronized HashMap<Short, OFStatistics> getPortStats(Long switchId){

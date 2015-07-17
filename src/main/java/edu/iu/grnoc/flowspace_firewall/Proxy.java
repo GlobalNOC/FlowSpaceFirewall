@@ -574,16 +574,19 @@ public class Proxy {
 		
 		if(specificRequest.getPortNumber() != OFPort.OFPP_NONE.getValue()){
 			OFStatistics myStat = this.parent.getPortStats(mySwitch.getId(), specificRequest.getPortNumber());
-			statsReply.add(myStat);
-			length += myStat.getLength();
-			
+			if(myStat != null){
+				statsReply.add(myStat);
+				length += myStat.getLength();
+			}
 		}else{
 			HashMap<Short, OFStatistics> allPortStats = this.parent.getPortStats(mySwitch.getId());
-			Iterator<Entry<Short, OFStatistics>> it = allPortStats.entrySet().iterator();
-			while(it.hasNext()){
-				Entry<Short, OFStatistics> entry = it.next();
-				length += entry.getValue().getLength();
-				statsReply.add(entry.getValue());
+			if(allPortStats != null){
+				Iterator<Entry<Short, OFStatistics>> it = allPortStats.entrySet().iterator();
+				while(it.hasNext()){
+					Entry<Short, OFStatistics> entry = it.next();
+					length += entry.getValue().getLength();
+					statsReply.add(entry.getValue());
+				}
 			}
 		}
 		OFStatisticsReply reply = new OFStatisticsReply();
