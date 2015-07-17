@@ -577,6 +577,8 @@ public class Proxy {
 			if(myStat != null){
 				statsReply.add(myStat);
 				length += myStat.getLength();
+			}else{
+				return;
 			}
 		}else{
 			HashMap<Short, OFStatistics> allPortStats = this.parent.getPortStats(mySwitch.getId());
@@ -587,6 +589,8 @@ public class Proxy {
 					length += entry.getValue().getLength();
 					statsReply.add(entry.getValue());
 				}
+			}else{
+				return;
 			}
 		}
 		OFStatisticsReply reply = new OFStatisticsReply();
