@@ -618,6 +618,9 @@ public class Proxy {
 		OFStatisticsReply reply = new OFStatisticsReply();
 		reply.setStatisticType(OFStatisticsType.DESC);
 		List<OFStatistics> stats = new ArrayList<OFStatistics>();
+		descrStats.setHardwareDescription("FSFW: " + descrStats.getHardwareDescription());
+		descrStats.setManufacturerDescription("FSFW: " + descrStats.getManufacturerDescription());
+		descrStats.setSoftwareDescription("FSFW: " + descrStats.getSoftwareDescription());
 		stats.add(descrStats);
 		reply.setStatistics(stats);
 		reply.setXid(msg.getXid());
