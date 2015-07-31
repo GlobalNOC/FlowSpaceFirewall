@@ -226,9 +226,6 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 	@Override
 	public void switchRemoved(long switchId) {
 		logger.debug("Switch removed!");
-		List <Proxy> proxies = controllerConnector.getSwitchProxies(switchId);
-		Iterator <Proxy> it = proxies.iterator();
-
 		Iterator <IOFSwitch> switchIt = this.switches.iterator();
 		while(switchIt.hasNext()){
 			IOFSwitch tmpSwitch = switchIt.next();
@@ -236,15 +233,19 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 				switchIt.remove();
 			}
 		}
-				
+		
 		this.statsCacher.clearCache(switchId);
 		
-		while(it.hasNext()){
-			Proxy p = it.next();
-			p.disconnect();
-			it.remove();
+		List <Proxy> proxies = controllerConnector.getSwitchProxies(switchId);
+		if(proxies != null){
+			Iterator <Proxy> it = proxies.iterator();
+			
+			while(it.hasNext()){
+				Proxy p = it.next();
+				p.disconnect();
+				it.remove();
+			}
 		}
-				
 	}
 	
 	public synchronized HashMap<Long, Slicer> getSlice(String name){
