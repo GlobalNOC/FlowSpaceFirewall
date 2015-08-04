@@ -574,16 +574,23 @@ public class Proxy {
 		
 		if(specificRequest.getPortNumber() != OFPort.OFPP_NONE.getValue()){
 			OFStatistics myStat = this.parent.getPortStats(mySwitch.getId(), specificRequest.getPortNumber());
-			statsReply.add(myStat);
-			length += myStat.getLength();
-			
+			if(myStat != null){
+				statsReply.add(myStat);
+				length += myStat.getLength();
+			}else{
+				return;
+			}
 		}else{
 			HashMap<Short, OFStatistics> allPortStats = this.parent.getPortStats(mySwitch.getId());
-			Iterator<Entry<Short, OFStatistics>> it = allPortStats.entrySet().iterator();
-			while(it.hasNext()){
-				Entry<Short, OFStatistics> entry = it.next();
-				length += entry.getValue().getLength();
-				statsReply.add(entry.getValue());
+			if(allPortStats != null){
+				Iterator<Entry<Short, OFStatistics>> it = allPortStats.entrySet().iterator();
+				while(it.hasNext()){
+					Entry<Short, OFStatistics> entry = it.next();
+					length += entry.getValue().getLength();
+					statsReply.add(entry.getValue());
+				}
+			}else{
+				return;
 			}
 		}
 		OFStatisticsReply reply = new OFStatisticsReply();
@@ -615,6 +622,9 @@ public class Proxy {
 		OFStatisticsReply reply = new OFStatisticsReply();
 		reply.setStatisticType(OFStatisticsType.DESC);
 		List<OFStatistics> stats = new ArrayList<OFStatistics>();
+		descrStats.setHardwareDescription("FSFW: " + descrStats.getHardwareDescription());
+		descrStats.setManufacturerDescription("FSFW: " + descrStats.getManufacturerDescription());
+		descrStats.setSoftwareDescription("FSFW: " + descrStats.getSoftwareDescription());
 		stats.add(descrStats);
 		reply.setStatistics(stats);
 		reply.setXid(msg.getXid());
