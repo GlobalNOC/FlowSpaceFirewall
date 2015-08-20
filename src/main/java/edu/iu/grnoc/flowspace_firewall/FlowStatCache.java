@@ -700,19 +700,27 @@ public class FlowStatCache{
 			HashMap<String, List<OFStatistics>> tmpStats = sliced.get(switchId);
 			if(tmpStats.containsKey(sliceName)){				
 				//create a copy of the array so we can manipulate it
-				List<OFStatistics> stats = new ArrayList<OFStatistics>(tmpStats.get(sliceName));
+				List<OFStatistics> slicedStats = new ArrayList<OFStatistics>();				
+				List<OFStatistics> stats = tmpStats.get(sliceName);
 
 				//we only want verified flows to appear
 				Iterator<OFStatistics> it = stats.iterator();
 				while(it.hasNext()){
 					FSFWOFFlowStatisticsReply flowStat = (FSFWOFFlowStatisticsReply)it.next();
 					if(flowStat.toBeDeleted() || !flowStat.isVerified()){
-						it.remove();
+						
+					}else{
+						try{
+							FSFWOFFlowStatisticsReply tmpFlowStat = FSFWOFFlowStatisticsReply.clone(flowStat);
+							slicedStats.add(tmpFlowStat);
+						}catch(CloneNotSupportedException e){
+							log.error("Unable to clone FlowStat!");
+						}
 					}
 				}
 				
-				log.debug("Returning " + stats.size() + " flow stats");
-				return stats;
+				log.debug("Returning " + slicedStats.size() + " flow stats");
+				return slicedStats;
 			}
 			log.debug("Switch cache has no slice cache named: " + sliceName);
 			return new ArrayList<OFStatistics>();
