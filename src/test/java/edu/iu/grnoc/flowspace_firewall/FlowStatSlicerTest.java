@@ -1100,6 +1100,55 @@ public class FlowStatSlicerTest {
 	}
 	
 	@Test
+	public void testThreadSafeStats(){
+		cache = new FlowStatCache(fsfw);
+		
+		OFFlowMod mod = new OFFlowMod();
+		OFMatch match = new OFMatch();
+		match.setDataLayerVirtualLan((short)300);
+		match.setWildcards(match.getWildcardObj().matchOn(Flag.DL_VLAN));
+		mod.setMatch(match);
+		List<OFAction> actions = new ArrayList<OFAction>();
+		OFActionOutput output = new OFActionOutput();
+		output.setPort((short)65533);
+		actions.add(output);
+		mod.setActions(actions);
+		
+		List<OFFlowMod> mods = slicerExpanded.allowedFlows(mod);
+		cache.addFlowMod(sw.getId(), slicerExpanded.getSliceName(), mod, mods);
+		log.error("Sending: " + expandedStats.size() + " flow stats!");
+		cache.setFlowCache(sw.getId(), expandedStats);
+
+		List<OFStatistics> slicedStats = cache.getSlicedFlowStats(sw.getId(), slicerExpanded.getSliceName());	
+		assertNotNull("Sliced Stats with no allowed stats returend ok", slicedStats);
+		assertEquals("Sliced stats", 6, slicedStats.size());
+		
+		
+		//update the byte count everywhere
+		for(OFStatistics rep : expandedStats){
+			OFFlowStatisticsReply tmp = (OFFlowStatisticsReply)rep;
+			tmp.setByteCount(tmp.getByteCount() + 100);
+		}
+		cache.setFlowCache(sw.getId(), expandedStats);
+		
+		//verify it didn't update our already fetched stats
+		OFFlowStatisticsReply flowStat = (OFFlowStatisticsReply) slicedStats.get(0);
+		assertEquals("flowStat byte count is correct", 4L,flowStat.getByteCount());
+		assertEquals("flowStat packet count is correct", 4L,flowStat.getPacketCount());
+		
+		//fetch the stats again... verify they did change now
+		slicedStats = cache.getSlicedFlowStats(sw.getId(), slicerExpanded.getSliceName());	
+		assertNotNull("Sliced Stats with no allowed stats returend ok", slicedStats);
+		assertEquals("Sliced stats", 6, slicedStats.size());
+		
+		log.error(slicedStats.get(0).toString());
+		flowStat = (OFFlowStatisticsReply) slicedStats.get(0);
+		assertEquals("flowStat byte count is correct", 404L,flowStat.getByteCount());
+		assertEquals("flowStat packet count is correct", 4L,flowStat.getPacketCount());
+		
+	}
+	
+	@Test
 	public void testBrokenStats(){
 		List<HashMap<Long, Slicer>> tmp = new ArrayList<HashMap<Long, Slicer>>();
 		HashMap<Long, Slicer> tmpMap = new HashMap<Long, Slicer>();

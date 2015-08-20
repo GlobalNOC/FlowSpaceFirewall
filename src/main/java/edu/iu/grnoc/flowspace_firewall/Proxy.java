@@ -1007,7 +1007,7 @@ public class Proxy {
 			
 			if(mySlicer.getTagManagement()){
 				removedFlow.getMatch().setDataLayerVirtualLan((short)0);
-				removedFlow.getMatch().getWildcardObj().wildcard(Wildcards.Flag.DL_VLAN);
+				removedFlow.getMatch().setWildcards(removedFlow.getMatch().getWildcardObj().wildcard(Wildcards.Flag.DL_VLAN));
 				msg = removedFlow;
 			}
 			

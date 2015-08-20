@@ -83,12 +83,12 @@ public class SlicerStatusResource extends ServerResource{
 		
 		results.put("flow_rate", myProxy.getSlicer().getRate() );
 		results.put("total_flows", myProxy.getFlowCount());
-		results.put("max_flows_per_sec",  myProxy.getSlicer().getMaxFlows());
+		results.put("max_flows_per_sec", myProxy.getSlicer().getMaxFlowRate());
 		results.put("connected", myProxy.connected());
 		results.put("DPID", myProxy.getSwitch().getStringId());
 		results.put("max_packet_in_rate",  myProxy.getSlicer().getPacketInRate());
 		results.put("packet_in_rate", myProxy.getPacketInRate());
-		results.put("max_flow_rule", myProxy.getSlicer().getMaxFlowRate());
+		results.put("max_flow_rule", myProxy.getSlicer().getMaxFlows());
 		
 		return results;
 		

@@ -1,5 +1,6 @@
 package edu.iu.grnoc.flowspace_firewall;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import org.openflow.protocol.action.OFAction;
@@ -17,6 +18,33 @@ public class FSFWOFFlowStatisticsReply extends OFFlowStatisticsReply{
 	private String sliceName;
 	private FSFWOFFlowStatisticsReply parentStat;
 	private boolean hasParent = false;
+
+	
+	public static FSFWOFFlowStatisticsReply clone(OFFlowStatisticsReply stat) throws CloneNotSupportedException{
+		FSFWOFFlowStatisticsReply newStat = new FSFWOFFlowStatisticsReply();
+		
+		newStat.setByteCount(stat.getByteCount());
+		newStat.setPacketCount(stat.getPacketCount());
+		newStat.setCookie(stat.getCookie());
+		
+		//need to copy the action list
+		List<OFAction> acts = new ArrayList<OFAction>();
+		for(OFAction act : stat.getActions()){
+			acts.add(act.clone());
+		}
+		
+		newStat.setActions(acts);
+		newStat.setMatch(stat.getMatch().clone());
+		newStat.setDurationNanoseconds(stat.getDurationNanoseconds());
+		newStat.setDurationSeconds(stat.getDurationSeconds());
+		newStat.setHardTimeout(stat.getHardTimeout());
+		newStat.setIdleTimeout(stat.getIdleTimeout());
+		newStat.setPriority(stat.getPriority());
+		newStat.setTableId(stat.getTableId());
+		newStat.setLength((short)newStat.getLength());
+		
+		return newStat;
+	}
 	
 	public boolean isVerified(){
 		return verified;
