@@ -21,7 +21,7 @@ use Data::Dumper;
 use GRNOC::WebService::Client;
 
 #use Text::Table;
-our $VERSION = "1.0.0";
+our $VERSION = "1.0.1";
 
 sub new {
 
@@ -368,6 +368,11 @@ sub build_command_list {
 		    push( @{ $self->{'possible_commands'} }, "$expandable_command $slice $dpid" );
 		}
             }
+
+	    if($expandable_command eq 'set slice status'){
+		push (@{ $self->{'possible_commands'} }, "$expandable_command $slice all enable");
+		push (@{ $self->{'possible_commands'} }, "$expandable_command $slice all disable");
+	    }
         }
     }
 
@@ -592,28 +597,57 @@ END
 
         }
     }elsif( $input =~ /^set slice status (\S+) (\S+) (\S+)/){
+	my $slice = $1;
+	my $dpid = lc($2);
 	my $status = $3;
 	my $state;
+
 	if($status eq 'enable'){
 	    $state = 'true';
-	}elsif($status eq 'disable'){
+	}
+	elsif($status eq 'disable'){
 	    $state = 'false';
 	}
 
-	#warn "State is set to " . $state . "\n";
-
 	if(!defined($state)){
 	    print "Invalid state: " . $status . " must be enable/disable\n\n";
-	}else{
-	    $ws->set_url("$base_url:$port/fsfw/admin/set_state/$1/$2/$state/json");
+	    return;
+	}
+
+	if($dpid =~ /^all$/){
+	    $ws->set_url("$base_url:$port/fsfw/admin/slices/json");
+	    my $slices = $ws->foo();
+	    
+	    my $dpids = $slices->{$slice};
+
+	    if(!$slice){
+		print "Unable to find slice $slice.\n\n";
+		return;
+	    }
+
+	    foreach my $id (@$dpids){
+		$ws->set_url("$base_url:$port/fsfw/admin/set_state/$slice/$id/$state/json");
+		my $status_obj = $ws->foo();
+
+		if($status_obj == 1){
+		    print "Slice $slice for DPID $id was successfully " . $status . "d\n\n";
+		}
+		else{
+		    print "An error occured attempting to set Slice $slice for DPID $id to " . $status . "\n\n";
+		}
+	    } 
+	}
+	else {
+	    $ws->set_url("$base_url:$port/fsfw/admin/set_state/$slice/$dpid/$state/json");
 	    my $status_obj = $ws->foo();
+	    
 	    if($status_obj == 1){
-		print "Slice $1 for DPID $2 was successfully " . $status . "d\n\n";
-	    }else{
-		print "An error occured attempting to set Slice $1 for DPID $2 to " . $status . "\n\n";
+		print "Slice $slice for DPID $dpid was successfully " . $status . "d\n\n";
+	    }
+	    else{
+		print "An error occured attempting to set Slice $slice for DPID $dpid to " . $status . "\n\n";
 	    }
 	}
-		
     }
 
     return;    #$insert_text;
