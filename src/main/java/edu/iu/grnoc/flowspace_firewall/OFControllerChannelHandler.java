@@ -561,6 +561,7 @@ class OFControllerChannelHandler
     })
     public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e)
             throws Exception {
+	//e.getCause().printStackTrace();
         if (e.getCause() instanceof ReadTimeoutException) {
             // switch timeout
             log.error("Disconnecting slice {} from controller {} due to read timeout", this.proxy.getSlicer().getSliceName(),
@@ -609,7 +610,7 @@ class OFControllerChannelHandler
             
         } else {
         	try{
-	            log.error("Error while processing message from  slice "+ this.proxy.getSlicer().getSliceName()+" controller "+
+	            log.error("Error while processing message from slice "+ this.proxy.getSlicer().getSliceName()+" controller "+
 	            this.proxy.getSlicer().getControllerAddress().toString() + " state " + this.state, e.getCause());
         	}catch(NullPointerException bad){
         		log.error("Something super crazy happened: " + bad.getMessage());
