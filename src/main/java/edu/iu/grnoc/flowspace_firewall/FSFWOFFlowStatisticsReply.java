@@ -41,7 +41,7 @@ public class FSFWOFFlowStatisticsReply extends OFFlowStatisticsReply{
 		newStat.setIdleTimeout(stat.getIdleTimeout());
 		newStat.setPriority(stat.getPriority());
 		newStat.setTableId(stat.getTableId());
-		newStat.setLength((short)newStat.getLength());
+		newStat.setLength((short)stat.getLength());
 		
 		return newStat;
 	}
