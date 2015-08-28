@@ -75,7 +75,7 @@ public class FlowStatCacher extends TimerTask{
 	 */
 	public void run(){
 		
-		List<IOFSwitch> switches = new ArrayList<IOFSwitch>(this.statsCache.getSwitches());
+		List<IOFSwitch> switches = this.statsCache.getSwitches();
 		Iterator <IOFSwitch> it = switches.iterator();
 		while(it.hasNext()){
 			IOFSwitch sw = it.next();
