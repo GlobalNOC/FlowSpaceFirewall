@@ -166,8 +166,8 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 		this.statsCacher.delFlowCache(switchId, sliceName, flowMod, flows);
 	}
 	
-	public synchronized List<IOFSwitch> getSwitches(){
-		return this.switches;
+	public List<IOFSwitch> getSwitches(){
+            return this.switches;
 	}
 
 	public HashMap<Short, OFStatistics> getPortStats(long switchId){
