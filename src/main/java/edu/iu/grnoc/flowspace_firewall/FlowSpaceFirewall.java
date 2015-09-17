@@ -99,7 +99,7 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 	
 	
 	@Override
-	public void switchAdded(long switchId) {
+	public synchronized void switchAdded(long switchId) {
         logger.info("Switch " + switchId + " has joined");
         IOFSwitch sw = floodlightProvider.getSwitch(switchId);
         
@@ -166,8 +166,8 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 		this.statsCacher.delFlowCache(switchId, sliceName, flowMod, flows);
 	}
 	
-	public synchronized List<IOFSwitch> getSwitches(){
-		return this.switches;
+	public List<IOFSwitch> getSwitches(){
+            return new ArrayList<IOFSwitch>(this.switches);
 	}
 
 	public HashMap<Short, OFStatistics> getPortStats(long switchId){
@@ -224,7 +224,7 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 	}
 	
 	@Override
-	public void switchRemoved(long switchId) {
+	public synchronized void switchRemoved(long switchId) {
 		logger.debug("Switch removed!");
 		Iterator <IOFSwitch> switchIt = this.switches.iterator();
 		while(switchIt.hasNext()){
@@ -248,7 +248,7 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 		}
 	}
 	
-	public synchronized HashMap<Long, Slicer> getSlice(String name){
+	public HashMap<Long, Slicer> getSlice(String name){
 		List<HashMap<Long,Slicer>> mySlices = Collections.synchronizedList(this.slices);
 		
 		Iterator <HashMap<Long,Slicer>> it = mySlices.iterator();
@@ -266,7 +266,7 @@ public class FlowSpaceFirewall implements IFloodlightModule, IOFMessageListener,
 		return null;
 	}
 	
-	public synchronized List<HashMap<Long,Slicer>> getSlices(){
+	public List<HashMap<Long,Slicer>> getSlices(){
 		List<HashMap<Long,Slicer>> slices = Collections.synchronizedList(this.slices);
 		logger.debug("slices size: "+slices.size());
 		return slices;
