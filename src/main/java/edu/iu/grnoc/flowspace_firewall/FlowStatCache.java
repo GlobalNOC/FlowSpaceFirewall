@@ -435,10 +435,10 @@ public class FlowStatCache{
 				//get a list of all flows that this will invalidate
 				List<OFFlowMod> flows;
 				if(slice.getTagManagement()){
-					log.error("Managed Flows");
+					log.debug("Managed Flows");
 					flows = slice.managedFlows(flow);
 				}else{
-					log.error("Allowed Flows!'");
+					log.debug("Allowed Flows!'");
 					flows = slice.allowedFlows(flow);
 				}
 				this.delFlowMod(switchId, slice.getSliceName(),flow, flows);
