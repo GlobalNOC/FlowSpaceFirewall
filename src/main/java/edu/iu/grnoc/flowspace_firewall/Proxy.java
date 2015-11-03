@@ -762,7 +762,7 @@ public class Proxy {
 		//first figure out what the message is
 		log.debug("Proxy Slicing request of type: " + msg.getType());
 		if(!this.mySlicer.isOkToProcessMessage()){
-			log.warn("Switch: "+this.getSlicer().getSwitchName()+"Slice:"+this.mySlicer.getSliceName()+"Rate limit exceeded");
+			log.warn("Switch: "+this.getSlicer().getSwitchName()+" Slice:"+this.mySlicer.getSliceName()+" Rate limit exceeded");
 			OFError error = new OFError(OFError.OFErrorType.OFPET_BAD_REQUEST);
 			error.setErrorCode(OFBadRequestCode.OFPBRC_EPERM);
 			this.sendError((OFMessage)msg,error);
