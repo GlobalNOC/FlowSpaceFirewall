@@ -276,6 +276,32 @@ public class VLANSlicerTest {
 		assertTrue("OutPacket size is correct, expected 5 got " + outPackets.size(), outPackets.size() == 5);
 	}
 	
+	/**
+	 * tests packetOut event slicing when OFPacketOut.InPort is specified.
+	 */
+	@Test
+	public void testAllowedPacketOutALLWithInPort(){
+		
+		OFPacketOut out = new OFPacketOut();
+		List<OFAction> actions = new ArrayList<OFAction>();
+		OFActionOutput output = new OFActionOutput();
+		output.setType(OFActionType.OUTPUT);
+		output.setPort(OFPort.OFPP_ALL.getValue());
+		actions.add(output);
+		out.setActions(actions);
+		out.setInPort((short)1);
+		
+		Ethernet pkt = new Ethernet();
+		pkt.setVlanID((short)1000);
+		pkt.setDestinationMACAddress("aa:bb:cc:dd:ee:ff");
+		pkt.setSourceMACAddress("ff:ee:dd:cc:bb:aa");
+		pkt.setEtherType((short)35020);
+		out.setPacketData(pkt.serialize());
+		
+		List<OFMessage> outPackets = slicer.allowedPacketOut(out);
+		assertTrue("OutPacket size is correct, expected 4 got " + outPackets.size(), outPackets.size() == 4);
+	}
+	
 	
 	/**
 	 * tests the allowedFlows for matches (always an action that works)
@@ -830,6 +856,69 @@ public class VLANSlicerTest {
 		assertTrue(managedFlows.size() == 0);
 	}
 	
+	/*
+	 * tests managed tag mode for flow mods
+	 */
+	@Test
+	public void testManagedFlowModWithInPort() {
+		VLANSlicer otherSlicer = new VLANSlicer();
+		otherSlicer.setTagManagement(true);
+		pConfig = new PortConfig();
+		pConfig.setPortName("foo");
+		VLANRange range = new VLANRange();
+		range.setVlanAvail((short)101,true);
+		pConfig.setVLANRange(range);
+		otherSlicer.setPortConfig("foo", pConfig);
+		
+		pConfig2 = new PortConfig();
+		pConfig2.setPortName("foo2");
+		range = new VLANRange();
+		range.setVlanAvail((short)103,true);
+		pConfig2.setVLANRange(range);
+		otherSlicer.setPortConfig("foo2", pConfig2);
+
+		pConfig3 = new PortConfig();
+		pConfig3.setPortName("foo3");
+		range = new VLANRange();
+		range.setVlanAvail((short)104,true);
+		pConfig3.setVLANRange(range);
+		otherSlicer.setPortConfig("foo3", pConfig3);
+		
+		pConfig5 = new PortConfig();
+		pConfig5.setPortName("foo5");
+		range = new VLANRange();
+		range.setVlanAvail((short)106,true);
+		pConfig5.setVLANRange(range);
+		otherSlicer.setPortConfig("foo5", pConfig5);
+		
+		pConfig6 = new PortConfig();
+		pConfig6.setPortName("foo6");
+		range = new VLANRange();
+		range.setVlanAvail((short)107,true);
+		pConfig6.setVLANRange(range);
+		otherSlicer.setPortConfig("foo6", pConfig6);
+		
+		otherSlicer.setSwitch(sw);
+		
+		OFFlowMod flowMod = new OFFlowMod();
+		OFMatch match = new OFMatch();
+		match.setInputPort((short)3);
+		match.setWildcards(match.getWildcardObj().matchOn(Flag.IN_PORT));
+		flowMod.setMatch(match);
+		List<OFAction> actions = new ArrayList<OFAction>();
+		OFActionOutput out = new OFActionOutput();
+		out.setPort(OFPort.OFPP_ALL.getValue());
+		actions.add(out);
+		flowMod.setActions(actions);
+		flowMod.setLength((short)(OFFlowMod.MINIMUM_LENGTH + OFActionOutput.MINIMUM_LENGTH));
+		List<OFFlowMod> managedFlows = otherSlicer.managedFlows(flowMod);
+		assertTrue("Flow count is correct: " + managedFlows.size(), managedFlows.size() == 1);
+		
+		OFFlowMod processedFlow = managedFlows.get(0);
+		List<OFAction> processedActions = processedFlow.getActions();
+		assertTrue("Action count is correct: " + processedActions.size(), processedActions.size() == 8);
+	}
+	
 	/**
 	 * tests packetOut event slicing
 	 */
@@ -945,5 +1034,66 @@ public class VLANSlicerTest {
 		
 	}
 	
-	
+	/**
+	 * tests packetOut event slicing
+	 */
+	@Test
+	public void testAllowedPacketOutALLManagedWithInPort(){
+		
+		OFPacketOut out = new OFPacketOut();
+		List<OFAction> actions = new ArrayList<OFAction>();
+		OFActionOutput output = new OFActionOutput();
+		output.setType(OFActionType.OUTPUT);
+		output.setPort(OFPort.OFPP_ALL.getValue());
+		actions.add(output);
+		out.setActions(actions);
+		out.setInPort((short)1);
+		
+		Ethernet pkt = new Ethernet();
+		pkt.setDestinationMACAddress("aa:bb:cc:dd:ee:ff");
+		pkt.setSourceMACAddress("ff:ee:dd:cc:bb:aa");
+		pkt.setEtherType((short)35021);
+		pkt.setPad(true);
+		out.setPacketData(pkt.serialize());
+		
+		slicer.setTagManagement(true);
+		pConfig = new PortConfig();
+		pConfig.setPortName("foo");
+		VLANRange range = new VLANRange();
+		range.setVlanAvail((short)101,true);
+		pConfig.setVLANRange(range);
+		slicer.setPortConfig("foo", pConfig);
+		
+		List<OFMessage> outPackets = slicer.managedPacketOut(out);
+		assertTrue("OutPacket size is correct, expected 4 got " + outPackets.size(), outPackets.size() == 4);
+		//TODO: need to verify the packet outs are what we want
+		//log.error(outPackets.toString());
+		
+		OFPacketOut pktOut = (OFPacketOut) outPackets.get(0);
+		Ethernet newPkt = new Ethernet();
+		newPkt.deserialize(pktOut.getPacketData(), 0, pktOut.getPacketData().length);
+		log.error("First packet: " + newPkt.getVlanID());
+		assertTrue("first packet has right vlan tag set: " + newPkt.getVlanID(), newPkt.getVlanID() == 105);
+		
+		pktOut = (OFPacketOut) outPackets.get(1);
+		newPkt.deserialize(pktOut.getPacketData(), 0, pktOut.getPacketData().length);
+		log.error("Second packet: " + newPkt.getVlanID());
+		assertTrue("second packet has right vlan tag set: " + newPkt.getVlanID(), newPkt.getVlanID() == 103);
+		
+		pktOut = (OFPacketOut) outPackets.get(2);
+		newPkt.deserialize(pktOut.getPacketData(), 0, pktOut.getPacketData().length);
+		log.error("Third packet: " + newPkt.getVlanID());
+		assertTrue("third packet has right vlan tag set: " + newPkt.getVlanID(), newPkt.getVlanID() == 102);
+		
+		pktOut = (OFPacketOut) outPackets.get(3);
+		newPkt.deserialize(pktOut.getPacketData(), 0, pktOut.getPacketData().length);
+		log.error("Foruth packet: " + newPkt.getVlanID());
+		assertTrue("fourth packet has right vlan tag set: " + newPkt.getVlanID(), newPkt.getVlanID() == 105);
+		
+		pkt.setVlanID((short)2000);
+		out.setPacketData(pkt.serialize());
+		outPackets = slicer.managedPacketOut(out);
+		assertTrue("Packet out was denied", outPackets.size() == 0);
+		
+	}
 }
