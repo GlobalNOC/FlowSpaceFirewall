@@ -433,7 +433,12 @@ public class VLANSlicer implements Slicer{
 							//just go on.  
 							if(myPortCfg == null){
 								log.info("Unable to find port " + port.getKey() + " probably not on device");
-							}else{
+							} else if (port.getValue().getPortId() == outPacket.getInPort()) {
+								// Because OFPP_ALL represents all physical
+								// ports except input port, do not include
+								// this port.
+								continue;
+							} else {
 								List<OFAction> actualActions = new ArrayList<OFAction>();
 								actualActions.addAll(newActions);
 								OFPacketOut newOut = this.clonePacketOut(outPacket);
@@ -566,14 +571,19 @@ public class VLANSlicer implements Slicer{
 					if(output.getPort() == OFPort.OFPP_ALL.getValue()){
 						log.debug("output to ALL expanding");
 
-						
 						for(Map.Entry<String, PortConfig> port : this.portList.entrySet()){
 							PortConfig myPortCfg = this.getPortConfig(port.getValue().getPortId());
 							if(myPortCfg == null){
 								log.debug("output packet disallowed to port:" + port.getValue().getPortId());
 								packets.clear();
 								return packets;
+							} else if (port.getValue().getPortId() == outPacket.getInPort()) {
+								// Because OFPP_ALL represents all physical
+								// ports except input port, do not include
+								// this port.
+								continue;
 							}
+							
 							if(!myPortCfg.vlanAllowed(curVlan)){
 								log.debug("Output packet disallowed for port:" + port.getValue().getPortId() + " and vlan: " + curVlan);
 								packets.clear();
@@ -741,7 +751,7 @@ public class VLANSlicer implements Slicer{
 						Iterator<Entry<String, PortConfig>> it = this.portList.entrySet().iterator();
 						while(it.hasNext()){
 							Map.Entry<String, PortConfig> port = (Entry<String, PortConfig>) it.next();
-							if(port.getValue().getPortId() != 0){
+							if (port.getValue().getPortId() != 0 && port.getValue().getPortId() != flowMod.getMatch().getInputPort()) {
 								PortConfig pConfig = this.getPortConfig(port.getValue().getPortId());
 								vlanTag = (short)pConfig.getVlanRange().getAvailableTags()[0];
 								if(vlanTag == -1){
